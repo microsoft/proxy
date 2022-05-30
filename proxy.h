@@ -4,12 +4,12 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
-#include <new>
+#include <concepts>
 #include <initializer_list>
+#include <new>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <tuple>
-#include <concepts>
 
 namespace pro {
 
