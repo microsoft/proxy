@@ -1,9 +1,9 @@
 cmake_minimum_required (VERSION 3.5)
 
-project(msft-proxy)
-add_library(msft-proxy INTERFACE)
-target_compile_features(msft-proxy INTERFACE cxx_std_20)
-target_include_directories(msft-proxy INTERFACE .)
+project(msft_proxy)
+add_library(msft_proxy INTERFACE)
+target_compile_features(msft_proxy INTERFACE cxx_std_20)
+target_include_directories(msft_proxy INTERFACE .)
 
 include(FetchContent)
 # gtest version release-1.11.0

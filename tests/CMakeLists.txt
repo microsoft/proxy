@@ -1,10 +1,10 @@
-project(msft-proxy-tests)
-add_executable(msft-proxy-tests
+project(msft_proxy_tests)
+add_executable(msft_proxy_tests
   DummyTests.cpp
 )
-target_compile_features(msft-proxy-tests PRIVATE cxx_std_20)
-target_link_libraries(msft-proxy-tests PRIVATE msft-proxy)
-target_link_libraries(msft-proxy-tests PRIVATE gtest_main)
+target_compile_features(msft_proxy_tests PRIVATE cxx_std_20)
+target_link_libraries(msft_proxy_tests PRIVATE msft_proxy)
+target_link_libraries(msft_proxy_tests PRIVATE gtest_main)
 
 include(GoogleTest)
-gtest_discover_tests(msft-proxy-tests)
+gtest_discover_tests(msft_proxy_tests)
