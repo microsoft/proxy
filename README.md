@@ -10,6 +10,17 @@ As the maintainer of this project, please make a few updates:
 - Understanding the security reporting process in SECURITY.MD
 - Remove this section from the README
 
+## Build with CMake
+
+```
+git clone https://github.com/microsoft/proxy.git
+cd proxy
+cmake -S . -B build
+cmake --build ./build -j8
+cd ./build
+ctest -j8
+```
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
