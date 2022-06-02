@@ -20,8 +20,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y gcc-11 g++-11
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
 
     - name: check compiler version
       run: g++ --version
@@ -37,15 +37,21 @@ jobs:
         ctest -j8
 
   build-with-clang:
-    runs-on: macos-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
 
-    - name: install clang 14
-      run: brew install llvm
+    - name: install clang 15
+      run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo sh -c 'echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main" >> /etc/apt/sources.list'
+        sudo apt update
+        sudo apt install -y clang-15
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 15
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 15
 
     - name: check compiler version
-      run: clang++ --version
+      run: g++ --version
 
     - name: build with cmake
       run: |
