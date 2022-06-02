@@ -56,3 +56,19 @@ jobs:
         cd ./build
         ctest -j8
 
+  build-with-msvc:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+    
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
