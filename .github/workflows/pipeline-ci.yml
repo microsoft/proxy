@@ -16,12 +16,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: install gcc 11
+    - name: install gcc 12
       run: |
         sudo apt update
-        sudo apt install -y gcc-11 g++-11
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110
+        sudo apt install -y gcc-12 g++-12
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
 
     - name: check compiler version
       run: g++ --version
@@ -40,6 +40,9 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
+
+    - name: install clang 14
+      run: sudo port install clang-14
 
     - name: check compiler version
       run: clang --version
