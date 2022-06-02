@@ -178,6 +178,7 @@ class LifetimeTracker {
   int max_version_;
   std::vector<LifetimeOperation> ops_;
 };
+
 }  // namespace
 
 TEST(ProxyLifetimeTests, TestTrivialPtr) {
