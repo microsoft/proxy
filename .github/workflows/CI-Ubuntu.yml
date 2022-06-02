@@ -18,10 +18,15 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: install gcc 11
+      run: |
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt install -y gcc-11
+
     - name: check compiler version
       run: gcc --version
 
-    - name: trigger CMake
+    - name: trigger cmake
       run: |
         cmake . -B build
         cmake --build ./build -j8
