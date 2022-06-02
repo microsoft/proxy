@@ -21,27 +21,10 @@ jobs:
         sudo apt update
         sudo apt install -y gcc-11 g++-11
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110
 
     - name: check compiler version
-      run: gcc --version
-
-    - name: build with cmake
-      run: |
-        cmake . -B build
-        cmake --build ./build -j8
-
-    - name: run tests
-      run: |
-        cd ./build
-        ctest -j8
-
-  build-with-clang:
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: check compiler version
-      run: clang --version
+      run: g++ --version
 
     - name: build with cmake
       run: |
