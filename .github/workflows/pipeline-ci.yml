@@ -36,6 +36,24 @@ jobs:
         cd ./build
         ctest -j8
 
+  build-with-clang:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: check compiler version
+      run: clang --version
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
+
   build-with-msvc:
     runs-on: windows-latest
     steps:
