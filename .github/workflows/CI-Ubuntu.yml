@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
 jobs:
   build:
 
@@ -13,4 +17,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: check compiler version
+      run: gcc --version
+
+    - name: trigger CMake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
 
