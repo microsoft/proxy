@@ -7,7 +7,6 @@
 #include <vector>
 #include "proxy.h"
 
-// TODO: Block unit tests requireing P0848R3 for clang. Clang implementation status: https://clang.llvm.org/cxx_status.html
 namespace {
 
 template <bool kNothrowRelocatable, bool kCopyable, bool kTrivial, std::size_t kSize, std::size_t kAlignment>
@@ -109,6 +108,7 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<CopyableSmallFacade>, Mock
 static_assert(!std::is_constructible_v<pro::proxy<CopyableSmallFacade>, MockTrivialPtr>);
 static_assert(!std::is_assignable_v<pro::proxy<CopyableSmallFacade>, MockTrivialPtr>);
 
+#ifndef __clang__
 struct TrivialFacade : pro::facade<> {
   static constexpr auto minimum_copyability = pro::constraint_level::trivial;
   static constexpr auto minimum_relocatability = pro::constraint_level::trivial;
@@ -133,6 +133,7 @@ static_assert(!std::is_constructible_v<pro::proxy<TrivialFacade>, MockCopyableSm
 static_assert(!std::is_assignable_v<pro::proxy<TrivialFacade>, MockCopyableSmallPtr>);
 static_assert(std::is_nothrow_constructible_v<pro::proxy<TrivialFacade>, MockTrivialPtr>);
 static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockTrivialPtr>);
+#endif  // __clang__
 
 enum class LifetimeOperationType {
   kNone,
@@ -186,7 +187,7 @@ TEST(ProxyLifetimeTests, TestTrivialPtr) {
   expected_ops.push_back({ 1, LifetimeOperationType::kValueConstruction });
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   {
-    pro::proxy<TrivialFacade> p1 = &session;
+    pro::proxy<CopyableFacade> p1 = &session;
     ASSERT_TRUE(p1.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
     auto p2 = p1;
