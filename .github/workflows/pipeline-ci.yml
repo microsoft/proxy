@@ -11,7 +11,7 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build with gcc:
+  build-with-gcc:
 
     runs-on: ubuntu-latest
 
@@ -36,7 +36,7 @@ jobs:
         cd ./build
         ctest -j8
 
-  build with clang:
+  build-with-clang:
 
     runs-on: macos-latest
 
