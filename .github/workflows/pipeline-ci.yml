@@ -1,0 +1,69 @@
+name: Proxy-CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build-with-gcc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: install gcc 11
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-11 g++-11
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110
+
+    - name: check compiler version
+      run: gcc --version
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
+
+  build-with-clang:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: check compiler version
+      run: clang --version
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
+
+  build-with-msvc:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
