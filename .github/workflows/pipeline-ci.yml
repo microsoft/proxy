@@ -27,7 +27,7 @@ jobs:
     - name: check compiler version
       run: gcc --version
 
-    - name: trigger cmake
+    - name: build with cmake
       run: |
         cmake . -B build
         cmake --build ./build -j8
@@ -45,3 +45,14 @@ jobs:
 
     - name: check compiler version
       run: clang --version
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+    
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
+
