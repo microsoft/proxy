@@ -18,6 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: look for gcc11
+      run: ls /usr/bin | grep gcc
+
     - name: install gcc 11
       run: |
         sudo apt update
