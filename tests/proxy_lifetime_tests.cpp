@@ -164,7 +164,6 @@ class LifetimeTracker {
     Session(Session&& rhs) noexcept : version_(++rhs.host_->max_version_), host_(rhs.host_)
         { host_->ops_.push_back({ version_, LifetimeOperationType::kMoveConstruction }); }
     ~Session() { host_->ops_.push_back({ version_, LifetimeOperationType::kDestruction }); }
-    LifetimeTracker& operator*() const { return *host_; }
 
    private:
     int version_;
