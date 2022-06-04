@@ -331,24 +331,32 @@ class proxy {
   template <class P>
   proxy(P&& ptr) noexcept(HasNothrowPolyConstructor<std::decay_t<P>, P>)
       requires(HasPolyConstructor<std::decay_t<P>, P>)
-      : proxy(std::in_place_type<std::decay_t<P>>, std::forward<P>(ptr)) {}
+      { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
   template <class P, class... Args>
   explicit proxy(std::in_place_type_t<P>, Args&&... args)
       noexcept(HasNothrowPolyConstructor<P, Args...>)
-      requires(HasPolyConstructor<P, Args...>) {
-    new(ptr_) P(std::forward<Args>(args)...);
-    meta_ = &Traits::template meta<P>;
-  }
+      requires(HasPolyConstructor<P, Args...>)
+      { initialize<P>(std::forward<Args>(args)...); }
   template <class P, class U, class... Args>
   explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
           Args&&... args)
       noexcept(HasNothrowPolyConstructor<P, std::initializer_list<U>&, Args...>)
       requires(HasPolyConstructor<P, std::initializer_list<U>&, Args...>)
-      : proxy(std::in_place_type<P>, il, std::forward<Args>(args)...) {}
+      { initialize<P>(il, std::forward<Args>(args)...); }
   proxy& operator=(std::nullptr_t) noexcept(HasNothrowDestructor)
       requires(HasDestructor) {
     this->~proxy();
     new(this) proxy();
+    return *this;
+  }
+  proxy& operator=(const proxy& rhs)
+      requires(!HasNothrowCopyAssignment && HasCopyAssignment) {
+    if constexpr (HasNothrowMoveAssignment) {
+      *this = proxy{rhs};
+    } else {
+      proxy temp{rhs};
+      swap(temp);
+    }
     return *this;
   }
   proxy& operator=(const proxy& rhs) noexcept
@@ -357,12 +365,6 @@ class proxy {
       this->~proxy();
       new(this) proxy(rhs);
     }
-    return *this;
-  }
-  proxy& operator=(const proxy& rhs)
-      requires(!HasNothrowCopyAssignment && HasCopyAssignment) {
-    proxy temp{rhs};
-    swap(temp);
     return *this;
   }
   proxy& operator=(const proxy&) noexcept requires(HasTrivialCopyAssignment) =
@@ -386,17 +388,14 @@ class proxy {
   proxy& operator=(P&& ptr) noexcept
       requires(HasNothrowPolyAssignment<std::decay_t<P>, P>) {
     this->~proxy();
-    new(this) proxy(std::forward<P>(ptr));
+    initialize<std::decay_t<P>>(std::forward<P>(ptr));
     return *this;
   }
   template <class P>
   proxy& operator=(P&& ptr)
       requires(!HasNothrowPolyAssignment<std::decay_t<P>, P> &&
-          HasPolyAssignment<std::decay_t<P>, P>) {
-    proxy temp{std::forward<P>(ptr)};
-    swap(temp);
-    return *this;
-  }
+          HasPolyAssignment<std::decay_t<P>, P>)
+      { return *this = proxy{std::forward<P>(ptr)}; }
   ~proxy() noexcept(HasNothrowDestructor)
       requires(!HasTrivialDestructor && HasDestructor) {
     if (meta_ != nullptr) {
@@ -437,14 +436,17 @@ class proxy {
   P& emplace(Args&&... args) noexcept(HasNothrowPolyAssignment<P, Args...>)
       requires(HasPolyAssignment<P, Args...>) {
     reset();
-    new(this) proxy(std::in_place_type<P>, std::forward<Args>(args)...);
+    initialize<P>(std::forward<Args>(args)...);
     return *reinterpret_cast<P*>(ptr_);
   }
   template <class P, class U, class... Args>
   P& emplace(std::initializer_list<U> il, Args&&... args)
       noexcept(HasNothrowPolyAssignment<P, std::initializer_list<U>&, Args...>)
-      requires(HasPolyAssignment<P, std::initializer_list<U>&, Args...>)
-      { return emplace<P>(il, std::forward<Args>(args)...); }
+      requires(HasPolyAssignment<P, std::initializer_list<U>&, Args...>) {
+    reset();
+    initialize<P>(il, std::forward<Args>(args)...);
+    return *reinterpret_cast<P*>(ptr_);
+  }
   template <class D = typename BasicTraits::default_dispatch, class... Args>
   decltype(auto) invoke(Args&&... args)
       requires(details::dependent_t<Traits, D>::applicable &&
@@ -457,6 +459,12 @@ class proxy {
   }
 
  private:
+  template <class P, class... Args>
+  void initialize(Args&&... args) {
+    new(ptr_) P(std::forward<Args>(args)...);
+    meta_ = &Traits::template meta<P>;
+  }
+
   const typename BasicTraits::meta_type* meta_;
   alignas(F::maximum_alignment) char ptr_[F::maximum_size];
 };
