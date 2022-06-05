@@ -588,10 +588,14 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToSelf) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif  // __clang__
     p = p;
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 3");
     expected_ops.emplace_back(2, LifetimeOperationType::kCopyConstruction);
@@ -667,10 +671,14 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToValue) {
 
 TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToSelf) {
   pro::proxy<TestFacade> p;
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wself-assign-overloaded"
+#endif  // __clang__
   p = p;
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif  // __clang__
   ASSERT_FALSE(p.has_value());
 }
 
