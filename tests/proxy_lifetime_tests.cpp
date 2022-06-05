@@ -711,6 +711,29 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToValue) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToSelf) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif  // __clang__
+    p = std::move(p);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
+    ASSERT_FALSE(p.has_value());
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
 TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToNull) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
@@ -742,6 +765,19 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToValue) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToSelf) {
+  pro::proxy<TestFacade> p;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-move"
+#endif  // __clang__
+  p = std::move(p);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
+  ASSERT_FALSE(p.has_value());
 }
 
 TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToNull) {
