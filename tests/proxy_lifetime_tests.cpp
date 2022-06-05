@@ -588,7 +588,10 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToSelf) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
     p = p;
+#pragma clang diagnostic pop
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 3");
     expected_ops.emplace_back(2, LifetimeOperationType::kCopyConstruction);
@@ -664,7 +667,10 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToValue) {
 
 TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToSelf) {
   pro::proxy<TestFacade> p;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wself-assign-overloaded"
   p = p;
+#pragma clang diagnostic pop
   ASSERT_FALSE(p.has_value());
 }
 
@@ -694,21 +700,6 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToValue) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
-  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-}
-
-TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToSelf) {
-  LifetimeTracker tracker;
-  std::vector<LifetimeOperation> expected_ops;
-  {
-    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    p = std::move(p);
-    ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.invoke(), "Session 1");
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-  }
-  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
@@ -743,12 +734,6 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToValue) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-}
-
-TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToSelf) {
-  pro::proxy<TestFacade> p;
-  p = std::move(p);
-  ASSERT_FALSE(p.has_value());
 }
 
 TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToNull) {
