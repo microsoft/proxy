@@ -350,15 +350,8 @@ class proxy {
     return *this;
   }
   proxy& operator=(const proxy& rhs)
-      requires(!HasNothrowCopyAssignment && HasCopyAssignment) {
-    if constexpr (HasNothrowMoveAssignment) {
-      *this = proxy{rhs};
-    } else {
-      proxy temp{rhs};
-      swap(temp);
-    }
-    return *this;
-  }
+      requires(!HasNothrowCopyAssignment && HasCopyAssignment)
+      { return *this = proxy{rhs}; }
   proxy& operator=(const proxy& rhs) noexcept
       requires(!HasTrivialCopyAssignment && HasNothrowCopyAssignment) {
     if (this != &rhs) {
@@ -370,17 +363,16 @@ class proxy {
   proxy& operator=(const proxy&) noexcept requires(HasTrivialCopyAssignment) =
       default;
   proxy& operator=(const proxy&) requires(!HasCopyAssignment) = delete;
-  proxy& operator=(proxy&& rhs) noexcept requires(HasNothrowMoveAssignment) {
+  proxy& operator=(proxy&& rhs) noexcept(HasNothrowMoveAssignment)
+      requires(HasNothrowMoveAssignment) {
     if (this != &rhs) {
-      this->~proxy();
+      if constexpr (HasNothrowMoveAssignment) {
+        this->~proxy();
+      } else {
+        reset();  // For weak exception safety
+      }
       new(this) proxy(std::move(rhs));
     }
-    return *this;
-  }
-  proxy& operator=(proxy&& rhs)
-      requires(!HasNothrowMoveAssignment && HasMoveAssignment) {
-    proxy temp{std::move(rhs)};
-    swap(temp);
     return *this;
   }
   proxy& operator=(proxy&&) requires(!HasMoveAssignment) = delete;
