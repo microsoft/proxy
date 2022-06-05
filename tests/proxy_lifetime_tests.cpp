@@ -29,20 +29,19 @@ enum class LifetimeOperationType {
 };
 
 struct LifetimeOperation {
-  LifetimeOperation(int id, LifetimeOperationType operation) : id_(id), operation_(operation) {}
+  LifetimeOperation(int id, LifetimeOperationType type) : id_(id), type_(type) {}
 
   bool operator==(const LifetimeOperation& rhs) const
-      { return id_ == rhs.id_ && operation_ == rhs.operation_; }
+      { return id_ == rhs.id_ && type_ == rhs.type_; }
 
   int id_;
-  LifetimeOperationType operation_;
+  LifetimeOperationType type_;
 };
 
 struct ConstructionFailure : std::exception {
-  ConstructionFailure(LifetimeOperationType operation_type)
-      : operation_type_(operation_type) {}
+  ConstructionFailure(LifetimeOperationType type) : type_(type) {}
 
-  LifetimeOperationType operation_type_;
+  LifetimeOperationType type_;
 };
 
 class LifetimeTracker {
@@ -93,107 +92,121 @@ class LifetimeTracker {
 
 }  // namespace
 
-TEST(ProxyUnitTests, TestDefaultConstrction) {
+TEST(ProxyLifetimeTests, TestDefaultConstrction) {
   pro::proxy<TestFacade> p;
   ASSERT_FALSE(p.has_value());
 }
 
-TEST(ProxyUnitTests, TestNullConstrction) {
+TEST(ProxyLifetimeTests, TestNullConstrction) {
   pro::proxy<TestFacade> p = nullptr;
   ASSERT_FALSE(p.has_value());
 }
 
-TEST(ProxyUnitTests, TestPolyConstrction) {
+TEST(ProxyLifetimeTests, TestPolyConstrction) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: No exception thrown
-    pro::proxy<TestFacade> p1 = LifetimeTracker::Session(&tracker);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 2");
+    pro::proxy<TestFacade> p = LifetimeTracker::Session(&tracker);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 2");
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Exception thrown during construction
-    LifetimeTracker::Session another_session{ &tracker };
-    expected_ops.emplace_back(3, LifetimeOperationType::kValueConstruction);
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      pro::proxy<TestFacade> p2 = another_session;
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
   expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestInPlacePolyConstrction) {
+TEST(ProxyLifetimeTests, TestPolyConstrction_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: No exception thrown
-    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
+    LifetimeTracker::Session another_session{ &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      pro::proxy<TestFacade> p = another_session;
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlacePolyConstrction) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Exception thrown during construction
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kValueConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestInPlaceInitializerListPolyConstrction) {
+TEST(ProxyLifetimeTests, TestInPlacePolyConstrction_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: No exception thrown
-    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, { 1, 2, 3 }, &tracker };
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kValueConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyConstrction) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, { 1, 2, 3 }, &tracker };
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
     expected_ops.emplace_back(1, LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Exception thrown during construction
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, { 1, 2, 3 }, &tracker };
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kInitializerListConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestCopyConstrction) {
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyConstrction_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Copy construction from another object that contains a value (no exception thrown)
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, { 1, 2, 3 }, &tracker };
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kInitializerListConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestCopyConstrction_FromValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
     pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
@@ -203,38 +216,46 @@ TEST(ProxyUnitTests, TestCopyConstrction) {
     ASSERT_EQ(p2.invoke(), "Session 2");
     expected_ops.emplace_back(2, LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Copy construction from another object that does not contain a value
-    pro::proxy<TestFacade> p3;
-    auto p4 = p3;
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_FALSE(p4.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Exception thrown during copy construction from another object that contains a value
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      auto p5 = p1;
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
   expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestMoveConstrction) {
+TEST(ProxyLifetimeTests, TestCopyConstrction_FromValue_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Move construction from another object that contains a value
+    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      auto p2 = p1;
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 1");
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestCopyConstrction_FromNull) {
+  pro::proxy<TestFacade> p1;
+  auto p2 = p1;
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
     pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
@@ -244,354 +265,501 @@ TEST(ProxyUnitTests, TestMoveConstrction) {
     expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
 
-    // Scenario 2: Move construction from another object that does not contain a value
-    pro::proxy<TestFacade> p3;
-    auto p4 = std::move(p3);
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_FALSE(p4.has_value());
+TEST(ProxyLifetimeTests, TestMoveConstrction_FromNull) {
+  pro::proxy<TestFacade> p1;
+  auto p2 = std::move(p1);
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestNullAssignment_ToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p = nullptr;
+    ASSERT_FALSE(p.has_value());
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestNullAssignment_ToNull) {
+  pro::proxy<TestFacade> p;
+  p = nullptr;
+  ASSERT_FALSE(p.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestPolyAssignment_ToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p = LifetimeTracker::Session{ &tracker };
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 3");
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestPolyAssignment_ToValue_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    LifetimeTracker::Session session{ &tracker };
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p = session;
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestPolyAssignment_ToNull) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p;
+    p = LifetimeTracker::Session{ &tracker };
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 2");
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestNullAssignment) {
+TEST(ProxyLifetimeTests, TestPolyAssignment_ToNull_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Null assignment to an object that contains a value
-    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    LifetimeTracker::Session session{ &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    p1 = nullptr;
-    ASSERT_FALSE(p1.has_value());
-    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    pro::proxy<TestFacade> p;
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p = session;
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
 
-    // Scenario 2: Null assignment to an object that does not contain a value
-    p1 = nullptr;
-    ASSERT_FALSE(p1.has_value());
+TEST(ProxyLifetimeTests, TestInPlacePolyAssignment_ToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p.emplace<LifetimeTracker::Session>(&tracker);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 2");
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlacePolyAssignment_ToValue_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p.emplace<LifetimeTracker::Session>(&tracker);
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kValueConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p.has_value());
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestPolyAssignment) {
+TEST(ProxyLifetimeTests, TestInPlacePolyAssignment_ToNull) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Polymorphic assignment to an object of proxy that does not contain a value
-    pro::proxy<TestFacade> p1;
-    p1 = LifetimeTracker::Session{ &tracker };
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 2");
+    pro::proxy<TestFacade> p;
+    p.emplace<LifetimeTracker::Session>(&tracker);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
 
-    // Scenario 2: Polymorphic assignment to an object of proxy that contains a value
-    p1 = LifetimeTracker::Session{ &tracker };
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 4");
-    expected_ops.emplace_back(3, LifetimeOperationType::kValueConstruction);
-    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(4, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Exception thrown during polymorphic assignment to an object of proxy that does not contain a value
-    LifetimeTracker::Session another_session{ &tracker };
-    expected_ops.emplace_back(5, LifetimeOperationType::kValueConstruction);
-    pro::proxy<TestFacade> p2;
+TEST(ProxyLifetimeTests, TestInPlacePolyAssignment_ToNull_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p;
     tracker.ThrowOnNextConstruction();
     bool exception_thrown = false;
     try {
-      p2 = another_session;
+      p.emplace<LifetimeTracker::Session>(&tracker);
     } catch (const ConstructionFailure& e) {
       exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
+      ASSERT_EQ(e.type_, LifetimeOperationType::kValueConstruction);
     }
     ASSERT_TRUE(exception_thrown);
-    ASSERT_FALSE(p2.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 4: Exception thrown during polymorphic assignment to an object of proxy that contains a value
-    tracker.ThrowOnNextConstruction();
-    exception_thrown = false;
-    try {
-      p1 = another_session;
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 4");
+    ASSERT_FALSE(p.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(5, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyAssignment_ToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 2");
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kInitializerListConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyAssignment_ToValue_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kInitializerListConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p.has_value());
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyAssignment_ToNull) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p;
+    p.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
+    expected_ops.emplace_back(1, LifetimeOperationType::kInitializerListConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestInPlaceInitializerListPolyAssignment_ToNull_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p;
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kInitializerListConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p.has_value());
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    p1 = p2;
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 4");
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(p2.invoke(), "Session 2");
+    expected_ops.emplace_back(3, LifetimeOperationType::kCopyConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(4, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
   expected_ops.emplace_back(4, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-// TODO: Handle exception
-TEST(ProxyUnitTests, TestInPlacePolyAssignment) {
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToValue_Exception) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Polymorphic assignment to an object of proxy that does not contain a value
-    pro::proxy<TestFacade> p1;
-    p1.emplace<LifetimeTracker::Session>(&tracker);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
-    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Polymorphic assignment to an object of proxy that contains a value
-    p1.emplace<LifetimeTracker::Session>(&tracker);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 2");
-    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Exception thrown during polymorphic assignment to an object of proxy that does not contain a value
-    pro::proxy<TestFacade> p2;
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      p2.emplace<LifetimeTracker::Session>(&tracker);
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kValueConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_FALSE(p2.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 4: Exception thrown during polymorphic assignment to an object of proxy that contains a value
-    tracker.ThrowOnNextConstruction();
-    exception_thrown = false;
-    try {
-      p1.emplace<LifetimeTracker::Session>(&tracker);
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kValueConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_FALSE(p1.has_value());
-    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-  }
-  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-}
-
-TEST(ProxyUnitTests, TestInPlaceInitializerListPolyAssignment) {
-  LifetimeTracker tracker;
-  std::vector<LifetimeOperation> expected_ops;
-  {
-    // Scenario 1: Polymorphic assignment to an object of proxy that does not contain a value
-    pro::proxy<TestFacade> p1;
-    p1.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
-    expected_ops.emplace_back(1, LifetimeOperationType::kInitializerListConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Polymorphic assignment to an object of proxy that contains a value
-    p1.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 2");
-    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(2, LifetimeOperationType::kInitializerListConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Exception thrown during polymorphic assignment to an object of proxy that does not contain a value
-    pro::proxy<TestFacade> p2;
-    tracker.ThrowOnNextConstruction();
-    bool exception_thrown = false;
-    try {
-      p2.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kInitializerListConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_FALSE(p2.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 4: Exception thrown during polymorphic assignment to an object of proxy that contains a value
-    tracker.ThrowOnNextConstruction();
-    exception_thrown = false;
-    try {
-      p1.emplace<LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kInitializerListConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_FALSE(p1.has_value());
-    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-  }
-  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-}
-
-TEST(ProxyUnitTests, TestCopyAssignment) {
-  LifetimeTracker tracker;
-  std::vector<LifetimeOperation> expected_ops;
-  {
-    // Scenario 1: Copy assignment from an object that contains a value to another object that does not contain a value
     pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    pro::proxy<TestFacade> p2;
-    p2 = p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p1 = p2;
+    } catch (const ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
     ASSERT_TRUE(p1.has_value());
     ASSERT_EQ(p1.invoke(), "Session 1");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 3");
+    ASSERT_EQ(p2.invoke(), "Session 2");
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToSelf) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p = p;
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 3");
+    expected_ops.emplace_back(2, LifetimeOperationType::kCopyConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToNull) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p1 = p2;
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 3");
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(p2.invoke(), "Session 1");
     expected_ops.emplace_back(2, LifetimeOperationType::kCopyConstruction);
     expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
 
-    // Scenario 2: Copy assignment from an object that contains a value to another object that contains a value
-    p1 = p2;
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 5");
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 3");
-    expected_ops.emplace_back(4, LifetimeOperationType::kCopyConstruction);
-    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(5, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(4, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Copy assignment from an object that does not contain a value to itself
-    pro::proxy<TestFacade> p3;
-    p3 = p3;
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 4: Copy assignment from an object that contains a value to itself
-    p1 = p1;
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 7");
-    expected_ops.emplace_back(6, LifetimeOperationType::kCopyConstruction);
-    expected_ops.emplace_back(5, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(7, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(6, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 5: Copy assignment from an object that does not contain a value to another object that contains a value
-    p1 = p3;
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p3.has_value());
-    expected_ops.emplace_back(7, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 6: Copy assignment from an object that does not contain a value to another object that does not contain a value
-    p1 = p3;
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 7: Exception thrown during copy assignment from an object that contains a value to another object that does not contain a value
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromValueToNull_Exception) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     tracker.ThrowOnNextConstruction();
     bool exception_thrown = false;
     try {
       p1 = p2;
     } catch (const ConstructionFailure& e) {
       exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
+      ASSERT_EQ(e.type_, LifetimeOperationType::kCopyConstruction);
     }
     ASSERT_TRUE(exception_thrown);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 3");
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 8: Exception thrown during copy assignment from an object that contains a value to another object that contains a value
-    p1 = p2;
-    expected_ops.emplace_back(8, LifetimeOperationType::kCopyConstruction);
-    expected_ops.emplace_back(9, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(8, LifetimeOperationType::kDestruction);
-    tracker.ThrowOnNextConstruction();
-    exception_thrown = false;
-    try {
-      p1 = p2;
-    } catch (const ConstructionFailure& e) {
-      exception_thrown = true;
-      ASSERT_EQ(e.operation_type_, LifetimeOperationType::kCopyConstruction);
-    }
-    ASSERT_TRUE(exception_thrown);
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 9");
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 3");
+    ASSERT_EQ(p2.invoke(), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
-  expected_ops.emplace_back(9, LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestMoveAssignment) {
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToValue) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Move assignment from an object that contains a value to another object that does not contain a value
     pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     pro::proxy<TestFacade> p2;
-    p2 = std::move(p1);
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 2");
-    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    p1 = p2;
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Move assignment from an object that contains a value to another object that contains a value
-    pro::proxy<TestFacade> p3{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    expected_ops.emplace_back(3, LifetimeOperationType::kValueConstruction);
-    p2 = std::move(p3);
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 4");
-    ASSERT_FALSE(p3.has_value());
-    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(4, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Move assignment from an object that does not contain a value to itself
-    p1 = std::move(p1);
-    ASSERT_FALSE(p1.has_value());
-
-    // Scenario 4: Move assignment from an object that contains a value to itself
-    p2 = std::move(p2);
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 4");
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 5: Move assignment from an object that does not contain a value to another object that contains a value
-    p2 = std::move(p1);
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p2.has_value());
-    expected_ops.emplace_back(4, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 6: Move assignment from an object that does not contain a value to another object that does not contain a value
-    p1 = std::move(p2);
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p2.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyUnitTests, TestHasValue) {
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToSelf) {
+  pro::proxy<TestFacade> p;
+  p = p;
+  ASSERT_FALSE(p.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestCopyAssignment_FromNullToNull) {
+  pro::proxy<TestFacade> p1;
+  pro::proxy<TestFacade> p2;
+  p1 = p2;
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
+    p1 = std::move(p2);
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 3");
+    ASSERT_FALSE(p2.has_value());
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToSelf) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p = std::move(p);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 1");
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValueToNull) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    p1 = std::move(p2);
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 2");
+    ASSERT_FALSE(p2.has_value());
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2;
+    p1 = std::move(p2);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToSelf) {
+  pro::proxy<TestFacade> p;
+  p = std::move(p);
+  ASSERT_FALSE(p.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromNullToNull) {
+  pro::proxy<TestFacade> p1;
+  pro::proxy<TestFacade> p2;
+  p1 = std::move(p2);
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestHasValue) {
   int foo = 123;
   pro::proxy<TestFacade> p1;
   ASSERT_FALSE(p1.has_value());
@@ -600,44 +768,34 @@ TEST(ProxyUnitTests, TestHasValue) {
   ASSERT_EQ(p1.invoke(), "123");
 }
 
-TEST(ProxyUnitTests, TestReset) {
+TEST(ProxyLifetimeTests, TestReset_FromValue) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
-    // Scenario 1: Reset an object of proxy that contains a value
-    pro::proxy<TestFacade> p1;
-    p1.emplace<LifetimeTracker::Session>(&tracker);
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    p1.reset();
-    ASSERT_FALSE(p1.has_value());
+    p.reset();
+    ASSERT_FALSE(p.has_value());
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 2: Reset an object of proxy that does not contain a value
-    p1.reset();
-    ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-// TODO
-TEST(ProxyUnitTests, TestSwap) {
+TEST(ProxyLifetimeTests, TestReset_FromNull) {
+  pro::proxy<TestFacade> p;
+  p.reset();
+  ASSERT_FALSE(p.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestSwap_ValueValue) {
   LifetimeTracker tracker;
   std::vector<LifetimeOperation> expected_ops;
   {
     pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 1");
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 1: Swap two objects of proxy that both contain a value
     pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 2");
     expected_ops.emplace_back(2, LifetimeOperationType::kValueConstruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
     swap(p1, p2);
     ASSERT_TRUE(p1.has_value());
     ASSERT_EQ(p1.invoke(), "Session 4");
@@ -650,54 +808,75 @@ TEST(ProxyUnitTests, TestSwap) {
     expected_ops.emplace_back(5, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(5, LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(4, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
 
-    // Scenario 2: Swap two objects of proxy where the first object contains the value and the second does not contain a value
-    p2.reset();
-    ASSERT_FALSE(p2.has_value());
-    expected_ops.emplace_back(5, LifetimeOperationType::kDestruction);
-    swap(p1, p2);
-    // TODO
-    /*// Scenario 2: Copy assignment from an object that contains a value to another object that contains a value
-    p1 = p2;
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 5");
-    ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 3");
-    expected_ops.emplace_back(4, LifetimeOperationType::kCopyConstruction);
+TEST(ProxyLifetimeTests, TestSwap_ValueSelf) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    swap(p, p);
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(5, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(4, LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 3: Copy assignment from an object that does not contain a value to itself
-    pro::proxy<TestFacade> p3;
-    p3 = p3;
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 4: Copy assignment from an object that contains a value to itself
-    p1 = p1;
-    ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.invoke(), "Session 7");
-    expected_ops.emplace_back(6, LifetimeOperationType::kCopyConstruction);
-    expected_ops.emplace_back(5, LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(7, LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(6, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 5: Copy assignment from an object that does not contain a value to another object that contains a value
-    p1 = p3;
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p3.has_value());
-    expected_ops.emplace_back(7, LifetimeOperationType::kDestruction);
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
-
-    // Scenario 6: Copy assignment from an object that does not contain a value to another object that does not contain a value
-    p1 = p3;
-    ASSERT_FALSE(p1.has_value());
-    ASSERT_FALSE(p3.has_value());
-    ASSERT_TRUE(tracker.GetOperations() == expected_ops);*/
   }
   expected_ops.emplace_back(3, LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestSwap_ValueNull) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2;
+    swap(p1, p2);
+    ASSERT_FALSE(p1.has_value());
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(p2.invoke(), "Session 2");
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestSwap_NullValue) {
+  LifetimeTracker tracker;
+  std::vector<LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
+    swap(p1, p2);
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(p1.invoke(), "Session 2");
+    ASSERT_FALSE(p2.has_value());
+    expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
+  }
+  expected_ops.emplace_back(2, LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestSwap_NullSelf) {
+  pro::proxy<TestFacade> p;
+  swap(p, p);
+  ASSERT_FALSE(p.has_value());
+}
+
+TEST(ProxyLifetimeTests, TestSwap_NullNull) {
+  pro::proxy<TestFacade> p1;
+  pro::proxy<TestFacade> p2;
+  swap(p1, p2);
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
 }
