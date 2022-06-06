@@ -22,6 +22,11 @@ using MockCopyablePtr = MockPtr<true, true, false, sizeof(void*) * 2, alignof(vo
 using MockCopyableSmallPtr = MockPtr<true, true, false, sizeof(void*), alignof(void*)>;
 using MockTrivialPtr = MockPtr<true, true, true, sizeof(void*) * 2, alignof(void*)>;
 
+template <class T, class = void>
+struct SfinaeReflectionAvailable : std::false_type {};
+template <class T>
+struct SfinaeReflectionAvailable<T, std::void_t<decltype(T::reflect)>> : std::true_type {};
+
 using DefaultFacade = pro::facade<>;
 static_assert(DefaultFacade::minimum_copyability == pro::constraint_level::none);
 static_assert(DefaultFacade::minimum_relocatability == pro::constraint_level::nothrow);
@@ -30,6 +35,7 @@ static_assert(DefaultFacade::maximum_size >= 2 * sizeof(void*));
 static_assert(DefaultFacade::maximum_alignment >= sizeof(void*));
 static_assert(std::is_same_v<DefaultFacade::dispatch_types, std::tuple<>>);
 static_assert(std::is_same_v<DefaultFacade::reflection_type, void>);
+static_assert(!SfinaeReflectionAvailable<pro::proxy<DefaultFacade>>::value);
 static_assert(std::is_nothrow_default_constructible_v<pro::proxy<DefaultFacade>>);
 static_assert(!std::is_trivially_default_constructible_v<pro::proxy<DefaultFacade>>);
 static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, std::nullptr_t>);
