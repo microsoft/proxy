@@ -850,6 +850,8 @@ TEST(ProxyLifetimeTests, TestSwap_ValueSelf) {
     pro::proxy<TestFacade> p{ std::in_place_type<LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, LifetimeOperationType::kValueConstruction);
     swap(p, p);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(p.invoke(), "Session 3");
     expected_ops.emplace_back(2, LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, LifetimeOperationType::kMoveConstruction);
