@@ -364,7 +364,7 @@ class proxy {
       default;
   proxy& operator=(const proxy&) requires(!HasCopyAssignment) = delete;
   proxy& operator=(proxy&& rhs) noexcept(HasNothrowMoveAssignment)
-    requires(HasNothrowMoveAssignment) {
+    requires(HasMoveAssignment) {
     if constexpr (HasNothrowMoveAssignment) {
       this->~proxy();
     } else {
