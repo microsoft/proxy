@@ -5,24 +5,13 @@
 #include <memory>
 #include <typeinfo>
 #include "proxy.h"
+#include "utils.h"
 
 namespace {
 
 template <class F>
 concept ReflectionApplicable = requires(pro::proxy<F> p) {
   { p.reflect() };
-};
-
-class RttiReflection {
- public:
-  template <class P>
-  constexpr explicit RttiReflection(std::in_place_type_t<P>)
-      : type_(typeid(P)) {}
-
-  const char* GetName() const noexcept { return type_.name(); }
-
- private:
-  const std::type_info& type_;
 };
 
 struct TraitsReflection {
@@ -46,7 +35,7 @@ using DefaultFacade = pro::facade<>;
 static_assert(!ReflectionApplicable<DefaultFacade>);
 
 struct TestRttiFacade : pro::facade<>
-    { using reflection_type = RttiReflection; };
+    { using reflection_type = utils::RttiReflection; };
 static_assert(ReflectionApplicable<TestRttiFacade>);
 
 struct TestTraitsFacade : pro::facade<>
@@ -55,18 +44,18 @@ static_assert(ReflectionApplicable<TestTraitsFacade>);
 
 }  // namespace
 
-TEST(ProxyReflectionTests, TestRttiReflection_RawPtr) {
+TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
   ASSERT_EQ(p.reflect().GetName(), typeid(int*).name());
 }
 
-TEST(ProxyReflectionTests, TestRttiReflection_FancyPtr) {
+TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
   ASSERT_EQ(p.reflect().GetName(), typeid(std::unique_ptr<double>).name());
 }
 
-TEST(ProxyReflectionTests, TestTraitsReflection_RawPtr) {
+TEST(ProxyReflectionTests, TestTraits_RawPtr) {
   int foo = 123;
   pro::proxy<TestTraitsFacade> p = &foo;
   ASSERT_EQ(p.reflect().is_default_constructible_, true);
@@ -76,7 +65,7 @@ TEST(ProxyReflectionTests, TestTraitsReflection_RawPtr) {
   ASSERT_EQ(p.reflect().is_trivial_, true);
 }
 
-TEST(ProxyReflectionTests, TestTraitsReflection_FancyPtr) {
+TEST(ProxyReflectionTests, TestTraits_FancyPtr) {
   pro::proxy<TestTraitsFacade> p = std::make_unique<double>(1.23);
   ASSERT_EQ(p.reflect().is_default_constructible_, true);
   ASSERT_EQ(p.reflect().is_copy_constructible_, false);
