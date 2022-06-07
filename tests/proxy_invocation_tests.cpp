@@ -67,7 +67,7 @@ static_assert(InvocableWithoutDispatch<CallableFacade<int(double)>, float>);  //
 static_assert(InvocableWithDispatch<IterableFacade<int>, GetSize>);
 static_assert(!InvocableWithDispatch<IterableFacade<int>, ForEach<int>, pro::proxy<CallableFacade<void(double&)>>>);  // Wrong arguments
 static_assert(!InvocableWithDispatch<IterableFacade<int>, Append<int>>);  // Wrong dispatch
-static_assert(!InvocableWithoutDispatch<IterableFacade<int>, GetSize>);  // Invoking without specifying a dispatch
+static_assert(!InvocableWithoutDispatch<IterableFacade<int>>);  // Invoking without specifying a dispatch
 
 }  // namespace
 
