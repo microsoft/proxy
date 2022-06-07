@@ -120,7 +120,6 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_Lifetime_Move) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-
 TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
