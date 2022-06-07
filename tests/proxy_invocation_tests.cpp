@@ -81,6 +81,7 @@ TEST(ProxyInvocationTests, TestThrow) {
     exception_thrown = true;
     ASSERT_EQ(e.what(), expected_error_message);
   }
+  ASSERT_TRUE(exception_thrown);
   ASSERT_TRUE(p.has_value());
 }
 
