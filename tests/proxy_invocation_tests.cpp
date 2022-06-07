@@ -63,7 +63,7 @@ static_assert(!InvocableWithoutDispatch<CallableFacade<int(double)>, std::nullpt
 static_assert(!InvocableWithDispatch<CallableFacade<int(double)>, int(double), double>);  // Wrong dispatch
 static_assert(InvocableWithoutDispatch<CallableFacade<int(double)>, float>);  // Invoking without specifying a dispatch
 
-// Static assertions for a facade of multile dispatches
+// Static assertions for a facade of multiple dispatches
 static_assert(InvocableWithDispatch<IterableFacade<int>, GetSize>);
 static_assert(!InvocableWithDispatch<IterableFacade<int>, ForEach<int>, pro::proxy<CallableFacade<void(double&)>>>);  // Wrong arguments
 static_assert(!InvocableWithDispatch<IterableFacade<int>, Append<int>>);  // Wrong dispatch
