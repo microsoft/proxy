@@ -1,6 +1,7 @@
 project(msft_proxy_tests)
 add_executable(msft_proxy_tests
   proxy_lifetime_tests.cpp
+  proxy_reflection_tests.cpp
   proxy_traits_tests.cpp
 )
 target_compile_features(msft_proxy_tests PRIVATE cxx_std_20)
