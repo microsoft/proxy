@@ -3,7 +3,6 @@
 
 #include <gtest/gtest.h>
 #include <memory>
-#include <typeinfo>
 #include "proxy.h"
 #include "utils.h"
 
