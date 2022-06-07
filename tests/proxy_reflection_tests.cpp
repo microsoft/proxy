@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <memory>
+#include <typeinfo>
 #include "proxy.h"
 #include "utils.h"
 
@@ -11,6 +12,18 @@ namespace {
 template <class F>
 concept ReflectionApplicable = requires(pro::proxy<F> p) {
   { p.reflect() };
+};
+
+class RttiReflection {
+ public:
+  template <class P>
+  constexpr explicit RttiReflection(std::in_place_type_t<P>)
+      : type_(typeid(P)) {}
+
+  const char* GetName() const noexcept { return type_.name(); }
+
+ private:
+  const std::type_info& type_;
 };
 
 struct TraitsReflection {
@@ -34,7 +47,7 @@ using DefaultFacade = pro::facade<>;
 static_assert(!ReflectionApplicable<DefaultFacade>);
 
 struct TestRttiFacade : pro::facade<>
-    { using reflection_type = utils::RttiReflection; };
+    { using reflection_type = RttiReflection; };
 static_assert(ReflectionApplicable<TestRttiFacade>);
 
 struct TestTraitsFacade : pro::facade<>

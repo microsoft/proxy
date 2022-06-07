@@ -2,12 +2,10 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
-#include <deque>
 #include <list>
 #include <string>
 #include <vector>
 #include "proxy.h"
-#include "utils.h"
 
 namespace {
 
