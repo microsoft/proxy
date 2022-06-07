@@ -55,18 +55,18 @@ static_assert(ReflectionApplicable<TestTraitsFacade>);
 
 }  // namespace
 
-TEST(ProxyReflectionTests, TestRttiReflection_RawPtr) {
+TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
   ASSERT_EQ(p.reflect().GetName(), typeid(int*).name());
 }
 
-TEST(ProxyReflectionTests, TestRttiReflection_FancyPtr) {
+TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
   ASSERT_EQ(p.reflect().GetName(), typeid(std::unique_ptr<double>).name());
 }
 
-TEST(ProxyReflectionTests, TestTraitsReflection_RawPtr) {
+TEST(ProxyReflectionTests, TestTraits_RawPtr) {
   int foo = 123;
   pro::proxy<TestTraitsFacade> p = &foo;
   ASSERT_EQ(p.reflect().is_default_constructible_, true);
@@ -76,7 +76,7 @@ TEST(ProxyReflectionTests, TestTraitsReflection_RawPtr) {
   ASSERT_EQ(p.reflect().is_trivial_, true);
 }
 
-TEST(ProxyReflectionTests, TestTraitsReflection_FancyPtr) {
+TEST(ProxyReflectionTests, TestTraits_FancyPtr) {
   pro::proxy<TestTraitsFacade> p = std::make_unique<double>(1.23);
   ASSERT_EQ(p.reflect().is_default_constructible_, true);
   ASSERT_EQ(p.reflect().is_copy_constructible_, false);
