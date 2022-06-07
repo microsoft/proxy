@@ -5,7 +5,6 @@
 #include <memory>
 #include <typeinfo>
 #include "proxy.h"
-#include "utils.h"
 
 namespace {
 

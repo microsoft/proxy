@@ -47,6 +47,28 @@ struct Append : pro::dispatch<pro::proxy<ContainerFacade<T>>(T)> {
   }
 };
 
+template <class F, class D, class... Args>
+concept InvocableWithDispatch = requires(pro::proxy<F> p, Args... args) {
+  { p.template invoke<D>(std::forward<Args>(args)...) };
+};
+template <class F, class... Args>
+concept InvocableWithoutDispatch = requires(pro::proxy<F> p, Args... args) {
+  { p.invoke(std::forward<Args>(args)...) };
+};
+
+// Static assertions for a facade of a single dispatch
+static_assert(InvocableWithDispatch<CallableFacade<int(double)>, Call<int(double)>, double>);
+static_assert(!InvocableWithDispatch<CallableFacade<int(double)>, Call<int(double)>, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithoutDispatch<CallableFacade<int(double)>, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<CallableFacade<int(double)>, int(double), double>);  // Wrong dispatch
+static_assert(InvocableWithoutDispatch<CallableFacade<int(double)>, float>);  // Invoking without specifying a dispatch
+
+// Static assertions for a facade of multile dispatches
+static_assert(InvocableWithDispatch<IterableFacade<int>, GetSize>);
+static_assert(!InvocableWithDispatch<IterableFacade<int>, ForEach<int>, pro::proxy<CallableFacade<void(double&)>>>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<IterableFacade<int>, Append<int>>);  // Wrong dispatch
+static_assert(!InvocableWithoutDispatch<IterableFacade<int>, GetSize>);  // Invoking without specifying a dispatch
+
 }  // namespace
 
 TEST(ProxyInvocationTests, TestArgumentForwarding) {
