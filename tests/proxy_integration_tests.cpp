@@ -4,11 +4,11 @@
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <memory>
+#include <memory_resource>
 #include <numbers>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <memory_resource>
 #include "proxy.h"
 
 namespace {
@@ -133,7 +133,7 @@ TEST(ProxyIntegrationTests, TestDrawable) {
 
   try {
     p = MakeDrawableFromCommand("Triangle 2 3");
-  } catch (const std::exception& e) {
+  } catch (const std::runtime_error& e) {
     ASSERT_STREQ(e.what(), "Invalid command");
   }
 }
