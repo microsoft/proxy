@@ -93,7 +93,7 @@ TEST(ProxyInvocationTests, TestArgumentForwarding) {
 }
 
 TEST(ProxyInvocationTests, TestThrow) {
-  std::string expected_error_message = "My exception";
+  const char* expected_error_message = "My exception";
   auto f = [&] { throw std::runtime_error{ expected_error_message }; };
   bool exception_thrown = false;
   pro::proxy<CallableFacade<void()>> p = &f;
@@ -101,7 +101,7 @@ TEST(ProxyInvocationTests, TestThrow) {
     p.invoke();
   } catch (const std::runtime_error& e) {
     exception_thrown = true;
-    ASSERT_EQ(e.what(), expected_error_message);
+    ASSERT_STREQ(e.what(), expected_error_message);
   }
   ASSERT_TRUE(exception_thrown);
   ASSERT_TRUE(p.has_value());
