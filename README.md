@@ -1,4 +1,4 @@
-# Project
+# Proxy: Easy Polymorphism in C++
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
@@ -11,6 +11,18 @@ As the maintainer of this project, please make a few updates:
 - Updating SUPPORT.MD with content about this project's support experience
 - Understanding the security reporting process in SECURITY.MD
 - Remove this section from the README
+
+
+
+Do you want to save your effort in lifetime management and architecture maintenance of polymorphic objects in C++?
+
+Do you want to be able to write polymorphic code in C++ as easy as those languages with GC (like Java or C#), while still having excellent runtime performance?
+
+Have you tried other polymorphic programming libraries in C++ but found them fall short somewhere?
+
+If so, this library is for you.
+
+
 
 ## Build with CMake
 
