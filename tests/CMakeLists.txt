@@ -1,6 +1,7 @@
 project(msft_proxy_tests)
 add_executable(msft_proxy_tests
   proxy_creation_tests.cpp
+  proxy_integration_tests.cpp
   proxy_invocation_tests.cpp
   proxy_lifetime_tests.cpp
   proxy_reflection_tests.cpp
