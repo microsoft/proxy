@@ -1,0 +1,60 @@
+name: Proxy-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version: 
+        description: 'Release version (x.x.x)'
+        required: true
+        default: '0.0.0'
+
+jobs:
+  run-bvt-gcc11:
+    uses: ./.github/workflows/bvt-gcc11.yml
+
+  run-bvt-clang15:
+    uses: ./.github/workflows/bvt-clang15.yml
+
+  run-bvt-msvc14:
+    uses: ./.github/workflows/bvt-msvc14.yml
+        
+  prepare-release:
+    runs-on: windows-latest
+    needs: [run-bvt-gcc11, run-bvt-clang15, run-bvt-msvc14]
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: create zip archive
+      run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{github.event.inputs.version}}.zip"
+
+    - name: tagging
+      uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{github.event.inputs.version}}',
+            sha: context.sha
+          })
+    
+    - uses: actions/create-release@v1
+      name: create release draft
+      id: release_draft
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{github.event.inputs.version}}
+        release_name: Proxy ${{github.event.inputs.version}} Release
+        draft: true
+        prerelease: true
+
+    - name: upload artifacts
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.release_draft.outputs.upload_url }}
+        asset_path: ./proxy-${{github.event.inputs.version}}.zip
+        asset_name: proxy-${{github.event.inputs.version}}.zip
+        asset_content_type: application/zip
