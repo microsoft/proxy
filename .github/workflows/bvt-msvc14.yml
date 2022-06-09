@@ -1,0 +1,18 @@
+on:
+  workflow_call:
+
+jobs:
+  bvt-msvc14:
+    runs-on: windows-2022
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8

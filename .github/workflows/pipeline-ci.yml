@@ -11,69 +11,14 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build-with-gcc:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
+  run-bvt-gcc11:
+    uses: ./.github/workflows/bvt-gcc11.yml
+    name: run bvt with g++ 11
 
-    - name: install gcc 11
-      run: |
-        sudo apt update
-        sudo apt install -y gcc-11 g++-11
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
+  run-bvt-clang15:
+    uses: ./.github/workflows/bvt-clang15.yml
+    name: run bvt with clang 15
 
-    - name: check compiler version
-      run: g++ --version
-
-    - name: build with cmake
-      run: |
-        cmake . -B build
-        cmake --build ./build -j8
-
-    - name: run tests
-      run: |
-        cd ./build
-        ctest -j8
-
-  build-with-clang:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: install clang 15
-      run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo sh -c 'echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main" >> /etc/apt/sources.list'
-        sudo apt update
-        sudo apt install -y clang-15
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 15
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 15
-
-    - name: check compiler version
-      run: g++ --version
-
-    - name: build with cmake
-      run: |
-        cmake . -B build
-        cmake --build ./build -j8
-
-    - name: run tests
-      run: |
-        cd ./build
-        ctest -j8
-
-  build-with-msvc:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: build with cmake
-      run: |
-        cmake . -B build
-        cmake --build ./build -j8
-
-    - name: run tests
-      run: |
-        cd ./build
-        ctest -j8
+  run-bvt-msvc14:
+    uses: ./.github/workflows/bvt-msvc14.yml
+    name: run bvt with msvc14 (vs2022)
