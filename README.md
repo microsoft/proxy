@@ -12,17 +12,17 @@ As the maintainer of this project, please make a few updates:
 - Understanding the security reporting process in SECURITY.MD
 - Remove this section from the README
 
-
-
 Do you want to save your effort in lifetime management and architecture maintenance of polymorphic objects in C++?
 
-Do you want to be able to write polymorphic code in C++ as easy as those languages with GC (like Java or C#), while still having excellent runtime performance?
+Do you want to be able to write polymorphic code in C++ as easily as in those languages with GC (like Java or C#), while still having excellent runtime performance?
 
-Have you tried other polymorphic programming libraries in C++ but found them fall short somewhere?
+Have you tried other polymorphic programming libraries in C++ but found them somewhat deficient?
 
 If so, this library is for you.
 
+## What is it
 
+The "proxy" is a C++ library that Microsoft uses to make runtime polymorphism easier to implement, both in architecture design and runtime performance. Consider the following example:
 
 ## Build with CMake
 
