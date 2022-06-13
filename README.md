@@ -2,27 +2,15 @@
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
-
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
-
 Do you want to save your effort in lifetime management and architecture maintenance of polymorphic objects in C++?
 
 Do you want to be able to write polymorphic code in C++ as easily as in those languages with GC (like Java or C#), while still having excellent runtime performance?
 
 Have you tried other polymorphic programming libraries in C++ but found them somewhat deficient?
 
-If so, this library is for you.
+If so, this library is for you. 😉
 
-## What is it
-
-The "proxy" is a C++ library that Microsoft uses to make runtime polymorphism easier to implement, both in architecture design and runtime performance. Consider the following example:
+The "proxy" is a C++ library that Microsoft uses to make runtime polymorphism easier to implement, both in architecture design and runtime performance. Please find the design details at https://wg21.link/p0957.
 
 ## Build with CMake
 
