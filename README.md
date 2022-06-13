@@ -60,7 +60,7 @@ pro::proxy<DrawableFacade> CreateRectangleAsDrawable(int width, int height) {
 }
 ```
 
-Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_creation_tests.cpp](tests/proxy_creation_tests.cpp).
+Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp).
 
 ## Minimum requirements for compilers
 
