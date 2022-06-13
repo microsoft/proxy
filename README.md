@@ -45,7 +45,7 @@ class Rectangle {
 // Client - Consumer
 std::string PrintDrawableToString(pro::proxy<DrawableFacade> p) {
   std::stringstream result;
-  result << std::fixed << std::setprecision(5) << "shape = ";
+  result << "shape = ";
   p.invoke<Draw>(result);
   result << ", area = " << p.invoke<Area>();
   return std::move(result).str();
