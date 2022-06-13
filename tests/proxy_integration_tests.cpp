@@ -118,8 +118,7 @@ pro::proxy<DrawableFacade> MakeDrawableFromCommand(const std::string& s) {
 }  // namespace
 
 TEST(ProxyIntegrationTests, TestDrawable) {
-  pro::proxy<DrawableFacade> p;
-  p = MakeDrawableFromCommand("Rectangle 2 3");
+  pro::proxy<DrawableFacade> p = MakeDrawableFromCommand("Rectangle 2 3");
   std::string s = PrintDrawableToString(std::move(p));
   ASSERT_EQ(s, "shape = {Rectangle: width = 2.00000, height = 3.00000}, area = 6.00000");
 

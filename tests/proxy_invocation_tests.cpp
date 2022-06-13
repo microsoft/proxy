@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <list>
+#include <ranges>
 #include <string>
 #include <vector>
 #include "proxy.h"
@@ -19,10 +20,8 @@ struct Call<R(Args...)> : pro::dispatch<R(Args...)> {
 template <class T>
 struct CallableFacade : pro::facade<Call<T>> {};
 
-struct GetSize : pro::dispatch<std::size_t()> {
-  template <class T>
-  std::size_t operator()(const T& self) { return self.size(); }
-};
+struct GetSize : pro::dispatch<std::size_t(), std::ranges::size> {};
+
 template <class T>
 struct ForEach : pro::dispatch<void(pro::proxy<CallableFacade<void(T&)>>)> {
   template <class U>
