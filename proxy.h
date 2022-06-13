@@ -15,11 +15,15 @@ namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
-template <class T> struct dispatch;
-template <class R, class... Args>
-struct dispatch<R(Args...)> {
+template <class T, auto F = nullptr> struct dispatch;
+template <class R, class... Args, auto F>
+struct dispatch<R(Args...), F> {
   using return_type = R;
   using argument_types = std::tuple<Args...>;
+
+  template <class T> requires(std::is_invocable_v<decltype(F)&, T, Args...>)
+  decltype(auto) operator()(T&& value, Args&&... args) const
+      { return F(std::forward<T>(value), std::forward<Args>(args)...); }
 };
 
 template <class... Ds>
