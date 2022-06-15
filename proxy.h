@@ -469,7 +469,9 @@ template <class T>
 class sbo_ptr {
  public:
   template <class... Args>
-  sbo_ptr(Args&&... args) : value_(std::forward<Args>(args)...) {}
+  sbo_ptr(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+      requires(std::is_constructible_v<T, Args...>)
+      : value_(std::forward<Args>(args)...) {}
   sbo_ptr(const sbo_ptr&) noexcept(std::is_nothrow_copy_constructible_v<T>)
       = default;
   sbo_ptr(sbo_ptr&&) noexcept(std::is_nothrow_move_constructible_v<T>)
@@ -485,10 +487,9 @@ template <class T>
 class deep_ptr {
  public:
   template <class... Args>
-  deep_ptr(Args&&... args) : ptr_(new T(std::forward<Args>(args)...)) {}
-  deep_ptr(const deep_ptr& rhs)
-      noexcept(std::is_nothrow_copy_constructible_v<T>)
-      requires(std::is_copy_constructible_v<T>)
+  deep_ptr(Args&&... args) requires(std::is_constructible_v<T, Args...>)
+      : ptr_(new T(std::forward<Args>(args)...)) {}
+  deep_ptr(const deep_ptr& rhs) requires(std::is_copy_constructible_v<T>)
       : ptr_(rhs.ptr_ == nullptr ? nullptr : new T(*rhs)) {}
   deep_ptr(deep_ptr&& rhs) noexcept : ptr_(rhs.ptr_) { rhs.ptr_ = nullptr; }
   ~deep_ptr() noexcept { delete ptr_; }
