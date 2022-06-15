@@ -22,7 +22,7 @@ struct dispatch<R(Args...), CPO> {
   using argument_types = std::tuple<Args...>;
 
   template <class T> requires(std::is_invocable_v<decltype(CPO)&, T, Args...>)
-  decltype(auto) operator()(T&& value, Args&&... args) const
+  constexpr decltype(auto) operator()(T&& value, Args&&... args) const
       { return CPO(std::forward<T>(value), std::forward<Args>(args)...); }
 };
 
