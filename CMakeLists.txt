@@ -14,13 +14,10 @@ install(FILES proxy.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 #make this library importable for other cmake projects
-install(EXPORT Microsoft.ProxyConfig DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/Microsoft.Proxy)
-export(TARGETS msft_proxy FILE Microsoft.ProxyConfig.cmake)
+export(TARGETS msft_proxy FILE ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfig.cmake)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake
-                                 VERSION 0.0.1
+                                 VERSION 1.0.0
                                  COMPATIBILITY SameMajorVersion)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/Microsoft.Proxy)
-
 
 include(CTest)
 if (BUILD_TESTING)
