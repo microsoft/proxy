@@ -1,27 +1,27 @@
 cmake_minimum_required (VERSION 3.5)
 
-project(msft_proxy)
+project(msft_proxy
+        VERSION 0.0.0
+        LANGUAGES CXX)
 add_library(msft_proxy INTERFACE)
+add_library(Microsoft.Proxy::Proxy ALIAS msft_proxy)
 target_compile_features(msft_proxy INTERFACE cxx_std_20)
 target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
                                                 $<INSTALL_INTERFACE:include>)
 
 include(CMakePackageConfigHelpers)
+write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake
+                                 COMPATIBILITY SameMajorVersion
+                                 ARCH_INDEPENDENT)
+
+include(GNUInstallDirs)
 install(TARGETS msft_proxy
         EXPORT Microsoft.ProxyConfig)
 install(FILES proxy.h
-        DESTINATION include)
-export(EXPORT Microsoft.ProxyConfig FILE ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfig.cmake)
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake
-                                 VERSION 1.0.0
-                                 COMPATIBILITY AnyNewerVersion)
-set(MSFT_PROXY_CMAKECONFIG_INSTALL_DIR "share/cmake/Microsoft.Proxy" CACHE STRING "install path for Microsoft.ProxyConfig.cmake")
-install(EXPORT Microsoft.ProxyConfig
-        FILE Microsoft.ProxyConfig.cmake
-        DESTINATION ${MSFT_PROXY_CMAKECONFIG_INSTALL_DIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfig.cmake
-              ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake
-              DESTINATION ${MSFT_PROXY_CMAKECONFIG_INSTALL_DIR})
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT Microsoft.ProxyConfig NAMESPACE Microsoft.Proxy:: DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/Microsoft.Proxy)
+export(TARGETS msft_proxy NAMESPACE Microsoft.Proxy:: FILE Microsoft.ProxyConfig.cmake)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Microsoft.ProxyConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_DATADIR}/cmake/Microsoft.Proxy)
 
 include(CTest)
 if (BUILD_TESTING)
