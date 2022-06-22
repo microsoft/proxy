@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.5)
 
 project(msft_proxy
+        VERSION 1.0.0
         LANGUAGES CXX)
 add_library(msft_proxy INTERFACE)
 target_compile_features(msft_proxy INTERFACE cxx_std_20)
@@ -8,12 +9,9 @@ target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURREN
                                                 $<INSTALL_INTERFACE:include>)
 
 include(GNUInstallDirs)
-install(TARGETS msft_proxy
-        EXPORT msft_proxyConfig)
+install(TARGETS msft_proxy)
 install(FILES proxy.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/msft_proxy)
-export(TARGETS msft_proxyConfig)
-install(EXPORT msft_proxyConfig DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy)
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/proxy)
 
 include(CTest)
 if (BUILD_TESTING)
