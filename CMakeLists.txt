@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.5)
 
 project(msft_proxy
-        VERSION 0.1.0
+        VERSION 0.1.0 # local build version
         LANGUAGES CXX)
 
 add_library(msft_proxy INTERFACE)

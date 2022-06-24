@@ -9,25 +9,17 @@ on:
         default: '0.0.0'
 
 jobs:
-  run-bvt-gcc11:
-    uses: ./.github/workflows/bvt-gcc11.yml
-    name: run bvt with g++ 11
-
   prepare-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc11]
     steps:
     - uses: actions/checkout@v3
-    
-    - name: create zip archive
-      run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{ github.event.inputs.version }}.zip"
 
     - name: create release branch
       run: |
         git checkout -b release/${{ github.event.inputs.version }}
 
     - name: assign cmake version
-      run: ((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt
+      run: ((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0 `# local build version','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt
 
     - name: commit changes
       run: |
@@ -44,7 +36,24 @@ jobs:
       run: |
         git push origin release/${{ github.event.inputs.version }}
         git push origin ${{ github.event.inputs.version }}
-          
+
+  run-bvt-gcc11:
+    needs: prepare-release
+    name: run bvt with g++ 11
+    uses: ./.github/workflows/bvt-gcc11.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
+
+  draft-release:
+    needs: [run-bvt-gcc11]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: release/${{ github.event.inputs.version }}
+
+    - name: create zip archive
+      run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{ github.event.inputs.version }}.zip"
+
     - uses: actions/create-release@v1
       name: create release draft
       id: release_draft
