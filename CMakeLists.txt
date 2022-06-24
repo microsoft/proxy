@@ -1,8 +1,9 @@
 cmake_minimum_required (VERSION 3.5)
 
 project(msft_proxy
-        VERSION 1.0.0
+        VERSION 0.1.0
         LANGUAGES CXX)
+
 add_library(msft_proxy INTERFACE)
 target_compile_features(msft_proxy INTERFACE cxx_std_20)
 target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

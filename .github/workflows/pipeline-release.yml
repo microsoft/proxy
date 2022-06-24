@@ -25,19 +25,29 @@ jobs:
     - name: create release branch
       run: |
         git checkout -b release/${{ github.event.inputs.version }}
-        git push origin release/${{ github.event.inputs.version }}
 
-    - name: git tagging
-      uses: actions/github-script@v5
+    - name: assign cmake version
+      uses: jacobtomlinson/gha-find-replace@v2
       with:
-        script: |
-          github.rest.git.createRef({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            ref: 'refs/tags/${{ github.event.inputs.version }}',
-            sha: context.sha
-          })
-    
+        find: 'VERSION [0-9].[0-9].[0-9]'
+        replace: 'VERSION ${{ github.event.inputs.version }}'
+        regex: false
+        include: CMakeLists.txt
+
+    - name: commit changes
+      run: |
+        git add CMakeLists.txt
+        git commit -m 'assign a release version'
+
+    - name: new git tag
+      run: |
+        git tag ${{ github.event.inputs.version }}
+
+    - name: push git objects
+      run: |
+        git push origin release/${{ github.event.inputs.version }}
+        git push origin ${{ github.event.inputs.version }}
+          
     - uses: actions/create-release@v1
       name: create release draft
       id: release_draft
