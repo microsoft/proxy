@@ -13,22 +13,19 @@ jobs:
     uses: ./.github/workflows/bvt-gcc11.yml
     name: run bvt with g++ 11
 
-  run-bvt-clang15:
-    uses: ./.github/workflows/bvt-clang15.yml
-    name: run bvt with clang 15
-
-  run-bvt-msvc14:
-    uses: ./.github/workflows/bvt-msvc14.yml
-    name: run bvt with msvc14 (vs2022)
-        
   prepare-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc11, run-bvt-clang15, run-bvt-msvc14]
+    needs: [run-bvt-gcc11]
     steps:
     - uses: actions/checkout@v3
     
     - name: create zip archive
       run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{ github.event.inputs.version }}.zip"
+
+    - name: create release branch
+      run: |
+        git checkout -b release/${{ github.event.inputs.version }}
+        git push origin release/${{ github.event.inputs.version }}
 
     - name: git tagging
       uses: actions/github-script@v5
