@@ -19,7 +19,7 @@ jobs:
         git checkout -b release/${{ github.event.inputs.version }}
 
     - name: assign cmake version
-      run: ((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0 `# local build version','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt
+      run: "((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0 # local build version','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt"
 
     - name: commit changes
       run: |
