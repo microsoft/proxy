@@ -27,12 +27,7 @@ jobs:
         git checkout -b release/${{ github.event.inputs.version }}
 
     - name: assign cmake version
-      uses: jacobtomlinson/gha-find-replace@v2
-      with:
-        find: 'VERSION [0-9].[0-9].[0-9]'
-        replace: 'VERSION ${{ github.event.inputs.version }}'
-        regex: false
-        include: CMakeLists.txt
+      run: ((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt
 
     - name: commit changes
       run: |
