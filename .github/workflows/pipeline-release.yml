@@ -31,6 +31,8 @@ jobs:
 
     - name: commit changes
       run: |
+        git config --local user.email "release-bot@no.email.com"
+        git config --local user.name "release bot"
         git add CMakeLists.txt
         git commit -m 'assign a release version'
 
