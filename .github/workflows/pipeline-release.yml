@@ -9,38 +9,66 @@ on:
         default: '0.0.0'
 
 jobs:
+  prepare-release:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: create release branch
+      run: |
+        git checkout -b release/${{ github.event.inputs.version }}
+
+    - name: assign cmake version
+      run: "((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0 # local build version','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt"
+
+    - name: commit changes
+      run: |
+        git config --local user.email "release-bot@no.email.com"
+        git config --local user.name "release bot"
+        git add CMakeLists.txt
+        git commit -m 'assign a release version'
+
+    - name: new git tag
+      run: |
+        git tag ${{ github.event.inputs.version }}
+
+    - name: push git objects
+      run: |
+        git push origin release/${{ github.event.inputs.version }}
+        git push origin ${{ github.event.inputs.version }}
+
   run-bvt-gcc11:
-    uses: ./.github/workflows/bvt-gcc11.yml
+    needs: prepare-release
     name: run bvt with g++ 11
+    uses: ./.github/workflows/bvt-gcc11.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-clang15:
-    uses: ./.github/workflows/bvt-clang15.yml
+    needs: prepare-release
     name: run bvt with clang 15
+    uses: ./.github/workflows/bvt-clang15.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-msvc14:
-    uses: ./.github/workflows/bvt-msvc14.yml
+    needs: prepare-release
     name: run bvt with msvc14 (vs2022)
-        
-  prepare-release:
+    uses: ./.github/workflows/bvt-msvc14.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
+
+  draft-release:
     runs-on: windows-latest
     needs: [run-bvt-gcc11, run-bvt-clang15, run-bvt-msvc14]
     steps:
     - uses: actions/checkout@v3
-    
+      with:
+        ref: release/${{ github.event.inputs.version }}
+
     - name: create zip archive
       run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{ github.event.inputs.version }}.zip"
 
-    - name: git tagging
-      uses: actions/github-script@v5
-      with:
-        script: |
-          github.rest.git.createRef({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            ref: 'refs/tags/${{ github.event.inputs.version }}',
-            sha: context.sha
-          })
-    
     - uses: actions/create-release@v1
       name: create release draft
       id: release_draft

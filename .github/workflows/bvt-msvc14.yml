@@ -1,11 +1,17 @@
 on:
   workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
 
 jobs:
   bvt-msvc14:
     runs-on: windows-2022
     steps:
     - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.branch }}
 
     - name: build with cmake
       run: |
