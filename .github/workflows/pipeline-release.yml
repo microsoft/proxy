@@ -45,6 +45,7 @@ jobs:
       branch: release/${{ github.event.inputs.version }}
 
   draft-release:
+    runs-on: windows-latest
     needs: [run-bvt-gcc11]
     steps:
     - uses: actions/checkout@v3
