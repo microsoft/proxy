@@ -3,7 +3,7 @@ on:
     inputs:
       branch:
         type: string
-        required: true
+        required: false
 
 jobs:
   bvt-msvc14:

@@ -14,17 +14,11 @@ jobs:
   run-bvt-gcc11:
     name: run bvt with g++ 11
     uses: ./.github/workflows/bvt-gcc11.yml
-    with:
-      branch: main
 
   run-bvt-clang15:
     name: run bvt with clang 15
     uses: ./.github/workflows/bvt-clang15.yml
-    with:
-      branch: main
 
   run-bvt-msvc14:
     name: run bvt with msvc14 (vs2022)
     uses: ./.github/workflows/bvt-msvc14.yml
-    with:
-      branch: main
