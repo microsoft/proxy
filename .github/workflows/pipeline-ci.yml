@@ -2,9 +2,9 @@ name: Proxy-CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, release/**]
   pull_request:
-    branches: [ main ]
+    branches: [ main, release/**]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
