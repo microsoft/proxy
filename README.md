@@ -72,6 +72,34 @@ Please find more details and discussions in the spec. The complete version of th
 | gcc | 11.2 | -std=c++20 |
 | MSVC | 19.30 | /std:c++20 |
 
+## Use `proxy` with CMake and [Vcpkg](https://github.com/microsoft/vcpkg)
+
+See more details in [samples](./samples)
+
+1. Set up vcpkg manifest
+```
+{
+  "name": "<project_name>",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "name": "proxy"
+    }
+  ]
+}
+```
+
+2. Integrate `proxy` in CMakeLists.txt
+```
+find_package(proxy CONFIG REQUIRED)
+target_link_libraries(<target_name> PRIVATE msft_proxy)
+```
+
+3. Run CMake with vcpkg toolchain file
+```
+cmake <source_dir> -B <build_dir> -DCMAKE_TOOLCHAIN_FILE=<vcpkg_dir>/scripts/buildsystems/vcpkg.cmake
+```
+
 ## Build and run tests with CMake
 
 ```
