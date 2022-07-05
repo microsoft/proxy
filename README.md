@@ -2,19 +2,21 @@
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
-Do you want to save your effort in lifetime management and architecture maintenance of polymorphic objects in C++?
+Do you want to facilitate lifetime management and maintenance of polymorphic objects in C++?
 
-Do you want to be able to write polymorphic code in C++ as easily as in those languages with GC (like Java or C#), while still having excellent runtime performance?
+Do you want to be able to write polymorphic code in C++ as easily as in languages with GC (like Java or C#), while still having excellent runtime performance?
 
-Have you tried other polymorphic programming libraries in C++ but found them somewhat deficient?
+Have you tried other polymorphic programming libraries in C++ but found them deficient?
 
 If so, this library is for you. 😉
 
-The "proxy" is a C++ library that Microsoft uses to make runtime polymorphism easier to implement, both in architecture design and runtime performance. Please find the design details at https://wg21.link/p0957.
+The "proxy" is a single-header, cross-platform C++ library that Microsoft uses to make runtime polymorphism easier to implement and faster. Please find the design details at https://wg21.link/p0957.
 
 ## Quick start
 
-This is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
+The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.info](https://vcpkg.info/port/proxy)).
+
+All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
 ```cpp
 // Abstraction
@@ -70,7 +72,7 @@ Please find more details and discussions in the spec. The complete version of th
 | gcc | 11.2 | -std=c++20 |
 | MSVC | 19.30 | /std:c++20 |
 
-## Build with CMake
+## Build and run tests with CMake
 
 ```
 git clone https://github.com/microsoft/proxy.git
