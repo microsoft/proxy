@@ -79,7 +79,7 @@ See more details in [samples](./samples)
 1. Set up vcpkg manifest
 ```
 {
-  "name": "demo",
+  "name": "<project_name>",
   "version": "0.1.0",
   "dependencies": [
     {
@@ -92,12 +92,12 @@ See more details in [samples](./samples)
 2. Integrate `proxy` in CMakeLists.txt
 ```
 find_package(proxy CONFIG REQUIRED)
-target_link_libraries(demo PRIVATE msft_proxy)
+target_link_libraries(<target_name> PRIVATE msft_proxy)
 ```
 
 3. Run CMake with vcpkg toolchain file
 ```
-cmake <demo_dir> -B <build_dir> -DCMAKE_TOOLCHAIN_FILE=<vcpkg_dir>/scripts/buildsystems/vcpkg.cmake
+cmake <source_dir> -B <build_dir> -DCMAKE_TOOLCHAIN_FILE=<vcpkg_dir>/scripts/buildsystems/vcpkg.cmake
 ```
 
 ## Build and run tests with CMake
