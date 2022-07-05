@@ -72,11 +72,11 @@ Please find more details and discussions in the spec. The complete version of th
 | gcc | 11.2 | -std=c++20 |
 | MSVC | 19.30 | /std:c++20 |
 
-## Use `proxy` in CMake with [Vcpkg](https://github.com/microsoft/vcpkg)
+## Use `proxy` with CMake and [Vcpkg](https://github.com/microsoft/vcpkg)
 
-See more details in [demo - proxy_at_vcpkg](./demo/proxy_at_vcpkg/)
+See more details in [samples](./samples)
 
-1. Setup vcpkg manifest
+1. Set up vcpkg manifest
 ```
 {
   "name": "demo",
@@ -89,7 +89,7 @@ See more details in [demo - proxy_at_vcpkg](./demo/proxy_at_vcpkg/)
 }
 ```
 
-2. Reference `proxy` in CMakeLists.txt
+2. Integrate `proxy` in CMakeLists.txt
 ```
 find_package(proxy CONFIG REQUIRED)
 target_link_libraries(demo PRIVATE msft_proxy)
