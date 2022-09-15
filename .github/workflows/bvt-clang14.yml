@@ -6,7 +6,7 @@ on:
         required: false
 
 jobs:
-  bvt-clang15:
+  bvt-clang14:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
