@@ -44,10 +44,10 @@ jobs:
     with:
       branch: release/${{ github.event.inputs.version }}
 
-  run-bvt-clang15:
+  run-bvt-clang14:
     needs: prepare-release
-    name: run bvt with clang 15
-    uses: ./.github/workflows/bvt-clang15.yml
+    name: run bvt with clang 14
+    uses: ./.github/workflows/bvt-clang14.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
@@ -60,7 +60,7 @@ jobs:
 
   draft-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc11, run-bvt-clang15, run-bvt-msvc14]
+    needs: [run-bvt-gcc11, run-bvt-clang14, run-bvt-msvc14]
     steps:
     - uses: actions/checkout@v3
       with:
