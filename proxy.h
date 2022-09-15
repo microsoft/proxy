@@ -82,9 +82,9 @@ consteval bool has_destructibility(constraint_level level) {
 }
 
 template <class P> struct pointer_traits : inapplicable_traits {};
-template <class P> requires(requires(P ptr) { { *ptr }; })
+template <class P> requires(requires(const P& ptr) { { *ptr }; })
 struct pointer_traits<P> : applicable_traits
-    { using value_type = decltype(*std::declval<P&>()); };
+    { using value_type = decltype(*std::declval<const P&>()); };
 
 template <class T, class... Us> struct contains_traits : inapplicable_traits {};
 template <class T, class... Us>
@@ -99,14 +99,15 @@ template <class D, class Args>
 struct dispatch_traits_impl : inapplicable_traits {};
 template <class D, class... Args>
 struct dispatch_traits_impl<D, std::tuple<Args...>> : applicable_traits {
-  using dispatcher_type = typename D::return_type (*)(char*, Args...);
+  using dispatcher_type = typename D::return_type (*)(const char*, Args...);
 
   template <class T>
   static constexpr bool applicable_operand = requires(T operand, Args... args)
       { { D{}(std::forward<T>(operand), std::forward<Args>(args)...) }; };
   template <class P>
-  static typename D::return_type dispatcher(char* p, Args... args)
-      { return D{}(**reinterpret_cast<P*>(p), std::forward<Args>(args)...); }
+  static typename D::return_type dispatcher(const char* p, Args... args) {
+    return D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+  }
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D> requires(requires {
@@ -442,7 +443,7 @@ class proxy {
     return *reinterpret_cast<P*>(ptr_);
   }
   template <class D = typename BasicTraits::default_dispatch, class... Args>
-  decltype(auto) invoke(Args&&... args)
+  decltype(auto) invoke(Args&&... args) const
       requires(details::dependent_t<Traits, D>::applicable &&
           BasicTraits::template has_dispatch<D> &&
           std::is_convertible_v<std::tuple<Args...>,
@@ -477,10 +478,10 @@ class sbo_ptr {
   sbo_ptr(sbo_ptr&&) noexcept(std::is_nothrow_move_constructible_v<T>)
       = default;
 
-  T& operator*() { return value_; }
+  T& operator*() const { return value_; }
 
  private:
-  T value_;
+  mutable T value_;
 };
 
 template <class T>
