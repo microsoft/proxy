@@ -13,14 +13,12 @@ jobs:
       with:
         ref: ${{ inputs.branch }}
 
-    - name: install clang 15
+    - name: install clang 14
       run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo sh -c 'echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main" >> /etc/apt/sources.list'
         sudo apt update
-        sudo apt install -y clang-15
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 15
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 15
+        sudo apt install -y clang-14
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-14 14
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-14 14
 
     - name: check compiler version
       run: g++ --version
