@@ -1,0 +1,34 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
+
+jobs:
+  bvt-clang15:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.branch }}
+
+    - name: install clang 14
+      run: |
+        sudo apt update
+        sudo apt install -y clang-14
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-14 14
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-14 14
+
+    - name: check compiler version
+      run: g++ --version
+
+    - name: build with cmake
+      run: |
+        cmake . -B build
+        cmake --build ./build -j8
+
+    - name: run tests
+      run: |
+        cd ./build
+        ctest -j8
