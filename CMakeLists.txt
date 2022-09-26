@@ -18,7 +18,8 @@ install(EXPORT proxyConfig DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy)
 export(TARGETS msft_proxy FILE proxyConfig.cmake)
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(proxyConfigVersion.cmake
-                                 COMPATIBILITY SameMajorVersion)
+                                 COMPATIBILITY SameMajorVersion
+                                 ARCH_INDEPENDENT)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxyConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy)
 
