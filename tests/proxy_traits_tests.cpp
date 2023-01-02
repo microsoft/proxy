@@ -107,7 +107,6 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<CopyableSmallFacade>, Mock
 static_assert(!std::is_constructible_v<pro::proxy<CopyableSmallFacade>, MockTrivialPtr>);
 static_assert(!std::is_assignable_v<pro::proxy<CopyableSmallFacade>, MockTrivialPtr>);
 
-#ifndef __clang__
 struct TrivialFacade : pro::facade<> {
   static constexpr auto minimum_copyability = pro::constraint_level::trivial;
   static constexpr auto minimum_relocatability = pro::constraint_level::trivial;
@@ -132,6 +131,5 @@ static_assert(!std::is_constructible_v<pro::proxy<TrivialFacade>, MockCopyableSm
 static_assert(!std::is_assignable_v<pro::proxy<TrivialFacade>, MockCopyableSmallPtr>);
 static_assert(std::is_nothrow_constructible_v<pro::proxy<TrivialFacade>, MockTrivialPtr>);
 static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockTrivialPtr>);
-#endif  // __clang__
 
 }  // namespace
