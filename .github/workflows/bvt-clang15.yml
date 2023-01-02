@@ -6,19 +6,19 @@ on:
         required: false
 
 jobs:
-  bvt-clang14:
+  bvt-clang15:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
       with:
         ref: ${{ inputs.branch }}
 
-    - name: install clang 14
+    - name: install clang 15
       run: |
         sudo apt update
-        sudo apt install -y clang-14
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-14 14
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-14 14
+        sudo apt install -y clang-15
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 15
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 15
 
     - name: check compiler version
       run: g++ --version

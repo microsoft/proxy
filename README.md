@@ -62,13 +62,13 @@ pro::proxy<DrawableFacade> CreateRectangleAsDrawable(int width, int height) {
 }
 ```
 
-Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp).
+Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/5a3jeE1M8)).
 
 ## Minimum requirements for compilers
 
 | Family | Minimum version | Required flags |
 | --- | --- | --- |
-| clang | 13.0.0 | -std=c++20 |
+| clang | 15.0.0 | -std=c++20 |
 | gcc | 11.2 | -std=c++20 |
 | MSVC | 19.30 | /std:c++20 |
 
@@ -110,10 +110,6 @@ cmake --build ./build -j8
 cd ./build
 ctest -j8
 ```
-
-## Known issues
-
-We did not notice a bug when testing with gcc or MSVC, but clang will fail to compile if the `minimum_destructibility` is set to `constraint_level::trivial` in a facade definition. The root cause of this failure is that the implementation requires the language feature defined in [P0848R3: Conditionally Trivial Special Member Functions](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0848r3.html), but it has not been implemented in clang, according to its [documentation](https://clang.llvm.org/cxx_status.html) for the time being.
 
 ## Contributing
 

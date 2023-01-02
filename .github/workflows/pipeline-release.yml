@@ -44,10 +44,10 @@ jobs:
     with:
       branch: release/${{ github.event.inputs.version }}
 
-  run-bvt-clang14:
+  run-bvt-clang15:
     needs: prepare-release
-    name: run bvt with clang 14
-    uses: ./.github/workflows/bvt-clang14.yml
+    name: run bvt with clang 15
+    uses: ./.github/workflows/bvt-clang15.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
