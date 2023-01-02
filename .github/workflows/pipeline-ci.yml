@@ -15,9 +15,9 @@ jobs:
     uses: ./.github/workflows/bvt-gcc11.yml
     name: run bvt with g++ 11
 
-  run-bvt-clang14:
-    uses: ./.github/workflows/bvt-clang14.yml
-    name: run bvt with clang 14
+  run-bvt-clang15:
+    uses: ./.github/workflows/bvt-clang15.yml
+    name: run bvt with clang 15
 
   run-bvt-msvc14:
     uses: ./.github/workflows/bvt-msvc14.yml
