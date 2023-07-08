@@ -641,10 +641,15 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToSelf) {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wself-move"
+#elif defined(__GNUC__) && __GNUC__ >= 13
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-move"
 #endif  // __clang__
     p = std::move(p);
 #ifdef __clang__
 #pragma clang diagnostic pop
+#elif defined(__GNUC__) && __GNUC__ >= 13
+#pragma GCC diagnostic pop
 #endif  // __clang__
     ASSERT_FALSE(p.has_value());
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -693,10 +698,15 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromNull_ToSelf) {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wself-move"
+#elif defined(__GNUC__) && __GNUC__ >= 13
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-move"
 #endif  // __clang__
   p = std::move(p);
 #ifdef __clang__
 #pragma clang diagnostic pop
+#elif defined(__GNUC__) && __GNUC__ >= 13
+#pragma GCC diagnostic pop
 #endif  // __clang__
   ASSERT_FALSE(p.has_value());
 }
