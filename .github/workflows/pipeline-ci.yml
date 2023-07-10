@@ -11,9 +11,9 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  run-bvt-gcc11:
-    uses: ./.github/workflows/bvt-gcc11.yml
-    name: run bvt with g++ 11
+  run-bvt-gcc13:
+    uses: ./.github/workflows/bvt-gcc13.yml
+    name: run bvt with g++ 13
 
   run-bvt-clang15:
     uses: ./.github/workflows/bvt-clang15.yml
