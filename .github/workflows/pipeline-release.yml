@@ -37,10 +37,10 @@ jobs:
         git push origin release/${{ github.event.inputs.version }}
         git push origin ${{ github.event.inputs.version }}
 
-  run-bvt-gcc11:
+  run-bvt-gcc13:
     needs: prepare-release
-    name: run bvt with g++ 11
-    uses: ./.github/workflows/bvt-gcc11.yml
+    name: run bvt with g++ 13
+    uses: ./.github/workflows/bvt-gcc13.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
