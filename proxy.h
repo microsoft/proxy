@@ -134,7 +134,7 @@ template <class Os, std::size_t... Is>
 struct overload_resolution_traits_impl<Os, std::index_sequence<Is...>> {
  private:
   template <std::size_t I>
-  using single_resolver = overload_traits<std::tuple_element_t<I, Os>>
+  using single_resolver = typename overload_traits<std::tuple_element_t<I, Os>>
       ::template resolver<std::integral_constant<std::size_t, I>>;
 
  public:
