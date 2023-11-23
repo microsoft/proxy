@@ -117,7 +117,7 @@ template <class R, class... Args>
 struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
   template <class T>
-  struct resolver { T operator()(Args&&...); };
+  struct resolver { T operator()(Args...); };
 
   template <class D, class T>
   static constexpr bool applicable_operand = requires(T operand, Args... args)
