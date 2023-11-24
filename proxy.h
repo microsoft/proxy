@@ -495,8 +495,8 @@ class proxy {
   decltype(auto) operator()(Args&&... args) const
       requires(!std::is_void_v<DefaultDispatch> &&
           details::dependent_t<Traits, Args...>::applicable &&
-          details::dispatch_traits<DefaultDispatch>
-              ::template has_overload<Args...>)
+          details::dependent_t<details::dispatch_traits<DefaultDispatch>
+              , Args...>::template has_overload<Args...>)
       { return invoke(std::forward<Args>(args)...); }
 
  private:
