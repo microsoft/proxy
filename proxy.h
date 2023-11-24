@@ -128,32 +128,33 @@ struct overload_traits<R(Args...)> : applicable_traits {
   }
 };
 
-template <class Os, class Is>
-struct overload_resolution_traits_impl;
+template <class Os, class Is> struct dispatch_traits_overload_resolution_impl;
 template <class Os, std::size_t... Is>
-struct overload_resolution_traits_impl<Os, std::index_sequence<Is...>> {
+struct dispatch_traits_overload_resolution_impl<
+    Os, std::index_sequence<Is...>> {
  private:
   template <std::size_t I>
   using single_resolver = typename overload_traits<std::tuple_element_t<I, Os>>
       ::template resolver<std::integral_constant<std::size_t, I>>;
-
- public:
   struct resolver : single_resolver<Is>...
       { using single_resolver<Is>::operator()...; };
-};
-template <class Os>
-struct overload_resolution_traits : overload_resolution_traits_impl<
-    Os, std::make_index_sequence<std::tuple_size_v<Os>>> {};
 
+ public:
+  template <class... Args>
+  static constexpr bool has_overload = std::is_invocable_v<resolver, Args...>;
+  template <class... Args>
+  static constexpr std::size_t overload_index =
+      std::invoke_result_t<resolver, Args...>::value;
+};
 template <class D, class Os>
 struct dispatch_traits_impl : inapplicable_traits {};
 template <class D, class... Os>
     requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
-struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
+struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
+    dispatch_traits_overload_resolution_impl<std::tuple<Os...>,
+        std::make_index_sequence<sizeof...(Os)>> {
   using dispatcher_types =
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
-  using overload_resolver =
-      typename overload_resolution_traits<std::tuple<Os...>>::resolver;
 
   template <class T>
   static constexpr bool applicable_operand =
@@ -281,9 +282,9 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
 template <class F> struct facade_traits : facade_traits_impl<
     F, typename flattening_traits<typename F::dispatch_types>::type> {};
 
-template <class T, class U> struct dependent_traits { using type = T; };
-template <class T, class U>
-using dependent_t = typename dependent_traits<T, U>::type;
+template <class T, class...> struct dependent_traits { using type = T; };
+template <class T, class... U>
+using dependent_t = typename dependent_traits<T, U...>::type;
 
 }  // namespace details
 
@@ -297,6 +298,7 @@ template <class F> requires(details::basic_facade_traits<F>::applicable)
 class proxy {
   using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
+  using DefaultDispatch = typename BasicTraits::default_dispatch;
 
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyConstructor = std::conditional_t<
@@ -476,20 +478,26 @@ class proxy {
     initialize<P>(il, std::forward<Args>(args)...);
     return *reinterpret_cast<P*>(ptr_);
   }
-  template <class D = typename BasicTraits::default_dispatch, class... Args>
+  template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
-      requires(details::dependent_t<Traits, D>::applicable &&
-          BasicTraits::template has_dispatch<D> &&
-          std::is_invocable_v<typename details::dispatch_traits<D>
-              ::overload_resolver, Args...>) {
-    constexpr auto OverloadIndex = decltype(typename details::dispatch_traits<D>
-        ::overload_resolver{}(std::forward<Args>(args)...))::value;
-    const auto& dispatchers =
-        static_cast<const typename Traits::meta_type*>(meta_)
-        ->template dispatch_meta<D>::dispatchers;
+      requires(BasicTraits::template has_dispatch<D> &&
+          details::dependent_t<Traits, Args...>::applicable &&
+          details::dispatch_traits<D>::template has_overload<Args...>) {
+    constexpr std::size_t OverloadIndex =
+        details::dispatch_traits<D>::template overload_index<Args...>;
+    const auto& dispatchers = static_cast<const typename Traits::meta_type*>(
+        meta_)->template dispatch_meta<D>::dispatchers;
     const auto& dispatcher = std::get<OverloadIndex>(dispatchers);
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
+
+  template <class... Args>
+  decltype(auto) operator()(Args&&... args) const
+      requires(!std::is_void_v<DefaultDispatch> &&
+          details::dependent_t<Traits, Args...>::applicable &&
+          details::dispatch_traits<DefaultDispatch>
+              ::template has_overload<Args...>)
+      { return invoke(std::forward<Args>(args)...); }
 
  private:
   template <class P, class... Args>
