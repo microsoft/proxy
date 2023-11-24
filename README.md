@@ -21,12 +21,10 @@ All the facilities of the library are defined in namespace `pro`. The 3 major cl
 ```cpp
 // Abstraction
 struct Draw : pro::dispatch<void(std::ostream&)> {
-  template <class T>
-  void operator()(const T& self, std::ostream& out) { self.Draw(out); }
+  void operator()(const auto& self, std::ostream& out) { self.Draw(out); }
 };
 struct Area : pro::dispatch<double()> {
-  template <class T>
-  double operator()(const T& self) { return self.Area(); }
+  double operator()(const auto& self) { return self.Area(); }
 };
 struct DrawableFacade : pro::facade<Draw, Area> {};
 
