@@ -13,7 +13,7 @@
 namespace {
 
 template <class... Os>
-struct Call : pro::dispatch<std::tuple<Os...>> {
+struct Call : pro::dispatch<Os...> {
   template <class T, class... Args> requires(std::is_invocable_v<T, Args...>)
   decltype(auto) operator()(T& self, Args&&... args)
       { return self(std::forward<Args>(args)...); }
@@ -21,7 +21,7 @@ struct Call : pro::dispatch<std::tuple<Os...>> {
 template <class... Os>
 struct CallableFacade : pro::facade<Call<Os...>> {};
 
-struct GetSize : pro::dispatch<std::size_t(), std::ranges::size> {};
+struct GetSize : pro::dispatch_adaptor<std::ranges::size, std::size_t()> {};
 
 template <class T>
 struct ForEach : pro::dispatch<void(pro::proxy<CallableFacade<void(T&)>>)> {

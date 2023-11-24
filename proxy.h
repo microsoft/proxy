@@ -15,10 +15,10 @@ namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
-template <class Os, auto CPO = nullptr>
-struct dispatch {
-  using overload_types = Os;
-
+template <class... Os>
+struct dispatch { using overload_types = std::tuple<Os...>; };
+template <auto CPO, class... Os>
+struct dispatch_adaptor : dispatch<Os...> {
   template <class T, class... Args>
       requires(std::is_invocable_v<decltype(CPO)&, T, Args...>)
   constexpr decltype(auto) operator()(T&& value, Args&&... args) const
