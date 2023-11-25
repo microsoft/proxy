@@ -109,7 +109,7 @@ struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
     typename flattening_traits<T>::type,
     typename flattening_traits<std::tuple<Ts...>>::type> {};
 
-template <class... U> struct default_traits { using type = void; };
+template <class... Ts> struct default_traits { using type = void; };
 template <class T> struct default_traits<T> { using type = T; };
 
 template <class O> struct overload_traits : inapplicable_traits {};
@@ -282,8 +282,8 @@ template <class F> struct facade_traits : facade_traits_impl<
     F, typename flattening_traits<typename F::dispatch_types>::type> {};
 
 template <class T, class...> struct dependent_traits { using type = T; };
-template <class T, class... U>
-using dependent_t = typename dependent_traits<T, U...>::type;
+template <class T, class... Us>
+using dependent_t = typename dependent_traits<T, Us...>::type;
 
 }  // namespace details
 
