@@ -5,10 +5,8 @@
 
 #include <proxy/proxy.h>
 
-struct at : pro::dispatch<std::string(int)> {
-  auto operator()(const auto& self, int key) { return self.at(key); }
-};
-struct resource_dictionary : pro::facade<at> {};
+DEFINE_MEMBER_DISPATCH(at, at, std::string(int));
+DEFINE_FACADE(resource_dictionary, at);
 
 void demo_print(pro::proxy<resource_dictionary> dictionary) {
   std::cout << dictionary(1) << std::endl;

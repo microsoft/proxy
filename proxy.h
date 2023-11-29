@@ -15,28 +15,6 @@ namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
-template <class... Os>
-struct dispatch { using overload_types = std::tuple<Os...>; };
-template <auto CPO, class... Os>
-struct dispatch_adaptor : dispatch<Os...> {
-  template <class T, class... Args>
-      requires(std::is_invocable_v<decltype(CPO)&, T, Args...>)
-  constexpr decltype(auto) operator()(T&& value, Args&&... args) const
-      { return CPO(std::forward<T>(value), std::forward<Args>(args)...); }
-};
-
-template <class... Ds>
-struct facade {
-  using dispatch_types = std::tuple<Ds...>;
-  using reflection_type = void;
-  static constexpr std::size_t maximum_size = sizeof(void*) * 2u;
-  static constexpr std::size_t maximum_alignment = alignof(void*);
-  static constexpr auto minimum_copyability = constraint_level::none;
-  static constexpr auto minimum_relocatability = constraint_level::nothrow;
-  static constexpr auto minimum_destructibility = constraint_level::nothrow;
-  facade() = delete;
-};
-
 namespace details {
 
 struct applicable_traits { static constexpr bool applicable = true; };
@@ -123,7 +101,11 @@ struct overload_traits<R(Args...)> : applicable_traits {
       { { D{}(std::forward<T>(operand), std::forward<Args>(args)...) }; };
   template <class D, class P>
   static R dispatcher(const char* p, Args... args) {
-    return D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+    if constexpr (std::is_void_v<R>) {
+      D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+    } else {
+      return D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+    }
   }
 };
 
@@ -566,6 +548,49 @@ proxy<F> make_proxy(T&& value) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
 
+template <class... Os>
+struct dispatch { using overload_types = std::tuple<Os...>; };
+
+template <class... Ds>
+struct facade {
+  using dispatch_types = std::tuple<Ds...>;
+  using reflection_type = void;
+  static constexpr std::size_t maximum_size = sizeof(void*) * 2u;
+  static constexpr std::size_t maximum_alignment = alignof(void*);
+  static constexpr auto minimum_copyability = constraint_level::none;
+  static constexpr auto minimum_relocatability = constraint_level::nothrow;
+  static constexpr auto minimum_destructibility = constraint_level::nothrow;
+  facade() = delete;
+};
+
 }  // namespace pro
+
+// The following macros facilitate definition of dispatch and facade types
+#define DEFINE_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
+    struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
+      template <class T, class... Args> \
+      decltype(auto) operator()(T&& value, Args&&... args) \
+          requires(requires{\
+              std::forward<T>(value).__FUNC(std::forward<Args>(args)...); }) { \
+        return std::forward<T>(value).__FUNC(std::forward<Args>(args)...); \
+      } \
+    }
+#define DEFINE_FREE_DISPATCH(__NAME, __FUNC, ...) \
+    struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
+      template <class T, class... Args> \
+      decltype(auto) operator()(T&& value, Args&&... args) \
+          requires(requires{\
+              __FUNC(std::forward<T>(value), std::forward<Args>(args)...); }) { \
+        return __FUNC(std::forward<T>(value), std::forward<Args>(args)...); \
+      } \
+    }
+
+#define DEFINE_FACADE(__NAME, ...) \
+    struct __NAME : ::pro::facade<__VA_ARGS__> {}
+#define DEFINE_COPYABLE_FACADE(__NAME, ...) \
+    struct __NAME : ::pro::facade<__VA_ARGS__> { \
+      static constexpr auto minimum_copyability = \
+          pro::constraint_level::nontrivial; \
+    }
 
 #endif  // _MSFT_PROXY_

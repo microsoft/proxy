@@ -80,13 +80,14 @@ class LifetimeTracker {
   std::vector<LifetimeOperation> ops_;
 };
 
-struct ToString : pro::dispatch<std::string()> {
-  template <class T>
-  std::string operator()(const T& self) {
-    using std::to_string;
-    return to_string(self);
-  }
-};
+namespace details {
+
+using std::to_string;
+DEFINE_FREE_DISPATCH(ToString, to_string, std::string());
+
+} // namespace details
+
+using details::ToString;
 
 }  // namespace utils
 

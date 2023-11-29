@@ -13,16 +13,9 @@
 
 namespace {
 
-struct Draw : pro::dispatch<void(std::ostream&)> {
-  template <class T>
-  void operator()(const T& self, std::ostream& out) { self.Draw(out); }
-};
-struct Area : pro::dispatch<double()> {
-  template <class T>
-  double operator()(const T& self) { return self.Area(); }
-};
-
-struct DrawableFacade : pro::facade<Draw, Area> {};
+DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
+DEFINE_MEMBER_DISPATCH(Area, Area, double());
+DEFINE_FACADE(DrawableFacade, Draw, Area);
 
 class Rectangle {
  public:

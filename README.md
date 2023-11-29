@@ -16,17 +16,14 @@ The "proxy" is a single-header, cross-platform C++ library that Microsoft uses t
 
 The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.info](https://vcpkg.info/port/proxy)).
 
-All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
+All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Some macros are defined (currently not in the proposal of standardization) to facilitate definition of `dispatch`es and `facade`s. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
 ```cpp
 // Abstraction
-struct Draw : pro::dispatch<void(std::ostream&)> {
-  void operator()(const auto& self, std::ostream& out) { self.Draw(out); }
-};
-struct Area : pro::dispatch<double()> {
-  double operator()(const auto& self) { return self.Area(); }
-};
-struct DrawableFacade : pro::facade<Draw, Area> {};
+
+DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
+DEFINE_MEMBER_DISPATCH(Area, Area, double());
+DEFINE_FACADE(DrawableFacade, Draw, Area);
 
 // Implementation
 class Rectangle {

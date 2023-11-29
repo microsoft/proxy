@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <list>
 #include <ranges>
 #include <string>
@@ -13,31 +14,20 @@
 namespace {
 
 template <class... Os>
-struct Call : pro::dispatch<Os...> {
-  template <class T, class... Args> requires(std::is_invocable_v<T, Args...>)
-  decltype(auto) operator()(T& self, Args&&... args)
-      { return self(std::forward<Args>(args)...); }
-};
+DEFINE_MEMBER_DISPATCH(Call, operator(), Os...);
 template <class... Os>
-struct CallableFacade : pro::facade<Call<Os...>> {};
+DEFINE_COPYABLE_FACADE(CallableFacade, Call<Os...>);
 
-struct GetSize : pro::dispatch_adaptor<std::ranges::size, std::size_t()> {};
+DEFINE_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
 
 template <class T>
-struct ForEach : pro::dispatch<void(pro::proxy<CallableFacade<void(T&)>>)> {
-  template <class U>
-  void operator()(U& self, pro::proxy<CallableFacade<void(T&)>>&& func) {
-    for (auto& value : self) {
-      func(value);
-    }
-  }
-};
+DEFINE_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<CallableFacade<void(T&)>>));
 template <class T>
-struct IterableFacade : pro::facade<ForEach<T>, GetSize> {};
+DEFINE_FACADE(IterableFacade, ForEach<T>, GetSize);
 
 template <class T> struct Append;
 template <class T>
-struct ContainerFacade : pro::facade<ForEach<T>, GetSize, Append<T>> {};
+DEFINE_FACADE(ContainerFacade, ForEach<T>, GetSize, Append<T>);
 template <class T>
 struct Append : pro::dispatch<pro::proxy<ContainerFacade<T>>(T)> {
   template <class U>
