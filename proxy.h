@@ -568,20 +568,22 @@ struct facade {
 // The following macros facilitate definition of dispatch and facade types
 #define DEFINE_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
     struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
-      template <class T, class... Args> \
-      decltype(auto) operator()(T&& value, Args&&... args) \
-          requires(requires{\
-              std::forward<T>(value).__FUNC(std::forward<Args>(args)...); }) { \
-        return std::forward<T>(value).__FUNC(std::forward<Args>(args)...); \
+      template <class __T, class... __Args> \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+          requires(requires{ std::forward<__T>(__self) \
+              .__FUNC(std::forward<__Args>(__args)...); }) { \
+        return std::forward<__T>(__self) \
+            .__FUNC(std::forward<__Args>(__args)...); \
       } \
     }
 #define DEFINE_FREE_DISPATCH(__NAME, __FUNC, ...) \
     struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
-      template <class T, class... Args> \
-      decltype(auto) operator()(T&& value, Args&&... args) \
-          requires(requires{\
-              __FUNC(std::forward<T>(value), std::forward<Args>(args)...); }) { \
-        return __FUNC(std::forward<T>(value), std::forward<Args>(args)...); \
+      template <class __T, class... __Args> \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+          requires(requires{ __FUNC(std::forward<__T>(__self), \
+              std::forward<__Args>(__args)...); }) { \
+        return __FUNC(std::forward<__T>(__self), \
+            std::forward<__Args>(__args)...); \
       } \
     }
 
