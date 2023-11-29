@@ -80,14 +80,12 @@ class LifetimeTracker {
   std::vector<LifetimeOperation> ops_;
 };
 
-namespace details {
+namespace poly {
 
 using std::to_string;
 DEFINE_FREE_DISPATCH(ToString, to_string, std::string());
 
-} // namespace details
-
-using details::ToString;
+}  // namespace poly
 
 }  // namespace utils
 

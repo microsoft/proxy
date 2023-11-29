@@ -19,11 +19,14 @@ The "proxy" is a header-only C++20 library. Once you set the language level of y
 All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Some macros are defined (currently not in the proposal of standardization) to facilitate definition of `dispatch`es and `facade`s. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
 ```cpp
-// Abstraction
+// Abstraction (poly is short for polymorphism)
+namespace poly {
 
 DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
 DEFINE_MEMBER_DISPATCH(Area, Area, double());
-DEFINE_FACADE(DrawableFacade, Draw, Area);
+DEFINE_FACADE(Drawable, Draw, Area);
+
+}  // namespace poly
 
 // Implementation
 class Rectangle {
@@ -40,20 +43,20 @@ class Rectangle {
 };
 
 // Client - Consumer
-std::string PrintDrawableToString(pro::proxy<DrawableFacade> p) {
+std::string PrintDrawableToString(pro::proxy<poly::Drawable> p) {
   std::stringstream result;
   result << "shape = ";
-  p.invoke<Draw>(result);
-  result << ", area = " << p.invoke<Area>();
+  p.invoke<poly::Draw>(result);
+  result << ", area = " << p.invoke<poly::Area>();
   return std::move(result).str();
 }
 
 // Client - Producer
-pro::proxy<DrawableFacade> CreateRectangleAsDrawable(int width, int height) {
+pro::proxy<poly::Drawable> CreateRectangleAsDrawable(int width, int height) {
   Rectangle rect;
   rect.SetWidth(width);
   rect.SetHeight(height);
-  return pro::make_proxy<DrawableFacade>(rect);
+  return pro::make_proxy<poly::Drawable>(rect);
 }
 ```
 

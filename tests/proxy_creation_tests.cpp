@@ -7,27 +7,31 @@
 
 namespace {
 
-struct TraitsReflection {
+namespace poly {
+
+struct SboObserver {
  public:
   template <class P>
-  constexpr explicit TraitsReflection(std::in_place_type_t<pro::details::sbo_ptr<P>>)
-      : sbo_enabled_(true) {}
+  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<P>>)
+      : SboEnabled(true) {}
   template <class P>
-  constexpr explicit TraitsReflection(std::in_place_type_t<pro::details::deep_ptr<P>>)
-    : sbo_enabled_(false) {}
+  constexpr explicit SboObserver(std::in_place_type_t<P>)
+      : SboEnabled(false) {}
 
-  bool sbo_enabled_;
+  bool SboEnabled;
 };
 
-struct TestSmallFacade : pro::facade<utils::ToString> {
-  using reflection_type = TraitsReflection;
+struct TestSmallStringable : pro::facade<utils::poly::ToString> {
+  using reflection_type = SboObserver;
   static constexpr std::size_t maximum_size = sizeof(void*);
   static constexpr auto minimum_copyability = pro::constraint_level::nontrivial;
 };
-struct TestLargeFacade : pro::facade<utils::ToString> {
-  using reflection_type = TraitsReflection;
+struct TestLargeStringable : pro::facade<utils::poly::ToString> {
+  using reflection_type = SboObserver;
   static constexpr auto minimum_copyability = pro::constraint_level::nontrivial;
 };
+
+}  // namespace poly
 
 }  // namespace
 
@@ -37,10 +41,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::make_proxy<TestLargeFacade>(session);
+    auto p = pro::make_proxy<poly::TestLargeStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 2");
-    ASSERT_TRUE(p.reflect().sbo_enabled_);
+    ASSERT_TRUE(p.reflect().SboEnabled);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -52,10 +56,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<TestLargeFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p = pro::make_proxy<poly::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
-    ASSERT_TRUE(p.reflect().sbo_enabled_);
+    ASSERT_TRUE(p.reflect().SboEnabled);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -67,10 +71,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<TestLargeFacade, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy<poly::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
-    ASSERT_TRUE(p.reflect().sbo_enabled_);
+    ASSERT_TRUE(p.reflect().SboEnabled);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -82,15 +86,15 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<TestLargeFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<poly::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
     ASSERT_EQ(p1.invoke(), "Session 1");
-    ASSERT_TRUE(p1.reflect().sbo_enabled_);
+    ASSERT_TRUE(p1.reflect().SboEnabled);
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(p2.invoke(), "Session 2");
-    ASSERT_TRUE(p2.reflect().sbo_enabled_);
+    ASSERT_TRUE(p2.reflect().SboEnabled);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -103,13 +107,13 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<TestLargeFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<poly::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(p2.invoke(), "Session 2");
-    ASSERT_TRUE(p2.reflect().sbo_enabled_);
+    ASSERT_TRUE(p2.reflect().SboEnabled);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
@@ -124,10 +128,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::make_proxy<TestSmallFacade>(session);
+    auto p = pro::make_proxy<poly::TestSmallStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 2");
-    ASSERT_FALSE(p.reflect().sbo_enabled_);
+    ASSERT_FALSE(p.reflect().SboEnabled);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -139,10 +143,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<TestSmallFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p = pro::make_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
-    ASSERT_FALSE(p.reflect().sbo_enabled_);
+    ASSERT_FALSE(p.reflect().SboEnabled);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -154,10 +158,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<TestSmallFacade, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
-    ASSERT_FALSE(p.reflect().sbo_enabled_);
+    ASSERT_FALSE(p.reflect().SboEnabled);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -169,15 +173,15 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<TestSmallFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
     ASSERT_EQ(p1.invoke(), "Session 1");
-    ASSERT_FALSE(p1.reflect().sbo_enabled_);
+    ASSERT_FALSE(p1.reflect().SboEnabled);
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(p2.invoke(), "Session 2");
-    ASSERT_FALSE(p2.reflect().sbo_enabled_);
+    ASSERT_FALSE(p2.reflect().SboEnabled);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -190,13 +194,13 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<TestSmallFacade, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(p2.invoke(), "Session 1");
-    ASSERT_FALSE(p2.reflect().sbo_enabled_);
+    ASSERT_FALSE(p2.reflect().SboEnabled);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);

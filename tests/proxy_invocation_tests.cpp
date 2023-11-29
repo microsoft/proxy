@@ -13,29 +13,34 @@
 
 namespace {
 
+namespace poly {
+
 template <class... Os>
 DEFINE_MEMBER_DISPATCH(Call, operator(), Os...);
 template <class... Os>
-DEFINE_COPYABLE_FACADE(CallableFacade, Call<Os...>);
+DEFINE_COPYABLE_FACADE(Callable, Call<Os...>);
 
 DEFINE_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
 
 template <class T>
-DEFINE_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<CallableFacade<void(T&)>>));
+DEFINE_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<Callable<void(T&)>>));
 template <class T>
-DEFINE_FACADE(IterableFacade, ForEach<T>, GetSize);
+DEFINE_FACADE(Iterable, ForEach<T>, GetSize);
 
 template <class T> struct Append;
 template <class T>
-DEFINE_FACADE(ContainerFacade, ForEach<T>, GetSize, Append<T>);
+DEFINE_FACADE(Container, ForEach<T>, GetSize, Append<T>);
 template <class T>
-struct Append : pro::dispatch<pro::proxy<ContainerFacade<T>>(T)> {
+struct Append : pro::dispatch<pro::proxy<Container<T>>(T)> {
   template <class U>
-  pro::proxy<ContainerFacade<T>> operator()(U& self, T&& value) {
+  pro::proxy<Container<T>> operator()(U& self, T&& value) {
     self.push_back(std::move(value));
     return &self;
   }
 };
+
+}  // namespace poly
+
 
 template <class F, class D, class... Args>
 concept InvocableWithDispatch = requires(pro::proxy<F> p, Args... args)
@@ -44,17 +49,17 @@ template <class F, class... Args>
 concept InvocableWithoutDispatch = std::is_invocable_v<pro::proxy<F>, Args...>;
 
 // Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<CallableFacade<int(double)>, Call<int(double)>, double>);
-static_assert(!InvocableWithDispatch<CallableFacade<int(double)>, Call<int(double)>, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithoutDispatch<CallableFacade<int(double)>, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<CallableFacade<int(double)>, int(double), double>);  // Wrong dispatch
-static_assert(InvocableWithoutDispatch<CallableFacade<int(double)>, float>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, double>);
+static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithoutDispatch<poly::Callable<int(double)>, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, int(double), double>);  // Wrong dispatch
+static_assert(InvocableWithoutDispatch<poly::Callable<int(double)>, float>);  // Invoking without specifying a dispatch
 
 // Static assertions for a facade of multiple dispatches
-static_assert(InvocableWithDispatch<IterableFacade<int>, GetSize>);
-static_assert(!InvocableWithDispatch<IterableFacade<int>, ForEach<int>, pro::proxy<CallableFacade<void(double&)>>>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<IterableFacade<int>, Append<int>>);  // Wrong dispatch
-static_assert(!InvocableWithoutDispatch<IterableFacade<int>>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithDispatch<poly::Iterable<int>, poly::GetSize>);
+static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::ForEach<int>, pro::proxy<poly::Callable<void(double&)>>>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::Append<int>>);  // Wrong dispatch
+static_assert(!InvocableWithoutDispatch<poly::Iterable<int>>);  // Invoking without specifying a dispatch
 
 template <class... Args>
 std::vector<std::type_index> GetTypeIndices()
@@ -74,7 +79,7 @@ TEST(ProxyInvocationTests, TestArgumentForwarding) {
     arg2_received = std::move(v);
     return expected_result;
   };
-  pro::proxy<CallableFacade<int(std::string, std::vector<int>)>> p = &f;
+  pro::proxy<poly::Callable<int(std::string, std::vector<int>)>> p = &f;
   int result = p.invoke(arg1, std::move(arg2));
   ASSERT_TRUE(p.has_value());
   ASSERT_EQ(arg1_received, arg1);
@@ -87,7 +92,7 @@ TEST(ProxyInvocationTests, TestThrow) {
   const char* expected_error_message = "My exception";
   auto f = [&] { throw std::runtime_error{ expected_error_message }; };
   bool exception_thrown = false;
-  pro::proxy<CallableFacade<void()>> p = &f;
+  pro::proxy<poly::Callable<void()>> p = &f;
   try {
     p.invoke();
   } catch (const std::runtime_error& e) {
@@ -100,46 +105,46 @@ TEST(ProxyInvocationTests, TestThrow) {
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
   std::list<int> l = { 1, 2, 3 };
-  pro::proxy<IterableFacade<int>> p = &l;
-  ASSERT_EQ(p.invoke<GetSize>(), 3);
+  pro::proxy<poly::Iterable<int>> p = &l;
+  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<ForEach<int>>(&accumulate_sum);
+  p.invoke<poly::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
-  using SomeCombination = std::tuple<ForEach<int>, std::tuple<GetSize, ForEach<int>>>;
-  struct DuplicatedIterableFacade : pro::facade<
-      ForEach<int>, SomeCombination, ForEach<int>, GetSize, GetSize> {};
-  static_assert(sizeof(pro::details::facade_traits<DuplicatedIterableFacade>::meta_type) ==
-      sizeof(pro::details::facade_traits<IterableFacade<int>>::meta_type));
+  using SomeCombination = std::tuple<poly::ForEach<int>, std::tuple<poly::GetSize, poly::ForEach<int>>>;
+  struct DuplicatedIterable : pro::facade<
+      poly::ForEach<int>, SomeCombination, poly::ForEach<int>, poly::GetSize, poly::GetSize> {};
+  static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta_type) ==
+      sizeof(pro::details::facade_traits<poly::Iterable<int>>::meta_type));
   std::list<int> l = { 1, 2, 3 };
-  pro::proxy<DuplicatedIterableFacade> p = &l;
-  ASSERT_EQ(p.invoke<GetSize>(), 3);
+  pro::proxy<DuplicatedIterable> p = &l;
+  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<ForEach<int>>(&accumulate_sum);
+  p.invoke<poly::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   std::list<int> l = { 1, 2, 3 };
-  pro::proxy<ContainerFacade<int>> p = &l;
-  ASSERT_EQ(p.invoke<GetSize>(), 3);
+  pro::proxy<poly::Container<int>> p = &l;
+  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<ForEach<int>>(&accumulate_sum);
+  p.invoke<poly::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
-  p.invoke<Append<int>>(4).invoke<Append<int>>(5).invoke<Append<int>>(6);
-  ASSERT_EQ(p.invoke<GetSize>(), 6);
+  p.invoke<poly::Append<int>>(4).invoke<poly::Append<int>>(5).invoke<poly::Append<int>>(6);
+  ASSERT_EQ(p.invoke<poly::GetSize>(), 6);
   sum = 0;
-  p.invoke<ForEach<int>>(&accumulate_sum);
+  p.invoke<poly::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 21);
 }
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
-  struct TestFacade : CallableFacade<void(int), void(double), void(char*),
+  struct TestFacade : poly::Callable<void(int), void(double), void(char*),
       void(const char*), void(std::string, int)> {};
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<TestFacade>([&](auto&&... args)

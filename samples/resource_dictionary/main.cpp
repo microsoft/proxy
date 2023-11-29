@@ -5,10 +5,14 @@
 
 #include <proxy/proxy.h>
 
-DEFINE_MEMBER_DISPATCH(at, at, std::string(int));
-DEFINE_FACADE(resource_dictionary, at);
+namespace poly {
 
-void demo_print(pro::proxy<resource_dictionary> dictionary) {
+DEFINE_MEMBER_DISPATCH(At, at, std::string(int));
+DEFINE_FACADE(Dictionary, At);
+
+}  // namespace poly
+
+void demo_print(pro::proxy<poly::Dictionary> dictionary) {
   std::cout << dictionary(1) << std::endl;
 }
 
