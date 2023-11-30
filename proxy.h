@@ -6,6 +6,7 @@
 
 #include <concepts>
 #include <initializer_list>
+#include <memory>
 #include <new>
 #include <tuple>
 #include <type_traits>
@@ -58,10 +59,12 @@ consteval bool has_destructibility(constraint_level level) {
   }
 }
 
-template <class P> struct pointer_traits : inapplicable_traits {};
-template <class P> requires(requires(const P& ptr) { { *ptr }; })
-struct pointer_traits<P> : applicable_traits
-    { using value_type = decltype(*std::declval<const P&>()); };
+// As per std::to_address() wording in [pointer.conversion]
+template <class P>
+concept is_address_deducible =
+    (std::is_pointer_v<P> && !std::is_function_v<std::remove_pointer_t<P>>) ||
+    requires(P p) { std::pointer_traits<P>::to_address(p); } ||
+    requires(P p) { p.operator->(); };
 
 template <class T, class... Us> struct contains_traits : inapplicable_traits {};
 template <class T, class... Us>
@@ -96,15 +99,16 @@ struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
   template <class T> struct resolver { T operator()(Args...); };
 
-  template <class D, class T>
-  static constexpr bool applicable_operand = requires(T operand, Args... args)
-      { { D{}(std::forward<T>(operand), std::forward<Args>(args)...) }; };
   template <class D, class P>
-  static R dispatcher(const char* p, Args... args) {
+  static constexpr bool applicable_pointer = requires(const P& p, Args... args)
+      { { D{}(*std::to_address(p), std::forward<Args>(args)...) }; };
+  template <class D, class P>
+  static R dispatcher(const char* erased, Args... args) {
+    const P& p = *reinterpret_cast<const P*>(erased);
     if constexpr (std::is_void_v<R>) {
-      D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+      D{}(*std::to_address(p), std::forward<Args>(args)...);
     } else {
-      return D{}(**reinterpret_cast<const P*>(p), std::forward<Args>(args)...);
+      return D{}(*std::to_address(p), std::forward<Args>(args)...);
     }
   }
 };
@@ -137,9 +141,9 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
   using dispatcher_types =
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
 
-  template <class T>
-  static constexpr bool applicable_operand =
-      (overload_traits<Os>::template applicable_operand<D, T> && ...);
+  template <class P>
+  static constexpr bool applicable_pointer =
+      (overload_traits<Os>::template applicable_pointer<D, P> && ...);
   template <class P>
   static constexpr dispatcher_types dispatchers{
       overload_traits<Os>::template dispatcher<D, P>...};
@@ -254,8 +258,7 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
       has_copyability<P>(F::minimum_copyability) &&
       has_relocatability<P>(F::minimum_relocatability) &&
       has_destructibility<P>(F::minimum_destructibility) &&
-      (dispatch_traits<Ds>::template applicable_operand<
-          typename pointer_traits<P>::value_type> && ...) &&
+      (dispatch_traits<Ds>::template applicable_pointer<P> && ...) &&
       (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
           typename F::reflection_type, std::in_place_type_t<P>>);
   template <class P> static constexpr meta_type meta{std::in_place_type<P>};
@@ -270,7 +273,7 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 }  // namespace details
 
 template <class P, class F>
-concept proxiable = details::pointer_traits<P>::applicable &&
+concept proxiable = details::is_address_deducible<const P> &&
     details::basic_facade_traits<F>::applicable &&
     details::facade_traits<F>::applicable &&
     details::facade_traits<F>::template applicable_pointer<P>;
@@ -505,7 +508,7 @@ class sbo_ptr {
   sbo_ptr(sbo_ptr&&) noexcept(std::is_nothrow_move_constructible_v<T>)
       = default;
 
-  T& operator*() const { return value_; }
+  T* operator->() const noexcept { return &value_; }
 
  private:
   mutable T value_;
@@ -518,11 +521,11 @@ class deep_ptr {
   deep_ptr(Args&&... args) requires(std::is_constructible_v<T, Args...>)
       : ptr_(new T(std::forward<Args>(args)...)) {}
   deep_ptr(const deep_ptr& rhs) requires(std::is_copy_constructible_v<T>)
-      : ptr_(rhs.ptr_ == nullptr ? nullptr : new T(*rhs)) {}
+      : ptr_(rhs.ptr_ == nullptr ? nullptr : new T(*rhs.ptr_)) {}
   deep_ptr(deep_ptr&& rhs) noexcept : ptr_(rhs.ptr_) { rhs.ptr_ = nullptr; }
   ~deep_ptr() noexcept { delete ptr_; }
 
-  T& operator*() const { return *ptr_; }
+  T* operator->() const noexcept { return ptr_; }
 
  private:
   T* ptr_;

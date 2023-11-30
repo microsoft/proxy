@@ -54,7 +54,7 @@ class LifetimeTracker {
           id_(rhs.host_->AllocateId(LifetimeOperationType::kMoveConstruction)),
           host_(rhs.host_) {}
     ~Session() { host_->ops_.emplace_back(id_, LifetimeOperationType::kDestruction); }
-    const Session& operator*() const { return *this; }
+    const Session* operator->() const { return this; }
     friend std::string to_string(const Session& self) { return "Session " + std::to_string(self.id_); }
 
    private:
