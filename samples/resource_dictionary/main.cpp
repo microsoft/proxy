@@ -5,12 +5,14 @@
 
 #include <proxy/proxy.h>
 
-struct at : pro::dispatch<std::string(int)> {
-  auto operator()(const auto& self, int key) { return self.at(key); }
-};
-struct resource_dictionary : pro::facade<at> {};
+namespace poly {
 
-void demo_print(pro::proxy<resource_dictionary> dictionary) {
+DEFINE_MEMBER_DISPATCH(At, at, std::string(int));
+DEFINE_FACADE(Dictionary, At);
+
+}  // namespace poly
+
+void demo_print(pro::proxy<poly::Dictionary> dictionary) {
   std::cout << dictionary(1) << std::endl;
 }
 

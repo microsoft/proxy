@@ -13,16 +13,13 @@
 
 namespace {
 
-struct Draw : pro::dispatch<void(std::ostream&)> {
-  template <class T>
-  void operator()(const T& self, std::ostream& out) { self.Draw(out); }
-};
-struct Area : pro::dispatch<double()> {
-  template <class T>
-  double operator()(const T& self) { return self.Area(); }
-};
+namespace poly {
 
-struct DrawableFacade : pro::facade<Draw, Area> {};
+DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
+DEFINE_MEMBER_DISPATCH(Area, Area, double());
+DEFINE_FACADE(Drawable, Draw, Area);
+
+}  // namespace poly
 
 class Rectangle {
  public:
@@ -53,11 +50,11 @@ class Point {
   constexpr double Area() const { return 0; }
 };
 
-std::string PrintDrawableToString(pro::proxy<DrawableFacade> p) {
+std::string PrintDrawableToString(pro::proxy<poly::Drawable> p) {
   std::stringstream result;
   result << std::fixed << std::setprecision(5) << "shape = ";
-  p.invoke<Draw>(result);
-  result << ", area = " << p.invoke<Area>();
+  p.invoke<poly::Draw>(result);
+  result << ", area = " << p.invoke<poly::Area>();
   return std::move(result).str();
 }
 
@@ -84,7 +81,7 @@ std::vector<std::string> ParseCommand(const std::string& s) {
   return result;
 }
 
-pro::proxy<DrawableFacade> MakeDrawableFromCommand(const std::string& s) {
+pro::proxy<poly::Drawable> MakeDrawableFromCommand(const std::string& s) {
   std::vector<std::string> parsed = ParseCommand(s);
   if (!parsed.empty()) {
     if (parsed[0u] == "Rectangle") {
@@ -103,7 +100,7 @@ pro::proxy<DrawableFacade> MakeDrawableFromCommand(const std::string& s) {
       if (parsed.size() == 2u) {
         Circle circle;
         circle.SetRadius(std::stod(parsed[1u]));
-        return pro::make_proxy<DrawableFacade>(circle);
+        return pro::make_proxy<poly::Drawable>(circle);
       }
     } else if (parsed[0u] == "Point") {
       if (parsed.size() == 1u) {
@@ -118,7 +115,7 @@ pro::proxy<DrawableFacade> MakeDrawableFromCommand(const std::string& s) {
 }  // namespace
 
 TEST(ProxyIntegrationTests, TestDrawable) {
-  pro::proxy<DrawableFacade> p = MakeDrawableFromCommand("Rectangle 2 3");
+  pro::proxy<poly::Drawable> p = MakeDrawableFromCommand("Rectangle 2 3");
   std::string s = PrintDrawableToString(std::move(p));
   ASSERT_EQ(s, "shape = {Rectangle: width = 2.00000, height = 3.00000}, area = 6.00000");
 
