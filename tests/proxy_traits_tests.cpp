@@ -14,7 +14,7 @@ struct MockPtr {
   MockPtr(const MockPtr&) noexcept requires(kTrivial) = default;
   MockPtr(MockPtr&&) noexcept requires(kNothrowRelocatable && !kTrivial) {}
   MockPtr(MockPtr&&) noexcept requires(kTrivial) = default;
-  const MockPtr& operator*() const noexcept { return *this; }
+  const MockPtr* operator->() const noexcept { return this; }
 
   alignas(kAlignment) char dummy_[kSize];
 };
