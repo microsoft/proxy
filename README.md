@@ -1,4 +1,4 @@
-# Proxy: Redefine Polymorphism in C++
+# Proxy: Polymorphism in C++ Redefined
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
