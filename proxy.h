@@ -584,7 +584,7 @@ proxy<F> make_proxy(T&& value) {
 }
 
 // The following types and macros aim to simplify definition of dispatch and
-// facade types before C++26
+// facade types prior to C++26
 namespace helper {
 
 template <class D = std::tuple<>, proxy_pointer_constraints C =
@@ -598,7 +598,8 @@ struct facade_prototype {
 }  // namespace helper
 
 }  // namespace pro
-#define DEFINE_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
+
+#define PRO_DEF_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
     struct __NAME { \
       using overload_types = std::tuple<__VA_ARGS__>;\
       template <class __T, class... __Args> \
@@ -609,7 +610,7 @@ struct facade_prototype {
             .__FUNC(std::forward<__Args>(__args)...); \
       } \
     }
-#define DEFINE_FREE_DISPATCH(__NAME, __FUNC, ...) \
+#define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \
     struct __NAME { \
       using overload_types = std::tuple<__VA_ARGS__>;\
       template <class __T, class... __Args> \
@@ -620,8 +621,8 @@ struct facade_prototype {
             std::forward<__Args>(__args)...); \
       } \
     }
-#define MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
-#define DEFINE_FACADE(__NAME, ...) \
+#define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
+#define PRO_DEF_FACADE(__NAME, ...) \
     struct __NAME : ::pro::helper::facade_prototype<__VA_ARGS__> {}
 
 #endif  // _MSFT_PROXY_

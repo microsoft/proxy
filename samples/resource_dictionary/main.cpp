@@ -7,8 +7,8 @@
 
 namespace poly {
 
-DEFINE_MEMBER_DISPATCH(At, at, std::string(int));
-DEFINE_FACADE(Dictionary, At);
+PRO_DEF_MEMBER_DISPATCH(At, at, std::string(int));
+PRO_DEF_FACADE(Dictionary, At);
 
 }  // namespace poly
 

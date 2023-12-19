@@ -16,20 +16,20 @@ namespace {
 namespace poly {
 
 template <class... Os>
-DEFINE_MEMBER_DISPATCH(Call, operator(), Os...);
+PRO_DEF_MEMBER_DISPATCH(Call, operator(), Os...);
 template <class... Os>
-DEFINE_FACADE(Callable, Call<Os...>, pro::copyable_pointer_constraints);
+PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_pointer_constraints);
 
-DEFINE_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
+PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
 
 template <class T>
-DEFINE_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<Callable<void(T&)>>));
+PRO_DEF_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<Callable<void(T&)>>));
 template <class T>
-DEFINE_FACADE(Iterable, MAKE_DISPATCH_PACK(ForEach<T>, GetSize));
+PRO_DEF_FACADE(Iterable, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize));
 
 template <class T> struct Append;
 template <class T>
-DEFINE_FACADE(Container, MAKE_DISPATCH_PACK(ForEach<T>, GetSize, Append<T>));
+PRO_DEF_FACADE(Container, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize, Append<T>));
 template <class T>
 struct Append {
   using overload_types = std::tuple<pro::proxy<Container<T>>(T)>;
@@ -117,7 +117,7 @@ TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
   using SomeCombination = std::tuple<poly::ForEach<int>, std::tuple<poly::GetSize, poly::ForEach<int>>>;
-  DEFINE_FACADE(DuplicatedIterable, MAKE_DISPATCH_PACK(poly::ForEach<int>, SomeCombination, poly::ForEach<int>, poly::GetSize, poly::GetSize));
+  PRO_DEF_FACADE(DuplicatedIterable, PRO_MAKE_DISPATCH_PACK(poly::ForEach<int>, SomeCombination, poly::ForEach<int>, poly::GetSize, poly::GetSize));
   static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta_type) ==
       sizeof(pro::details::facade_traits<poly::Iterable<int>>::meta_type));
   std::list<int> l = { 1, 2, 3 };

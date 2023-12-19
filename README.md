@@ -24,9 +24,9 @@ The majority of the library is defined in namespace `pro`. Some macros are provi
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
-DEFINE_MEMBER_DISPATCH(Area, Area, double());
-DEFINE_FACADE(Drawable, MAKE_DISPATCH_PACK(Draw, Area));
+PRO_DEF_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
+PRO_DEF_MEMBER_DISPATCH(Area, Area, double());
+PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly
 
@@ -68,9 +68,9 @@ Here is another demo showing how to define overloads in a dispatch. Note that `.
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-DEFINE_MEMBER_DISPATCH(Log, Log,
+PRO_DEF_MEMBER_DISPATCH(Log, Log,
     void(const char*), void(const char*, const std::exception&));
-DEFINE_FACADE(Logger, Log);
+PRO_DEF_FACADE(Logger, Log);
 
 }  // namespace poly
 

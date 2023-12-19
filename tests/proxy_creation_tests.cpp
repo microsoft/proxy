@@ -21,14 +21,14 @@ struct SboObserver {
   bool SboEnabled;
 };
 
-DEFINE_FACADE(TestSmallStringable, utils::poly::ToString, pro::proxy_pointer_constraints{
+PRO_DEF_FACADE(TestSmallStringable, utils::poly::ToString, pro::proxy_pointer_constraints{
     .maximum_size = sizeof(void*),
     .maximum_alignment = alignof(void*),
     .minimum_copyability = pro::constraint_level::nontrivial,
     .minimum_relocatability = pro::constraint_level::nothrow,
     .minimum_destructibility = pro::constraint_level::nothrow,
   }, SboObserver);
-DEFINE_FACADE(TestLargeStringable, utils::poly::ToString, pro::copyable_pointer_constraints, SboObserver);
+PRO_DEF_FACADE(TestLargeStringable, utils::poly::ToString, pro::copyable_pointer_constraints, SboObserver);
 
 }  // namespace poly
 
