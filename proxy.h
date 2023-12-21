@@ -295,19 +295,21 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 }  // namespace details
 
 template <class F>
-concept facade = requires {
+concept basic_facade = requires {
   typename F::dispatch_types;
   typename std::integral_constant<
       proxy_pointer_constraints, F::pointer_constraints>;
   typename F::reflection_type;
 };
 
+template <class F>
+concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
+
 template <class P, class F>
 concept proxiable = facade<F> && details::is_address_deducible<const P> &&
-    details::facade_traits<F>::applicable &&
     details::facade_traits<F>::template applicable_pointer<P>;
 
-template <facade F>
+template <basic_facade F>
 class proxy {
   using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
@@ -495,8 +497,8 @@ class proxy {
   }
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
-      requires(BasicTraits::template has_dispatch<D> &&
-          details::dependent_t<Traits, Args...>::applicable &&
+      requires(facade<details::dependent_t<F, Args...>> &&
+          BasicTraits::template has_dispatch<D> &&
           details::dispatch_traits<D>::template has_overload<Args...>) {
     constexpr std::size_t OverloadIndex =
         details::dispatch_traits<D>::template overload_index<Args...>;
@@ -508,8 +510,8 @@ class proxy {
 
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
-      requires(!std::is_void_v<DefaultDispatch> &&
-          details::dependent_t<Traits, Args...>::applicable &&
+      requires(facade<details::dependent_t<F, Args...>> &&
+          !std::is_void_v<DefaultDispatch> &&
           details::dependent_t<details::dispatch_traits<DefaultDispatch>
               , Args...>::template has_overload<Args...>)
       { return invoke(std::forward<Args>(args)...); }
