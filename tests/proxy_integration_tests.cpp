@@ -15,8 +15,8 @@ namespace {
 
 namespace poly {
 
-PRO_DEF_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
-PRO_DEF_MEMBER_DISPATCH(Area, Area, double());
+PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
+PRO_DEF_MEMBER_DISPATCH(Area, double());
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly

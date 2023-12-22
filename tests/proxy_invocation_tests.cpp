@@ -16,7 +16,7 @@ namespace {
 namespace poly {
 
 template <class... Os>
-PRO_DEF_MEMBER_DISPATCH(Call, operator(), Os...);
+PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
 template <class... Os>
 PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_pointer_constraints);
 

@@ -601,15 +601,15 @@ struct facade_prototype {
 
 }  // namespace pro
 
-#define PRO_DEF_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
+#define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
     struct __NAME { \
       using overload_types = std::tuple<__VA_ARGS__>;\
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           requires(requires{ std::forward<__T>(__self) \
-              .__FUNC(std::forward<__Args>(__args)...); }) { \
+              .__NAME(std::forward<__Args>(__args)...); }) { \
         return std::forward<__T>(__self) \
-            .__FUNC(std::forward<__Args>(__args)...); \
+            .__NAME(std::forward<__Args>(__args)...); \
       } \
     }
 #define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \

@@ -1,4 +1,4 @@
-# Proxy: Polymorphism in C++ Redefined
+# Proxy: Next Generation Polymorphism in C++
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
@@ -24,8 +24,8 @@ The majority of the library is defined in namespace `pro`. Some macros are provi
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-PRO_DEF_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
-PRO_DEF_MEMBER_DISPATCH(Area, Area, double());
+PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
+PRO_DEF_MEMBER_DISPATCH(Area, double());
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly
@@ -68,8 +68,7 @@ Here is another demo showing how to define overloads in a dispatch. Note that `.
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-PRO_DEF_MEMBER_DISPATCH(Log, Log,
-    void(const char*), void(const char*, const std::exception&));
+PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
 PRO_DEF_FACADE(Logger, Log);
 
 }  // namespace poly
@@ -98,6 +97,44 @@ struct MyLogger {
 int main() {
   MyLogger logger;
   MyVerboseFunction(&logger);
+  return 0;
+}
+```
+
+By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.
+
+```cpp
+// Abstraction (poly is short for polymorphism)
+namespace poly {
+
+template <class... Overloads>
+PRO_DEF_FREE_DISPATCH(Call, std::invoke, Overloads...);
+template <class... Overloads>
+PRO_DEF_FACADE(MovableCallable, Call<Overloads...>);
+template <class... Overloads>
+PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_pointer_constraints);
+
+}  // namespace poly
+
+// MyFunction has similar functionality as std::function but supports multiple overloads
+// MyMoveOnlyFunction has similar functionality as std::move_only_function but supports multiple overloads
+template <class... Overloads>
+using MyFunction = pro::proxy<poly::MovableCallable<Overloads...>>;
+template <class... Overloads>
+using MyMoveOnlyFunction = pro::proxy<poly::CopyableCallable<Overloads...>>;
+
+int main() {
+  auto f = [](auto&&... v) {
+    printf("f() called. Args: ");
+    ((std::cout << v << ":" << typeid(decltype(v)).name() << ", "), ...);
+    puts("");
+  };
+  MyFunction<void(int)> p0{&f};
+  p0(123);  // Prints "f() called. Args: 123:i," (assuming GCC)
+  MyMoveOnlyFunction<void(), void(int), void(double)> p1{&f};
+  p1();  // Prints "f() called. Args:"
+  p1(456);  // Prints "f() called. Args: 456:i,"
+  p1(1.2);  // Prints "f() called. Args: 1.2:d,"
   return 0;
 }
 ```
