@@ -83,7 +83,7 @@ class LifetimeTracker {
 namespace poly {
 
 using std::to_string;
-DEFINE_FREE_DISPATCH(ToString, to_string, std::string());
+PRO_DEF_FREE_DISPATCH(ToString, to_string, std::string());
 
 }  // namespace poly
 

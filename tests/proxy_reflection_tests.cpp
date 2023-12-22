@@ -42,15 +42,13 @@ struct TraitsReflection {
   bool is_trivial_;
 };
 
-using DefaultFacade = pro::facade<>;
+PRO_DEF_FACADE(DefaultFacade);
 static_assert(!ReflectionApplicable<DefaultFacade>);
 
-struct TestRttiFacade : pro::facade<>
-    { using reflection_type = RttiReflection; };
+PRO_DEF_FACADE(TestRttiFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_pointer_constraints, RttiReflection);
 static_assert(ReflectionApplicable<TestRttiFacade>);
 
-struct TestTraitsFacade : pro::facade<>
-    { using reflection_type = TraitsReflection; };
+PRO_DEF_FACADE(TestTraitsFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_pointer_constraints, TraitsReflection);
 static_assert(ReflectionApplicable<TestTraitsFacade>);
 
 }  // namespace

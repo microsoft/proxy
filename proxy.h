@@ -16,6 +16,35 @@ namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
+struct proxy_pointer_constraints {
+  std::size_t maximum_size;
+  std::size_t maximum_alignment;
+  constraint_level minimum_copyability;
+  constraint_level minimum_relocatability;
+  constraint_level minimum_destructibility;
+};
+constexpr proxy_pointer_constraints relocatable_pointer_constraints{
+  .maximum_size = sizeof(void*) * 2u,
+  .maximum_alignment = alignof(void*),
+  .minimum_copyability = constraint_level::none,
+  .minimum_relocatability = constraint_level::nothrow,
+  .minimum_destructibility = constraint_level::nothrow,
+};
+constexpr proxy_pointer_constraints copyable_pointer_constraints{
+  .maximum_size = sizeof(void*) * 2u,
+  .maximum_alignment = alignof(void*),
+  .minimum_copyability = constraint_level::nontrivial,
+  .minimum_relocatability = constraint_level::nothrow,
+  .minimum_destructibility = constraint_level::nothrow,
+};
+constexpr proxy_pointer_constraints trivial_pointer_constraints{
+  .maximum_size = sizeof(void*),
+  .maximum_alignment = alignof(void*),
+  .minimum_copyability = constraint_level::trivial,
+  .minimum_relocatability = constraint_level::trivial,
+  .minimum_destructibility = constraint_level::trivial,
+};
+
 namespace details {
 
 struct applicable_traits { static constexpr bool applicable = true; };
@@ -153,8 +182,8 @@ template <class D> requires(requires {
       typename D::overload_types;
       { D{} };
     })
-struct dispatch_traits<D> : dispatch_traits_impl<
-    D, typename flattening_traits<typename D::overload_types>::type> {};
+struct dispatch_traits<D>
+    : dispatch_traits_impl<D, typename D::overload_types> {};
 
 template <class D>
 struct dispatch_meta {
@@ -217,11 +246,14 @@ template <> struct facade_meta_traits<> { using type = facade_meta<>; };
 
 template <class F, class Ds> struct basic_facade_traits_impl;
 template <class F, class... Ds>
-struct basic_facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
+struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
   using meta_type = typename facade_meta_traits<
-      conditional_meta_tag<F::minimum_copyability, copy_meta>,
-      conditional_meta_tag<F::minimum_relocatability, relocation_meta>,
-      conditional_meta_tag<F::minimum_destructibility, destruction_meta>,
+      conditional_meta_tag<
+          F::pointer_constraints.minimum_copyability, copy_meta>,
+      conditional_meta_tag<
+          F::pointer_constraints.minimum_relocatability, relocation_meta>,
+      conditional_meta_tag<
+          F::pointer_constraints.minimum_destructibility, destruction_meta>,
       conditional_meta_tag<std::is_void_v<typename F::reflection_type> ?
           constraint_level::none : constraint_level::nothrow,
           typename F::reflection_type>>::type;
@@ -230,19 +262,8 @@ struct basic_facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
   template <class D>
   static constexpr bool has_dispatch = contains_traits<D, Ds...>::applicable;
 };
-template <class F> struct basic_facade_traits : inapplicable_traits {};
-template <class F> requires(requires {
-      typename F::dispatch_types;
-      typename F::reflection_type;
-      typename std::integral_constant<std::size_t, F::maximum_size>;
-      typename std::integral_constant<std::size_t, F::maximum_alignment>;
-      typename std::integral_constant<constraint_level, F::minimum_copyability>;
-      typename std::integral_constant<
-          constraint_level, F::minimum_relocatability>;
-      typename std::integral_constant<
-          constraint_level, F::minimum_destructibility>;
-    })
-struct basic_facade_traits<F> : basic_facade_traits_impl<
+template <class F>
+struct basic_facade_traits : basic_facade_traits_impl<
     F, typename flattening_traits<typename F::dispatch_types>::type> {};
 
 template <class F, class Ds>
@@ -254,10 +275,11 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
 
   template <class P>
   static constexpr bool applicable_pointer =
-      sizeof(P) <= F::maximum_size && alignof(P) <= F::maximum_alignment &&
-      has_copyability<P>(F::minimum_copyability) &&
-      has_relocatability<P>(F::minimum_relocatability) &&
-      has_destructibility<P>(F::minimum_destructibility) &&
+      sizeof(P) <= F::pointer_constraints.maximum_size &&
+      alignof(P) <= F::pointer_constraints.maximum_alignment &&
+      has_copyability<P>(F::pointer_constraints.minimum_copyability) &&
+      has_relocatability<P>(F::pointer_constraints.minimum_relocatability) &&
+      has_destructibility<P>(F::pointer_constraints.minimum_destructibility) &&
       (dispatch_traits<Ds>::template applicable_pointer<P> && ...) &&
       (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
           typename F::reflection_type, std::in_place_type_t<P>>);
@@ -272,13 +294,22 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 
 }  // namespace details
 
+template <class F>
+concept basic_facade = requires {
+  typename F::dispatch_types;
+  typename std::integral_constant<
+      proxy_pointer_constraints, F::pointer_constraints>;
+  typename F::reflection_type;
+};
+
+template <class F>
+concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
+
 template <class P, class F>
-concept proxiable = details::is_address_deducible<const P> &&
-    details::basic_facade_traits<F>::applicable &&
-    details::facade_traits<F>::applicable &&
+concept proxiable = facade<F> && details::is_address_deducible<const P> &&
     details::facade_traits<F>::template applicable_pointer<P>;
 
-template <class F> requires(details::basic_facade_traits<F>::applicable)
+template <basic_facade F>
 class proxy {
   using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
@@ -293,21 +324,21 @@ class proxy {
       proxiable<P, F>, std::is_constructible<P, Args...>,
           std::false_type>::value;
   static constexpr bool HasTrivialCopyConstructor =
-      F::minimum_copyability == constraint_level::trivial;
+      F::pointer_constraints.minimum_copyability == constraint_level::trivial;
   static constexpr bool HasNothrowCopyConstructor =
-      F::minimum_copyability >= constraint_level::nothrow;
-  static constexpr bool HasCopyConstructor =
-      F::minimum_copyability >= constraint_level::nontrivial;
-  static constexpr bool HasNothrowMoveConstructor =
-      F::minimum_relocatability >= constraint_level::nothrow;
-  static constexpr bool HasMoveConstructor =
-      F::minimum_relocatability >= constraint_level::nontrivial;
-  static constexpr bool HasTrivialDestructor =
-      F::minimum_destructibility == constraint_level::trivial;
-  static constexpr bool HasNothrowDestructor =
-      F::minimum_destructibility >= constraint_level::nothrow;
-  static constexpr bool HasDestructor =
-      F::minimum_destructibility >= constraint_level::nontrivial;
+      F::pointer_constraints.minimum_copyability >= constraint_level::nothrow;
+  static constexpr bool HasCopyConstructor = F::pointer_constraints
+      .minimum_copyability >= constraint_level::nontrivial;
+  static constexpr bool HasNothrowMoveConstructor = F::pointer_constraints
+      .minimum_relocatability >= constraint_level::nothrow;
+  static constexpr bool HasMoveConstructor = F::pointer_constraints
+      .minimum_relocatability >= constraint_level::nontrivial;
+  static constexpr bool HasTrivialDestructor = F::pointer_constraints
+      .minimum_destructibility == constraint_level::trivial;
+  static constexpr bool HasNothrowDestructor = F::pointer_constraints
+      .minimum_destructibility >= constraint_level::nothrow;
+  static constexpr bool HasDestructor = F::pointer_constraints
+      .minimum_destructibility >= constraint_level::nontrivial;
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyAssignment =
       HasNothrowPolyConstructor<P, Args...> && HasNothrowDestructor;
@@ -341,8 +372,9 @@ class proxy {
   proxy(proxy&& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
     if (rhs.meta_ != nullptr) {
-      if constexpr (F::minimum_relocatability == constraint_level::trivial) {
-        memcpy(ptr_, rhs.ptr_, F::maximum_size);
+      if constexpr (F::pointer_constraints.minimum_relocatability ==
+          constraint_level::trivial) {
+        memcpy(ptr_, rhs.ptr_, F::pointer_constraints.maximum_size);
       } else {
         rhs.meta_->relocate(ptr_, rhs.ptr_);
       }
@@ -428,7 +460,8 @@ class proxy {
       { this->~proxy(); meta_ = nullptr; }
   void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
-    if constexpr (F::minimum_relocatability == constraint_level::trivial) {
+    if constexpr (F::pointer_constraints.minimum_relocatability ==
+        constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
       std::swap(ptr_, rhs.ptr);
     } else {
@@ -464,8 +497,8 @@ class proxy {
   }
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
-      requires(BasicTraits::template has_dispatch<D> &&
-          details::dependent_t<Traits, Args...>::applicable &&
+      requires(facade<details::dependent_t<F, Args...>> &&
+          BasicTraits::template has_dispatch<D> &&
           details::dispatch_traits<D>::template has_overload<Args...>) {
     constexpr std::size_t OverloadIndex =
         details::dispatch_traits<D>::template overload_index<Args...>;
@@ -477,8 +510,8 @@ class proxy {
 
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
-      requires(!std::is_void_v<DefaultDispatch> &&
-          details::dependent_t<Traits, Args...>::applicable &&
+      requires(facade<details::dependent_t<F, Args...>> &&
+          !std::is_void_v<DefaultDispatch> &&
           details::dependent_t<details::dispatch_traits<DefaultDispatch>
               , Args...>::template has_overload<Args...>)
       { return invoke(std::forward<Args>(args)...); }
@@ -491,7 +524,8 @@ class proxy {
   }
 
   const typename BasicTraits::meta_type* meta_;
-  alignas(F::maximum_alignment) char ptr_[F::maximum_size];
+  alignas(F::pointer_constraints.maximum_alignment)
+      char ptr_[F::pointer_constraints.maximum_size];
 };
 
 namespace details {
@@ -551,36 +585,36 @@ proxy<F> make_proxy(T&& value) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
 
-template <class... Os>
-struct dispatch { using overload_types = std::tuple<Os...>; };
+// The following types and macros aim to simplify definition of dispatch and
+// facade types prior to C++26
+namespace helper {
 
-template <class... Ds>
-struct facade {
-  using dispatch_types = std::tuple<Ds...>;
-  using reflection_type = void;
-  static constexpr std::size_t maximum_size = sizeof(void*) * 2u;
-  static constexpr std::size_t maximum_alignment = alignof(void*);
-  static constexpr auto minimum_copyability = constraint_level::none;
-  static constexpr auto minimum_relocatability = constraint_level::nothrow;
-  static constexpr auto minimum_destructibility = constraint_level::nothrow;
-  facade() = delete;
+template <class D = std::tuple<>, proxy_pointer_constraints C =
+    relocatable_pointer_constraints, class R = void>
+struct facade_prototype {
+  using dispatch_types = D;
+  static constexpr proxy_pointer_constraints pointer_constraints = C;
+  using reflection_type = R;
 };
+
+}  // namespace helper
 
 }  // namespace pro
 
-// The following macros facilitate definition of dispatch and facade types
-#define DEFINE_MEMBER_DISPATCH(__NAME, __FUNC, ...) \
-    struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
+#define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
+    struct __NAME { \
+      using overload_types = std::tuple<__VA_ARGS__>;\
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           requires(requires{ std::forward<__T>(__self) \
-              .__FUNC(std::forward<__Args>(__args)...); }) { \
+              .__NAME(std::forward<__Args>(__args)...); }) { \
         return std::forward<__T>(__self) \
-            .__FUNC(std::forward<__Args>(__args)...); \
+            .__NAME(std::forward<__Args>(__args)...); \
       } \
     }
-#define DEFINE_FREE_DISPATCH(__NAME, __FUNC, ...) \
-    struct __NAME : ::pro::dispatch<__VA_ARGS__> { \
+#define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \
+    struct __NAME { \
+      using overload_types = std::tuple<__VA_ARGS__>;\
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           requires(requires{ __FUNC(std::forward<__T>(__self), \
@@ -589,13 +623,8 @@ struct facade {
             std::forward<__Args>(__args)...); \
       } \
     }
-
-#define DEFINE_FACADE(__NAME, ...) \
-    struct __NAME : ::pro::facade<__VA_ARGS__> {}
-#define DEFINE_COPYABLE_FACADE(__NAME, ...) \
-    struct __NAME : ::pro::facade<__VA_ARGS__> { \
-      static constexpr auto minimum_copyability = \
-          pro::constraint_level::nontrivial; \
-    }
+#define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
+#define PRO_DEF_FACADE(__NAME, ...) \
+    struct __NAME : ::pro::helper::facade_prototype<__VA_ARGS__> {}
 
 #endif  // _MSFT_PROXY_

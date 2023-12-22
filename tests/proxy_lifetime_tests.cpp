@@ -7,9 +7,7 @@
 
 namespace {
 
-struct TestFacade : pro::facade<utils::poly::ToString> {
-  static constexpr auto minimum_copyability = pro::constraint_level::nontrivial;
-};
+PRO_DEF_FACADE(TestFacade, utils::poly::ToString, pro::copyable_pointer_constraints);
 
 }  // namespace
 

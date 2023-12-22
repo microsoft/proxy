@@ -1,4 +1,4 @@
-# Proxy: Easy Polymorphism in C++
+# Proxy: Next Generation Polymorphism in C++
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
 
@@ -10,21 +10,23 @@ Have you tried other polymorphic programming libraries in C++ but found them def
 
 If so, this library is for you. 😉
 
+For decades, object-based virtual table has been a de facto implementation of runtime polymorphism in many (compiled) programming languages. There are many drawbacks in this mechanism, including life management (because each object may have different size and ownership) and reflection (because it is hard to balance between usability and memory allocation). To workaround these drawbacks, some languages like Java or C# choose to sacrifice performance by introducing GC to facilitate lifetime management, and JIT-compile the source code at runtime to generate full metadata. We improved the theory and implemented as a C++ library without sacrificing performance, proposed to merge into the C++ standard.
+
 The "proxy" is a single-header, cross-platform C++ library that Microsoft uses to make runtime polymorphism easier to implement and faster. Please find the design details at https://wg21.link/p0957.
 
 ## Quick start
 
 The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.info](https://vcpkg.info/port/proxy)).
 
-All the facilities of the library are defined in namespace `pro`. The 3 major class templates are `dispatch`, `facade` and `proxy`. Some macros are defined (currently not in the proposal of standardization) to facilitate definition of `dispatch`es and `facade`s. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
+The majority of the library is defined in namespace `pro`. Some macros are provided (currently not included in the proposal of standardization) to simplify the definiton of `proxy` prior to C++26. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
 ```cpp
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-DEFINE_MEMBER_DISPATCH(Draw, Draw, void(std::ostream&));
-DEFINE_MEMBER_DISPATCH(Area, Area, double());
-DEFINE_FACADE(Drawable, Draw, Area);
+PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
+PRO_DEF_MEMBER_DISPATCH(Area, double());
+PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly
 
@@ -57,6 +59,83 @@ pro::proxy<poly::Drawable> CreateRectangleAsDrawable(int width, int height) {
   rect.SetWidth(width);
   rect.SetHeight(height);
   return pro::make_proxy<poly::Drawable>(rect);
+}
+```
+
+Here is another demo showing how to define overloads in a dispatch. Note that `.invoke<>` can be ommitted when only 1 dispatch is defined in a facade:
+
+```cpp
+// Abstraction (poly is short for polymorphism)
+namespace poly {
+
+PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
+PRO_DEF_FACADE(Logger, Log);
+
+}  // namespace poly
+
+// Client - Consumer
+void MyVerboseFunction(pro::proxy<poly::Logger> logger) {
+  logger("hello");
+  try {
+    throw std::runtime_error{"runtime error!"};
+  } catch (const std::exception& e) {
+    logger("world", e);
+  }
+}
+
+// Implementation
+struct MyLogger {
+  void Log(const char* s) {
+    printf("[INFO] %s\n", s);
+  }
+  void Log(const char* s, const std::exception& e) {
+    printf("[ERROR] %s (exception info: %s)\n", s, e.what());
+  }
+};
+
+// Client - Producer
+int main() {
+  MyLogger logger;
+  MyVerboseFunction(&logger);
+  return 0;
+}
+```
+
+By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.
+
+```cpp
+// Abstraction (poly is short for polymorphism)
+namespace poly {
+
+template <class... Overloads>
+PRO_DEF_FREE_DISPATCH(Call, std::invoke, Overloads...);
+template <class... Overloads>
+PRO_DEF_FACADE(MovableCallable, Call<Overloads...>);
+template <class... Overloads>
+PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_pointer_constraints);
+
+}  // namespace poly
+
+// MyFunction has similar functionality as std::function but supports multiple overloads
+// MyMoveOnlyFunction has similar functionality as std::move_only_function but supports multiple overloads
+template <class... Overloads>
+using MyFunction = pro::proxy<poly::MovableCallable<Overloads...>>;
+template <class... Overloads>
+using MyMoveOnlyFunction = pro::proxy<poly::CopyableCallable<Overloads...>>;
+
+int main() {
+  auto f = [](auto&&... v) {
+    printf("f() called. Args: ");
+    ((std::cout << v << ":" << typeid(decltype(v)).name() << ", "), ...);
+    puts("");
+  };
+  MyFunction<void(int)> p0{&f};
+  p0(123);  // Prints "f() called. Args: 123:i," (assuming GCC)
+  MyMoveOnlyFunction<void(), void(int), void(double)> p1{&f};
+  p1();  // Prints "f() called. Args:"
+  p1(456);  // Prints "f() called. Args: 456:i,"
+  p1(1.2);  // Prints "f() called. Args: 1.2:d,"
+  return 0;
 }
 ```
 
