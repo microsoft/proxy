@@ -22,8 +22,7 @@ using MockMovablePtr = MockPtr<true, false, false, sizeof(void*) * 2, alignof(vo
 using MockCopyablePtr = MockPtr<true, true, false, sizeof(void*) * 2, alignof(void*)>;
 using MockCopyableSmallPtr = MockPtr<true, true, false, sizeof(void*), alignof(void*)>;
 using MockTrivialPtr = MockPtr<true, true, true, sizeof(void*), alignof(void*)>;
-void MockFunction() {}
-using MockFunctionPtr = decltype(&MockFunction);
+using MockFunctionPtr = void(*)();
 
 PRO_DEF_FACADE(DefaultFacade);
 static_assert(DefaultFacade::pointer_constraints.minimum_copyability == pro::constraint_level::none);
