@@ -43,7 +43,6 @@ struct Append {
 
 }  // namespace poly
 
-
 template <class F, class D, class... Args>
 concept InvocableWithDispatch = requires(pro::proxy<F> p, Args... args)
     { { p.template invoke<D>(std::forward<Args>(args)...) }; };
@@ -162,4 +161,11 @@ TEST(ProxyInvocationTests, TestOverloadResolution) {
   p("lalala", 0);
   ASSERT_EQ(side_effect, (GetTypeIndices<std::string, int>()));
   ASSERT_FALSE((std::is_invocable_v<decltype(p), std::vector<int>>));
+}
+
+TEST(ProxyInvocationTests, TestFunctionPointer) {
+  struct TestFacade : poly::Callable<std::vector<std::type_index>()> {};
+  pro::proxy<TestFacade> p{ &GetTypeIndices<int, double> };
+  auto ret = p();
+  ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
 }
