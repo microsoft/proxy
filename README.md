@@ -112,7 +112,7 @@ PRO_DEF_FREE_DISPATCH(Call, std::invoke, Overloads...);
 template <class... Overloads>
 PRO_DEF_FACADE(MovableCallable, Call<Overloads...>);
 template <class... Overloads>
-PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_pointer_constraints);
+PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_ptr_constraints);
 
 }  // namespace poly
 

@@ -25,11 +25,11 @@ using MockTrivialPtr = MockPtr<true, true, true, sizeof(void*), alignof(void*)>;
 using MockFunctionPtr = void(*)();
 
 PRO_DEF_FACADE(DefaultFacade);
-static_assert(DefaultFacade::pointer_constraints.minimum_copyability == pro::constraint_level::none);
-static_assert(DefaultFacade::pointer_constraints.minimum_relocatability == pro::constraint_level::nothrow);
-static_assert(DefaultFacade::pointer_constraints.minimum_destructibility == pro::constraint_level::nothrow);
-static_assert(DefaultFacade::pointer_constraints.maximum_size >= 2 * sizeof(void*));
-static_assert(DefaultFacade::pointer_constraints.maximum_alignment >= sizeof(void*));
+static_assert(DefaultFacade::constraints.copyability == pro::constraint_level::none);
+static_assert(DefaultFacade::constraints.relocatability == pro::constraint_level::nothrow);
+static_assert(DefaultFacade::constraints.destructibility == pro::constraint_level::nothrow);
+static_assert(DefaultFacade::constraints.max_size >= 2 * sizeof(void*));
+static_assert(DefaultFacade::constraints.max_align >= sizeof(void*));
 static_assert(std::is_same_v<DefaultFacade::dispatch_types, std::tuple<>>);
 static_assert(std::is_same_v<DefaultFacade::reflection_type, void>);
 static_assert(std::is_nothrow_default_constructible_v<pro::proxy<DefaultFacade>>);
@@ -69,7 +69,7 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockTr
 static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockFunctionPtr>);
 static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockFunctionPtr>);
 
-PRO_DEF_FACADE(CopyableFacade, PRO_MAKE_DISPATCH_PACK(), pro::copyable_pointer_constraints);
+PRO_DEF_FACADE(CopyableFacade, PRO_MAKE_DISPATCH_PACK(), pro::copyable_ptr_constraints);
 static_assert(std::is_copy_constructible_v<pro::proxy<CopyableFacade>>);
 static_assert(!std::is_nothrow_copy_constructible_v<pro::proxy<CopyableFacade>>);
 static_assert(std::is_copy_assignable_v<pro::proxy<CopyableFacade>>);
@@ -96,12 +96,12 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<CopyableFacade>, MockTrivi
 static_assert(std::is_nothrow_constructible_v<pro::proxy<CopyableFacade>, MockFunctionPtr>);
 static_assert(std::is_nothrow_assignable_v<pro::proxy<CopyableFacade>, MockFunctionPtr>);
 
-PRO_DEF_FACADE(CopyableSmallFacade, PRO_MAKE_DISPATCH_PACK(), pro::proxy_pointer_constraints{
-    .maximum_size = sizeof(void*),
-    .maximum_alignment = alignof(void*),
-    .minimum_copyability = pro::constraint_level::nontrivial,
-    .minimum_relocatability = pro::constraint_level::nothrow,
-    .minimum_destructibility = pro::constraint_level::nothrow,
+PRO_DEF_FACADE(CopyableSmallFacade, PRO_MAKE_DISPATCH_PACK(), pro::proxiable_ptr_constraints{
+    .max_size = sizeof(void*),
+    .max_align = alignof(void*),
+    .copyability = pro::constraint_level::nontrivial,
+    .relocatability = pro::constraint_level::nothrow,
+    .destructibility = pro::constraint_level::nothrow,
   });
 static_assert(!pro::proxiable<MockMovablePtr, CopyableSmallFacade>);
 static_assert(!pro::proxiable<MockCopyablePtr, CopyableSmallFacade>);
@@ -119,7 +119,7 @@ static_assert(std::is_assignable_v<pro::proxy<CopyableSmallFacade>, MockTrivialP
 static_assert(std::is_constructible_v<pro::proxy<CopyableSmallFacade>, MockFunctionPtr>);
 static_assert(std::is_assignable_v<pro::proxy<CopyableSmallFacade>, MockFunctionPtr>);
 
-PRO_DEF_FACADE(TrivialFacade, PRO_MAKE_DISPATCH_PACK(), pro::trivial_pointer_constraints);
+PRO_DEF_FACADE(TrivialFacade, PRO_MAKE_DISPATCH_PACK(), pro::trivial_ptr_constraints);
 static_assert(std::is_trivially_copy_constructible_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_trivially_copy_assignable_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_nothrow_move_constructible_v<pro::proxy<TrivialFacade>>);

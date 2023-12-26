@@ -45,10 +45,10 @@ struct TraitsReflection {
 PRO_DEF_FACADE(DefaultFacade);
 static_assert(!ReflectionApplicable<DefaultFacade>);
 
-PRO_DEF_FACADE(TestRttiFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_pointer_constraints, RttiReflection);
+PRO_DEF_FACADE(TestRttiFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, RttiReflection);
 static_assert(ReflectionApplicable<TestRttiFacade>);
 
-PRO_DEF_FACADE(TestTraitsFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_pointer_constraints, TraitsReflection);
+PRO_DEF_FACADE(TestTraitsFacade, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, TraitsReflection);
 static_assert(ReflectionApplicable<TestTraitsFacade>);
 
 }  // namespace
