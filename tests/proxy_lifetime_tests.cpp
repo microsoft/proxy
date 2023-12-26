@@ -7,7 +7,7 @@
 
 namespace {
 
-PRO_DEF_FACADE(TestFacade, utils::poly::ToString, pro::copyable_pointer_constraints);
+PRO_DEF_FACADE(TestFacade, utils::poly::ToString, pro::copyable_ptr_constraints);
 
 }  // namespace
 

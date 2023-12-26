@@ -18,7 +18,7 @@ namespace poly {
 template <class... Os>
 PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
 template <class... Os>
-PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_pointer_constraints);
+PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_ptr_constraints);
 
 PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
 

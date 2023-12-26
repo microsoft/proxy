@@ -16,33 +16,33 @@ namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
 
-struct proxy_pointer_constraints {
-  std::size_t maximum_size;
-  std::size_t maximum_alignment;
-  constraint_level minimum_copyability;
-  constraint_level minimum_relocatability;
-  constraint_level minimum_destructibility;
+struct proxiable_ptr_constraints {
+  std::size_t max_size;
+  std::size_t max_align;
+  constraint_level copyability;
+  constraint_level relocatability;
+  constraint_level destructibility;
 };
-constexpr proxy_pointer_constraints relocatable_pointer_constraints{
-  .maximum_size = sizeof(void*) * 2u,
-  .maximum_alignment = alignof(void*),
-  .minimum_copyability = constraint_level::none,
-  .minimum_relocatability = constraint_level::nothrow,
-  .minimum_destructibility = constraint_level::nothrow,
+constexpr proxiable_ptr_constraints relocatable_ptr_constraints{
+  .max_size = sizeof(void*) * 2u,
+  .max_align = alignof(void*),
+  .copyability = constraint_level::none,
+  .relocatability = constraint_level::nothrow,
+  .destructibility = constraint_level::nothrow,
 };
-constexpr proxy_pointer_constraints copyable_pointer_constraints{
-  .maximum_size = sizeof(void*) * 2u,
-  .maximum_alignment = alignof(void*),
-  .minimum_copyability = constraint_level::nontrivial,
-  .minimum_relocatability = constraint_level::nothrow,
-  .minimum_destructibility = constraint_level::nothrow,
+constexpr proxiable_ptr_constraints copyable_ptr_constraints{
+  .max_size = sizeof(void*) * 2u,
+  .max_align = alignof(void*),
+  .copyability = constraint_level::nontrivial,
+  .relocatability = constraint_level::nothrow,
+  .destructibility = constraint_level::nothrow,
 };
-constexpr proxy_pointer_constraints trivial_pointer_constraints{
-  .maximum_size = sizeof(void*),
-  .maximum_alignment = alignof(void*),
-  .minimum_copyability = constraint_level::trivial,
-  .minimum_relocatability = constraint_level::trivial,
-  .minimum_destructibility = constraint_level::trivial,
+constexpr proxiable_ptr_constraints trivial_ptr_constraints{
+  .max_size = sizeof(void*),
+  .max_align = alignof(void*),
+  .copyability = constraint_level::trivial,
+  .relocatability = constraint_level::trivial,
+  .destructibility = constraint_level::trivial,
 };
 
 namespace details {
@@ -257,12 +257,9 @@ template <class F, class Ds> struct basic_facade_traits_impl;
 template <class F, class... Ds>
 struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
   using meta_type = typename facade_meta_traits<
-      conditional_meta_tag<
-          F::pointer_constraints.minimum_copyability, copy_meta>,
-      conditional_meta_tag<
-          F::pointer_constraints.minimum_relocatability, relocation_meta>,
-      conditional_meta_tag<
-          F::pointer_constraints.minimum_destructibility, destruction_meta>,
+      conditional_meta_tag<F::constraints.copyability, copy_meta>,
+      conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
+      conditional_meta_tag<F::constraints.destructibility, destruction_meta>,
       conditional_meta_tag<std::is_void_v<typename F::reflection_type> ?
           constraint_level::none : constraint_level::nothrow,
           typename F::reflection_type>>::type;
@@ -284,11 +281,11 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
 
   template <class P>
   static constexpr bool applicable_pointer =
-      sizeof(P) <= F::pointer_constraints.maximum_size &&
-      alignof(P) <= F::pointer_constraints.maximum_alignment &&
-      has_copyability<P>(F::pointer_constraints.minimum_copyability) &&
-      has_relocatability<P>(F::pointer_constraints.minimum_relocatability) &&
-      has_destructibility<P>(F::pointer_constraints.minimum_destructibility) &&
+      sizeof(P) <= F::constraints.max_size &&
+      alignof(P) <= F::constraints.max_align &&
+      has_copyability<P>(F::constraints.copyability) &&
+      has_relocatability<P>(F::constraints.relocatability) &&
+      has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_pointer<P> && ...) &&
       (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
           typename F::reflection_type, std::in_place_type_t<P>>);
@@ -306,8 +303,7 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 template <class F>
 concept basic_facade = requires {
   typename F::dispatch_types;
-  typename std::integral_constant<
-      proxy_pointer_constraints, F::pointer_constraints>;
+  typename std::integral_constant<proxiable_ptr_constraints, F::constraints>;
   typename F::reflection_type;
 };
 
@@ -333,21 +329,21 @@ class proxy {
       proxiable<P, F>, std::is_constructible<P, Args...>,
           std::false_type>::value;
   static constexpr bool HasTrivialCopyConstructor =
-      F::pointer_constraints.minimum_copyability == constraint_level::trivial;
+      F::constraints.copyability == constraint_level::trivial;
   static constexpr bool HasNothrowCopyConstructor =
-      F::pointer_constraints.minimum_copyability >= constraint_level::nothrow;
-  static constexpr bool HasCopyConstructor = F::pointer_constraints
-      .minimum_copyability >= constraint_level::nontrivial;
-  static constexpr bool HasNothrowMoveConstructor = F::pointer_constraints
-      .minimum_relocatability >= constraint_level::nothrow;
-  static constexpr bool HasMoveConstructor = F::pointer_constraints
-      .minimum_relocatability >= constraint_level::nontrivial;
-  static constexpr bool HasTrivialDestructor = F::pointer_constraints
-      .minimum_destructibility == constraint_level::trivial;
-  static constexpr bool HasNothrowDestructor = F::pointer_constraints
-      .minimum_destructibility >= constraint_level::nothrow;
-  static constexpr bool HasDestructor = F::pointer_constraints
-      .minimum_destructibility >= constraint_level::nontrivial;
+      F::constraints.copyability >= constraint_level::nothrow;
+  static constexpr bool HasCopyConstructor =
+      F::constraints.copyability >= constraint_level::nontrivial;
+  static constexpr bool HasNothrowMoveConstructor =
+      F::constraints.relocatability >= constraint_level::nothrow;
+  static constexpr bool HasMoveConstructor =
+      F::constraints.relocatability >= constraint_level::nontrivial;
+  static constexpr bool HasTrivialDestructor =
+      F::constraints.destructibility == constraint_level::trivial;
+  static constexpr bool HasNothrowDestructor =
+      F::constraints.destructibility >= constraint_level::nothrow;
+  static constexpr bool HasDestructor =
+      F::constraints.destructibility >= constraint_level::nontrivial;
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyAssignment =
       HasNothrowPolyConstructor<P, Args...> && HasNothrowDestructor;
@@ -381,9 +377,9 @@ class proxy {
   proxy(proxy&& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
     if (rhs.meta_ != nullptr) {
-      if constexpr (F::pointer_constraints.minimum_relocatability ==
+      if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
-        memcpy(ptr_, rhs.ptr_, F::pointer_constraints.maximum_size);
+        memcpy(ptr_, rhs.ptr_, F::constraints.max_size);
       } else {
         rhs.meta_->relocate(ptr_, rhs.ptr_);
       }
@@ -469,8 +465,7 @@ class proxy {
       { this->~proxy(); meta_ = nullptr; }
   void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
-    if constexpr (F::pointer_constraints.minimum_relocatability ==
-        constraint_level::trivial) {
+    if constexpr (F::constraints.relocatability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
       std::swap(ptr_, rhs.ptr);
     } else {
@@ -533,8 +528,7 @@ class proxy {
   }
 
   const typename BasicTraits::meta_type* meta_;
-  alignas(F::pointer_constraints.maximum_alignment)
-      char ptr_[F::pointer_constraints.maximum_size];
+  alignas(F::constraints.max_align) char ptr_[F::constraints.max_size];
 };
 
 namespace details {
@@ -598,11 +592,11 @@ proxy<F> make_proxy(T&& value) {
 // facade types prior to C++26
 namespace helper {
 
-template <class D = std::tuple<>, proxy_pointer_constraints C =
-    relocatable_pointer_constraints, class R = void>
+template <class D = std::tuple<>, proxiable_ptr_constraints C =
+    relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
   using dispatch_types = D;
-  static constexpr proxy_pointer_constraints pointer_constraints = C;
+  static constexpr proxiable_ptr_constraints constraints = C;
   using reflection_type = R;
 };
 
