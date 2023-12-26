@@ -90,10 +90,19 @@ consteval bool has_destructibility(constraint_level level) {
 
 // As per std::to_address() wording in [pointer.conversion]
 template <class P>
-concept is_address_deducible =
-    (std::is_pointer_v<P> && !std::is_function_v<std::remove_pointer_t<P>>) ||
+concept is_address_deducible = std::is_pointer_v<P> ||
     requires(P p) { std::pointer_traits<P>::to_address(p); } ||
     requires(P p) { p.operator->(); };
+
+// Bypass function pointer restriction of std::to_address()
+template <class P>
+auto deduce_address(const P& p) {
+  if constexpr (std::is_pointer_v<P>) {
+    return p;
+  } else {
+    return std::to_address(p);
+  }
+}
 
 template <class T, class... Us> struct contains_traits : inapplicable_traits {};
 template <class T, class... Us>
@@ -130,14 +139,14 @@ struct overload_traits<R(Args...)> : applicable_traits {
 
   template <class D, class P>
   static constexpr bool applicable_pointer = requires(const P& p, Args... args)
-      { { D{}(*std::to_address(p), std::forward<Args>(args)...) }; };
+      { D{}(*deduce_address(p), std::forward<Args>(args)...); };
   template <class D, class P>
   static R dispatcher(const char* erased, Args... args) {
     const P& p = *reinterpret_cast<const P*>(erased);
     if constexpr (std::is_void_v<R>) {
-      D{}(*std::to_address(p), std::forward<Args>(args)...);
+      D{}(*deduce_address(p), std::forward<Args>(args)...);
     } else {
-      return D{}(*std::to_address(p), std::forward<Args>(args)...);
+      return D{}(*deduce_address(p), std::forward<Args>(args)...);
     }
   }
 };
@@ -180,7 +189,7 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D> requires(requires {
       typename D::overload_types;
-      { D{} };
+      D{};
     })
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
@@ -603,7 +612,7 @@ struct facade_prototype {
 
 #define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
     struct __NAME { \
-      using overload_types = std::tuple<__VA_ARGS__>;\
+      using overload_types = std::tuple<__VA_ARGS__>; \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           requires(requires{ std::forward<__T>(__self) \
@@ -614,7 +623,7 @@ struct facade_prototype {
     }
 #define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \
     struct __NAME { \
-      using overload_types = std::tuple<__VA_ARGS__>;\
+      using overload_types = std::tuple<__VA_ARGS__>; \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           requires(requires{ __FUNC(std::forward<__T>(__self), \
