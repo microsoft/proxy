@@ -590,44 +590,81 @@ proxy<F> make_proxy(T&& value) {
 
 // The following types and macros aim to simplify definition of dispatch and
 // facade types prior to C++26
-namespace helper {
+namespace details {
 
-template <class D = std::tuple<>, proxiable_ptr_constraints C =
+template <class Args, class O>
+struct one_overload_matching_traits : inapplicable_traits {};
+template <class Args0, class R, class... Args1>
+    requires(std::is_same_v<Args0, std::tuple<Args1&&...>>)
+struct one_overload_matching_traits<Args0, R(Args1...)> : applicable_traits {};
+template <class Args, class Os>
+struct overloads_matching_traits : inapplicable_traits {};
+template <class... Args, class... Os> requires(
+    one_overload_matching_traits<std::tuple<Args...>, Os>::applicable || ...)
+struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
+    : applicable_traits {};
+template <class Args, class Os>
+concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
+
+template <class D> struct dispatch_tuple_traits { using type = std::tuple<D>; };
+template <class... Ds>
+struct dispatch_tuple_traits<std::tuple<Ds...>>
+    { using type = std::tuple<Ds...>; };
+
+template <class Ts, class... Tss>
+struct tuple_concat_traits { using type = Ts; };
+template <class... Ts0, class... Ts1, class... Tss>
+struct tuple_concat_traits<std::tuple<Ts0...>, std::tuple<Ts1...>, Tss...>
+    : tuple_concat_traits<std::tuple<Ts0..., Ts1...>, Tss...> {};
+
+template <class... Os> requires(sizeof...(Os) > 0u)
+struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
+
+template <class... Ds> requires(sizeof...(Ds) > 0u)
+struct combined_dispatch : Ds... {
+  using overload_types =
+      typename tuple_concat_traits<typename Ds::overload_types...>::type;
+  using Ds::operator()...;
+};
+
+template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
-  using dispatch_types = D;
+  using dispatch_types = typename dispatch_tuple_traits<Ds>::type;
   static constexpr proxiable_ptr_constraints constraints = C;
   using reflection_type = R;
 };
 
-}  // namespace helper
+}  // namespace details
 
 }  // namespace pro
 
-#define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
-    struct __NAME { \
-      using overload_types = std::tuple<__VA_ARGS__>; \
+#define PRO_DEF_MEMBER_DISPATCH(NAME, ...) \
+    struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
-      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
-          requires(requires{ std::forward<__T>(__self) \
-              .__NAME(std::forward<__Args>(__args)...); }) { \
-        return std::forward<__T>(__self) \
-            .__NAME(std::forward<__Args>(__args)...); \
+      decltype(auto) operator()(__T& __self, __Args&&... __args) \
+          requires( \
+              ::pro::details::matches_overloads<std::tuple<__Args&&...>, \
+                  std::tuple<__VA_ARGS__>> && \
+              requires{ __self.NAME(std::forward<__Args>(__args)...); }) { \
+        return __self.NAME(std::forward<__Args>(__args)...); \
       } \
     }
-#define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \
-    struct __NAME { \
-      using overload_types = std::tuple<__VA_ARGS__>; \
+#define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) \
+    struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
-      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
-          requires(requires{ __FUNC(std::forward<__T>(__self), \
-              std::forward<__Args>(__args)...); }) { \
-        return __FUNC(std::forward<__T>(__self), \
-            std::forward<__Args>(__args)...); \
+      decltype(auto) operator()(__T& __self, __Args&&... __args) \
+          requires( \
+              ::pro::details::matches_overloads<std::tuple<__Args&&...>, \
+                  std::tuple<__VA_ARGS__>> && \
+              requires{ FUNC(__self, std::forward<__Args>(__args)...); }) { \
+        return FUNC(__self, std::forward<__Args>(__args)...); \
       } \
     }
+#define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
+    struct NAME : ::pro::details::combined_dispatch<__VA_ARGS__> {}
 #define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
-#define PRO_DEF_FACADE(__NAME, ...) \
-    struct __NAME : ::pro::helper::facade_prototype<__VA_ARGS__> {}
+#define PRO_DEF_FACADE(NAME, ...) \
+    struct NAME : ::pro::details::facade_prototype<__VA_ARGS__> {}
 
 #endif  // _MSFT_PROXY_
