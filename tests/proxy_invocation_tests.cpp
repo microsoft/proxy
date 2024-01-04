@@ -15,10 +15,10 @@ namespace {
 
 namespace poly {
 
-template <class... Os>
-PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
-template <class... Os>
-PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_ptr_constraints);
+template <class O>
+PRO_DEF_FREE_DISPATCH(Call, std::invoke, O);
+template <class O>
+PRO_DEF_FACADE(Callable, Call<O>, pro::copyable_ptr_constraints);
 
 PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
 
@@ -144,10 +144,10 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
 }
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
-  struct TestFacade : poly::Callable<void(int), void(double), void(char*),
-      void(const char*), void(std::string, int)> {};
+  PRO_DEF_COMBINED_DISPATCH(OverloadedCall, poly::Call<void(int)>, poly::Call<void(double)>, poly::Call<void(char*)>, poly::Call<void(const char*)>, poly::Call<void(std::string, int)>);
+  PRO_DEF_FACADE(OverloadedCallable, OverloadedCall);
   std::vector<std::type_index> side_effect;
-  auto p = pro::make_proxy<TestFacade>([&](auto&&... args)
+  auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
       { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
   p(123);
   ASSERT_EQ(side_effect, GetTypeIndices<int>());
