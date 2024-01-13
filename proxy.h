@@ -580,10 +580,9 @@ struct overload_args_traits<R(Args...)> { using type = std::tuple<Args&&...>; };
 template <class Args, class Os>
 struct overloads_matching_traits : inapplicable_traits {};
 template <class... Args, class... Os>
-    requires(contains_traits<std::tuple<Args&&...>,
-        typename overload_args_traits<Os>::type...>::applicable)
 struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
-    : applicable_traits {};
+    : contains_traits<std::tuple<Args&&...>,
+          typename overload_args_traits<Os>::type...> {};
 template <class Args, class Os>
 concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
 
@@ -607,14 +606,12 @@ struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
 
 template <class... Os> requires(sizeof...(Os) > 0u)
 struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
-
 template <class... Ds> requires(sizeof...(Ds) > 0u)
-struct combined_dispatch : Ds... {
+struct combined_dispatch_prototype : Ds... {
   using overload_types = typename flattening_traits<
       std::tuple<typename Ds::overload_types...>>::type;
   using Ds::operator()...;
 };
-
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
@@ -650,7 +647,7 @@ struct facade_prototype {
       } \
     }
 #define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
-    struct NAME : ::pro::details::combined_dispatch<__VA_ARGS__> {}
+    struct NAME : ::pro::details::combined_dispatch_prototype<__VA_ARGS__> {}
 #define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
 #define PRO_DEF_FACADE(NAME, ...) \
     struct NAME : ::pro::details::facade_prototype<__VA_ARGS__> {}
