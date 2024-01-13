@@ -439,8 +439,8 @@ class proxy {
   ~proxy() requires(HasTrivialDestructor) = default;
   ~proxy() requires(!HasDestructor) = delete;
 
-  [[nodiscard]] bool has_value() const noexcept { return meta_ != nullptr; }
-  [[nodiscard]] decltype(auto) reflect() const noexcept
+  bool has_value() const noexcept { return meta_ != nullptr; }
+  decltype(auto) reflect() const noexcept
       requires(!std::is_void_v<typename F::reflection_type>)
       { return static_cast<const typename F::reflection_type&>(*meta_); }
   void reset() noexcept(HasNothrowDestructor) requires(HasDestructor)
