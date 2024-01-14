@@ -155,14 +155,28 @@ static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacadeWithReflection>);
 
 struct BadFacade_MissingDispatchTypes {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
   using reflection_type = void;
 };
 static_assert(!pro::basic_facade<BadFacade_MissingDispatchTypes>);
 
 struct BadFacade_BadDispatchTypes {
   using dispatch_types = int;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
   using reflection_type = void;
 };
 static_assert(!pro::basic_facade<BadFacade_BadDispatchTypes>);
