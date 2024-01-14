@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
+#include <bit>
 #include <concepts>
 #include <initializer_list>
 #include <memory>
@@ -120,7 +121,7 @@ struct overload_traits<R(Args...)> : applicable_traits {
   template <class T> struct resolver { T operator()(Args...); };
 
   template <class D, class P>
-  static constexpr bool applicable_pointer = requires(const P& p, Args... args)
+  static constexpr bool applicable_ptr = requires(const P& p, Args... args)
       { D{}(*deduce_address(p), std::forward<Args>(args)...); };
   template <class D, class P>
   static R dispatcher(const char* erased, Args... args) {
@@ -162,17 +163,16 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
 
   template <class P>
-  static constexpr bool applicable_pointer =
-      (overload_traits<Os>::template applicable_pointer<D, P> && ...);
+  static constexpr bool applicable_ptr =
+      (overload_traits<Os>::template applicable_ptr<D, P> && ...);
   template <class P>
   static constexpr dispatcher_types dispatchers{
       overload_traits<Os>::template dispatcher<D, P>...};
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
-template <class D> requires(requires {
-      typename D::overload_types;
-      D{};
-    })
+template <class D>
+    requires(requires { typename D::overload_types; } &&
+        std::is_trivially_default_constructible_v<D>)
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
 
@@ -235,9 +235,10 @@ struct facade_meta_traits<M, Ms...> : facade_meta_traits_impl<
     M, typename facade_meta_traits<Ms...>::type> {};
 template <> struct facade_meta_traits<> { using type = facade_meta<>; };
 
-template <class F, class Ds> struct basic_facade_traits_impl;
+template <class F, class Ds>
+struct basic_facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds>
-struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
+struct basic_facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
   using meta_type = typename facade_meta_traits<
       conditional_meta_tag<F::constraints.copyability, copy_meta>,
       conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
@@ -250,8 +251,21 @@ struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
   template <class D>
   static constexpr bool has_dispatch = contains_traits<D, Ds...>::applicable;
 };
+template <class F> struct basic_facade_traits : inapplicable_traits {};
 template <class F>
-struct basic_facade_traits
+    requires(
+        requires {
+          typename F::dispatch_types;
+          F::constraints;
+          typename F::reflection_type;
+        } &&
+        std::is_same_v<decltype(F::constraints),
+            const proxiable_ptr_constraints> &&
+        std::popcount(F::constraints.max_align) == 1u &&
+        F::constraints.max_size % F::constraints.max_align == 0u &&
+        (std::is_void_v<typename F::reflection_type> ||
+            std::is_trivially_copyable_v<typename F::reflection_type>))
+struct basic_facade_traits<F>
     : basic_facade_traits_impl<F, typename F::dispatch_types> {};
 
 template <class F, class Ds>
@@ -262,13 +276,13 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
       typename basic_facade_traits<F>::meta_type, dispatch_meta<Ds>...>;
 
   template <class P>
-  static constexpr bool applicable_pointer =
+  static constexpr bool applicable_ptr =
       sizeof(P) <= F::constraints.max_size &&
       alignof(P) <= F::constraints.max_align &&
       has_copyability<P>(F::constraints.copyability) &&
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
-      (dispatch_traits<Ds>::template applicable_pointer<P> && ...) &&
+      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
       (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
           typename F::reflection_type, std::in_place_type_t<P>>);
   template <class P> static constexpr meta_type meta{std::in_place_type<P>};
@@ -283,18 +297,14 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 }  // namespace details
 
 template <class F>
-concept basic_facade = requires {
-  typename F::dispatch_types;
-  typename std::integral_constant<proxiable_ptr_constraints, F::constraints>;
-  typename F::reflection_type;
-};
+concept basic_facade = details::basic_facade_traits<F>::applicable;
 
 template <class F>
 concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
 
 template <class P, class F>
 concept proxiable = facade<F> && details::is_address_deducible<const P> &&
-    details::facade_traits<F>::template applicable_pointer<P>;
+    details::facade_traits<F>::template applicable_ptr<P>;
 
 template <basic_facade F>
 class proxy {
