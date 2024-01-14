@@ -498,8 +498,8 @@ class proxy {
   decltype(auto) operator()(Args&&... args) const
       requires(facade<details::dependent_t<F, Args...>> &&
           !std::is_void_v<DefaultDispatch> &&
-          details::dependent_t<details::dispatch_traits<DefaultDispatch>
-              , Args...>::template has_overload<Args...>)
+          details::dependent_t<details::dispatch_traits<DefaultDispatch>,
+              Args...>::template has_overload<Args...>)
       { return invoke(std::forward<Args>(args)...); }
 
  private:
@@ -628,9 +628,8 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires( \
-              ::pro::details::matches_overloads<std::tuple<__Args...>, \
-                  std::tuple<__VA_ARGS__>> && \
+          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
+              std::tuple<__VA_ARGS__>> && \
               requires{ __self.NAME(std::forward<__Args>(__args)...); }) { \
         return __self.NAME(std::forward<__Args>(__args)...); \
       } \
@@ -639,9 +638,8 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires( \
-              ::pro::details::matches_overloads<std::tuple<__Args...>, \
-                  std::tuple<__VA_ARGS__>> && \
+          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
+              std::tuple<__VA_ARGS__>> && \
               requires{ FUNC(__self, std::forward<__Args>(__args)...); }) { \
         return FUNC(__self, std::forward<__Args>(__args)...); \
       } \
