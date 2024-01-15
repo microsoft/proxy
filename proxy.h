@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
+#include <bit>
 #include <concepts>
 #include <initializer_list>
 #include <memory>
@@ -110,24 +111,6 @@ struct contains_traits<T, T, Us...> : applicable_traits {};
 template <class T, class U, class... Us>
 struct contains_traits<T, U, Us...> : contains_traits<T, Us...> {};
 
-template <class T, class U> struct flattening_traits_impl;
-template <class T>
-struct flattening_traits_impl<std::tuple<>, T> { using type = T; };
-template <class T, class... Ts, class U>
-struct flattening_traits_impl<std::tuple<T, Ts...>, U>
-    : flattening_traits_impl<std::tuple<Ts...>, U> {};
-template <class T, class... Ts, class... Us>
-    requires(!contains_traits<T, Us...>::applicable)
-struct flattening_traits_impl<std::tuple<T, Ts...>, std::tuple<Us...>>
-    : flattening_traits_impl<std::tuple<Ts...>, std::tuple<Us..., T>> {};
-template <class T> struct flattening_traits { using type = std::tuple<T>; };
-template <>
-struct flattening_traits<std::tuple<>> { using type = std::tuple<>; };
-template <class T, class... Ts>
-struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
-    typename flattening_traits<T>::type,
-    typename flattening_traits<std::tuple<Ts...>>::type> {};
-
 template <class... Ts> struct default_traits { using type = void; };
 template <class T> struct default_traits<T> { using type = T; };
 
@@ -138,7 +121,7 @@ struct overload_traits<R(Args...)> : applicable_traits {
   template <class T> struct resolver { T operator()(Args...); };
 
   template <class D, class P>
-  static constexpr bool applicable_pointer = requires(const P& p, Args... args)
+  static constexpr bool applicable_ptr = requires(const P& p, Args... args)
       { D{}(*deduce_address(p), std::forward<Args>(args)...); };
   template <class D, class P>
   static R dispatcher(const char* erased, Args... args) {
@@ -180,17 +163,16 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
 
   template <class P>
-  static constexpr bool applicable_pointer =
-      (overload_traits<Os>::template applicable_pointer<D, P> && ...);
+  static constexpr bool applicable_ptr =
+      (overload_traits<Os>::template applicable_ptr<D, P> && ...);
   template <class P>
   static constexpr dispatcher_types dispatchers{
       overload_traits<Os>::template dispatcher<D, P>...};
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
-template <class D> requires(requires {
-      typename D::overload_types;
-      D{};
-    })
+template <class D>
+    requires(requires { typename D::overload_types; } &&
+        std::is_trivially_default_constructible_v<D>)
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
 
@@ -253,9 +235,10 @@ struct facade_meta_traits<M, Ms...> : facade_meta_traits_impl<
     M, typename facade_meta_traits<Ms...>::type> {};
 template <> struct facade_meta_traits<> { using type = facade_meta<>; };
 
-template <class F, class Ds> struct basic_facade_traits_impl;
+template <class F, class Ds>
+struct basic_facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds>
-struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
+struct basic_facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
   using meta_type = typename facade_meta_traits<
       conditional_meta_tag<F::constraints.copyability, copy_meta>,
       conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
@@ -268,9 +251,22 @@ struct basic_facade_traits_impl<F, std::tuple<Ds...>> {
   template <class D>
   static constexpr bool has_dispatch = contains_traits<D, Ds...>::applicable;
 };
+template <class F> struct basic_facade_traits : inapplicable_traits {};
 template <class F>
-struct basic_facade_traits : basic_facade_traits_impl<
-    F, typename flattening_traits<typename F::dispatch_types>::type> {};
+    requires(
+        requires {
+          typename F::dispatch_types;
+          F::constraints;
+          typename F::reflection_type;
+        } &&
+        std::is_same_v<decltype(F::constraints),
+            const proxiable_ptr_constraints> &&
+        std::popcount(F::constraints.max_align) == 1u &&
+        F::constraints.max_size % F::constraints.max_align == 0u &&
+        (std::is_void_v<typename F::reflection_type> ||
+            std::is_trivially_copyable_v<typename F::reflection_type>))
+struct basic_facade_traits<F>
+    : basic_facade_traits_impl<F, typename F::dispatch_types> {};
 
 template <class F, class Ds>
 struct facade_traits_impl : inapplicable_traits {};
@@ -280,19 +276,19 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
       typename basic_facade_traits<F>::meta_type, dispatch_meta<Ds>...>;
 
   template <class P>
-  static constexpr bool applicable_pointer =
+  static constexpr bool applicable_ptr =
       sizeof(P) <= F::constraints.max_size &&
       alignof(P) <= F::constraints.max_align &&
       has_copyability<P>(F::constraints.copyability) &&
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
-      (dispatch_traits<Ds>::template applicable_pointer<P> && ...) &&
+      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
       (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
           typename F::reflection_type, std::in_place_type_t<P>>);
   template <class P> static constexpr meta_type meta{std::in_place_type<P>};
 };
-template <class F> struct facade_traits : facade_traits_impl<
-    F, typename flattening_traits<typename F::dispatch_types>::type> {};
+template <class F>
+struct facade_traits : facade_traits_impl<F, typename F::dispatch_types> {};
 
 template <class T, class...> struct dependent_traits { using type = T; };
 template <class T, class... Us>
@@ -301,18 +297,14 @@ using dependent_t = typename dependent_traits<T, Us...>::type;
 }  // namespace details
 
 template <class F>
-concept basic_facade = requires {
-  typename F::dispatch_types;
-  typename std::integral_constant<proxiable_ptr_constraints, F::constraints>;
-  typename F::reflection_type;
-};
+concept basic_facade = details::basic_facade_traits<F>::applicable;
 
 template <class F>
 concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
 
 template <class P, class F>
 concept proxiable = facade<F> && details::is_address_deducible<const P> &&
-    details::facade_traits<F>::template applicable_pointer<P>;
+    details::facade_traits<F>::template applicable_ptr<P>;
 
 template <basic_facade F>
 class proxy {
@@ -516,8 +508,8 @@ class proxy {
   decltype(auto) operator()(Args&&... args) const
       requires(facade<details::dependent_t<F, Args...>> &&
           !std::is_void_v<DefaultDispatch> &&
-          details::dependent_t<details::dispatch_traits<DefaultDispatch>
-              , Args...>::template has_overload<Args...>)
+          details::dependent_t<details::dispatch_traits<DefaultDispatch>,
+              Args...>::template has_overload<Args...>)
       { return invoke(std::forward<Args>(args)...); }
 
  private:
@@ -592,45 +584,48 @@ proxy<F> make_proxy(T&& value) {
 // facade types prior to C++26
 namespace details {
 
-template <class Args, class O>
-struct one_overload_matching_traits : inapplicable_traits {};
-template <class Args0, class R, class... Args1>
-    requires(std::is_same_v<Args0, std::tuple<Args1&&...>>)
-struct one_overload_matching_traits<Args0, R(Args1...)> : applicable_traits {};
+template <class O> struct overload_args_traits;
+template <class R, class... Args>
+struct overload_args_traits<R(Args...)> { using type = std::tuple<Args&&...>; };
 template <class Args, class Os>
 struct overloads_matching_traits : inapplicable_traits {};
-template <class... Args, class... Os> requires(
-    one_overload_matching_traits<std::tuple<Args...>, Os>::applicable || ...)
+template <class... Args, class... Os>
 struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
-    : applicable_traits {};
+    : contains_traits<std::tuple<Args&&...>,
+          typename overload_args_traits<Os>::type...> {};
 template <class Args, class Os>
 concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
 
-template <class D> struct dispatch_tuple_traits { using type = std::tuple<D>; };
-template <class... Ds>
-struct dispatch_tuple_traits<std::tuple<Ds...>>
-    { using type = std::tuple<Ds...>; };
-
-template <class Ts, class... Tss>
-struct tuple_concat_traits { using type = Ts; };
-template <class... Ts0, class... Ts1, class... Tss>
-struct tuple_concat_traits<std::tuple<Ts0...>, std::tuple<Ts1...>, Tss...>
-    : tuple_concat_traits<std::tuple<Ts0..., Ts1...>, Tss...> {};
+template <class T, class U> struct flattening_traits_impl;
+template <class T>
+struct flattening_traits_impl<std::tuple<>, T> { using type = T; };
+template <class T, class... Ts, class U>
+struct flattening_traits_impl<std::tuple<T, Ts...>, U>
+    : flattening_traits_impl<std::tuple<Ts...>, U> {};
+template <class T, class... Ts, class... Us>
+    requires(!contains_traits<T, Us...>::applicable)
+struct flattening_traits_impl<std::tuple<T, Ts...>, std::tuple<Us...>>
+    : flattening_traits_impl<std::tuple<Ts...>, std::tuple<Us..., T>> {};
+template <class T> struct flattening_traits { using type = std::tuple<T>; };
+template <>
+struct flattening_traits<std::tuple<>> { using type = std::tuple<>; };
+template <class T, class... Ts>
+struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
+    typename flattening_traits<T>::type,
+    typename flattening_traits<std::tuple<Ts...>>::type> {};
 
 template <class... Os> requires(sizeof...(Os) > 0u)
 struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
-
 template <class... Ds> requires(sizeof...(Ds) > 0u)
-struct combined_dispatch : Ds... {
-  using overload_types =
-      typename tuple_concat_traits<typename Ds::overload_types...>::type;
+struct combined_dispatch_prototype : Ds... {
+  using overload_types = typename flattening_traits<
+      std::tuple<typename Ds::overload_types...>>::type;
   using Ds::operator()...;
 };
-
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
-  using dispatch_types = typename dispatch_tuple_traits<Ds>::type;
+  using dispatch_types = typename flattening_traits<Ds>::type;
   static constexpr proxiable_ptr_constraints constraints = C;
   using reflection_type = R;
 };
@@ -643,9 +638,8 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires( \
-              ::pro::details::matches_overloads<std::tuple<__Args&&...>, \
-                  std::tuple<__VA_ARGS__>> && \
+          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
+              std::tuple<__VA_ARGS__>> && \
               requires{ __self.NAME(std::forward<__Args>(__args)...); }) { \
         return __self.NAME(std::forward<__Args>(__args)...); \
       } \
@@ -654,15 +648,14 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires( \
-              ::pro::details::matches_overloads<std::tuple<__Args&&...>, \
-                  std::tuple<__VA_ARGS__>> && \
+          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
+              std::tuple<__VA_ARGS__>> && \
               requires{ FUNC(__self, std::forward<__Args>(__args)...); }) { \
         return FUNC(__self, std::forward<__Args>(__args)...); \
       } \
     }
 #define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
-    struct NAME : ::pro::details::combined_dispatch<__VA_ARGS__> {}
+    struct NAME : ::pro::details::combined_dispatch_prototype<__VA_ARGS__> {}
 #define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
 #define PRO_DEF_FACADE(NAME, ...) \
     struct NAME : ::pro::details::facade_prototype<__VA_ARGS__> {}

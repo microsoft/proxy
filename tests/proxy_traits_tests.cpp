@@ -143,4 +143,94 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockTrivia
 static_assert(std::is_nothrow_constructible_v<pro::proxy<TrivialFacade>, MockFunctionPtr>);
 static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockFunctionPtr>);
 
+struct ReflectionOfSmallPtr {
+  template <class P> requires(sizeof(P) <= sizeof(void*))
+  constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
+};
+PRO_DEF_FACADE(RelocatableFacadeWithReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, ReflectionOfSmallPtr);
+static_assert(!pro::proxiable<MockMovablePtr, RelocatableFacadeWithReflection>);
+static_assert(!pro::proxiable<MockCopyablePtr, RelocatableFacadeWithReflection>);
+static_assert(pro::proxiable<MockCopyableSmallPtr, RelocatableFacadeWithReflection>);
+static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacadeWithReflection>);
+static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacadeWithReflection>);
+
+struct BadFacade_MissingDispatchTypes {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
+  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_MissingDispatchTypes>);
+
+struct BadFacade_BadDispatchTypes {
+  using dispatch_types = int;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
+  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_BadDispatchTypes>);
+
+struct BadFacade_MissingConstraints {
+  using dispatch_types = std::tuple<>;
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_MissingConstraints>);
+
+struct BadFacade_BadConstraints_UnexpectedType {
+  using dispatch_types = std::tuple<>;
+  static constexpr auto constraints = 0;
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_BadConstraints_UnexpectedType>);
+
+struct BadFacade_BadConstraints_BadAlignment {
+  using dispatch_types = std::tuple<>;
+  static constexpr pro::proxiable_ptr_constraints constraints{
+      .max_size = 6u,
+      .max_align = 6u, // Should be a power of 2
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_BadConstraints_BadAlignment>);
+
+struct BadFacade_BadConstraints_BadSize {
+  using dispatch_types = std::tuple<>;
+  static constexpr pro::proxiable_ptr_constraints constraints{
+      .max_size = 6u, // Should be a multiple of max_alignment
+      .max_align = 4u,
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
+  using reflection_type = void;
+};
+static_assert(!pro::basic_facade<BadFacade_BadConstraints_BadSize>);
+
+struct BadFacade_MissingReflectionType {
+  using dispatch_types = std::tuple<>;
+  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+};
+static_assert(!pro::basic_facade<BadFacade_MissingReflectionType>);
+
+struct BadFacade_BadReflectionType {
+  using dispatch_types = std::tuple<>;
+  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+  using reflection_type = std::unique_ptr<int>;
+};
+static_assert(!pro::basic_facade<BadFacade_BadReflectionType>);
+
 }  // namespace
