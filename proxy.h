@@ -614,12 +614,22 @@ struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
     typename flattening_traits<T>::type,
     typename flattening_traits<std::tuple<Ts...>>::type> {};
 
+template <class... Ds>
+struct overloads_combination_traits { using type = std::tuple<>; };
+template <class D, class... Ds>
+struct overloads_combination_traits<D, Ds...>
+    : overloads_combination_traits<Ds...> {};
+template <class D, class... Ds>
+    requires(requires { typename D::overload_types; })
+struct overloads_combination_traits<D, Ds...>
+    : flattening_traits<std::tuple<typename D::overload_types,
+        typename overloads_combination_traits<Ds...>::type>> {};
+
 template <class... Os> requires(sizeof...(Os) > 0u)
 struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
 template <class... Ds> requires(sizeof...(Ds) > 0u)
 struct combined_dispatch_prototype : Ds... {
-  using overload_types = typename flattening_traits<
-      std::tuple<typename Ds::overload_types...>>::type;
+  using overload_types = typename overloads_combination_traits<Ds...>::type;
   using Ds::operator()...;
 };
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
