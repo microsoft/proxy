@@ -92,8 +92,8 @@ consteval bool has_destructibility(constraint_level level) {
 // As per std::to_address() wording in [pointer.conversion]
 template <class P>
 concept is_address_deducible = std::is_pointer_v<P> ||
-    requires(P p) { std::pointer_traits<P>::to_address(p); } ||
-    requires(P p) { p.operator->(); };
+    requires(const P p) { std::pointer_traits<P>::to_address(p); } ||
+    requires(const P p) { p.operator->(); };
 
 // Bypass function pointer restriction of std::to_address()
 template <class P>
@@ -303,7 +303,7 @@ template <class F>
 concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
 
 template <class P, class F>
-concept proxiable = facade<F> && details::is_address_deducible<const P> &&
+concept proxiable = facade<F> && details::is_address_deducible<P> &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <basic_facade F>
