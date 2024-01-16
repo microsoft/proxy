@@ -169,3 +169,26 @@ TEST(ProxyInvocationTests, TestFunctionPointer) {
   auto ret = p();
   ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
 }
+
+TEST(ProxyInvocationTests, TestCombinationWithIncompleteDispatch) {
+  constexpr auto not_implemented = [](auto&&...) { throw std::runtime_error{ "Not implemented!" }; };
+  PRO_DEF_COMBINED_DISPATCH(WeakCall, poly::Call<void()>, decltype(not_implemented));
+  PRO_DEF_FACADE(WeakCallable, WeakCall);
+  {
+    int side_effect = 0;
+    auto p = pro::make_proxy<WeakCallable>([&] { side_effect = 1; });
+    p();
+    ASSERT_EQ(side_effect, 1);
+  }
+  {
+    bool exception_thrown = false;
+    auto p = pro::make_proxy<WeakCallable>(123);
+    try {
+      p();
+    } catch (const std::runtime_error& e) {
+      exception_thrown = true;
+      ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
+    }
+    ASSERT_TRUE(exception_thrown);
+  }
+}
