@@ -419,12 +419,14 @@ class proxy {
   proxy& operator=(const proxy&) requires(!HasCopyAssignment) = delete;
   proxy& operator=(proxy&& rhs) noexcept(HasNothrowMoveAssignment)
     requires(HasMoveAssignment) {
-    if constexpr (HasNothrowMoveAssignment) {
-      this->~proxy();
-    } else {
-      reset();  // For weak exception safety
+    if (this != &rhs) {
+      if constexpr (HasNothrowMoveAssignment) {
+        this->~proxy();
+      } else {
+        reset();  // For weak exception safety
+      }
+      new(this) proxy(std::move(rhs));
     }
-    new(this) proxy(std::move(rhs));
     return *this;
   }
   proxy& operator=(proxy&&) requires(!HasMoveAssignment) = delete;
