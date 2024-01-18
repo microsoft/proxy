@@ -598,40 +598,37 @@ struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
 template <class Args, class Os>
 concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
 
-template <class I, class O, template <class, class> class R>
-struct reduction_traits { using type = typename R<I, O>::type; };
-template <class I, class O, template <class, class> class R>
-using reduction_t = typename reduction_traits<I, O, R>::type;
+template <class T> struct final_reduction { using type = T; };
 template <template <class, class> class R, class O, class... Is>
-struct reduction_traits_impl { using type = O; };
+struct recursive_reduction : final_reduction<O> {};
 template <template <class, class> class R, class O, class I, class... Is>
-struct reduction_traits_impl<R, O, I, Is...>
-    : reduction_traits_impl<R, reduction_t<I, O, R>, Is...> {};
-template <class... Is, class O, template <class, class> class R>
-struct reduction_traits<std::tuple<Is...>, O, R>
-    : reduction_traits_impl<R, O, Is...> {};
+struct recursive_reduction<R, O, I, Is...>
+    : recursive_reduction<R, typename R<O, I>::type, Is...> {};
 
-template <class I, class O> struct flat_reducer { using type = O; };
-template <class I, class... Os> requires(!contains_traits<I, Os...>::applicable)
-struct flat_reducer<I, std::tuple<Os...>>
-    { using type = std::tuple<Os..., I>; };
-template <class I, class O> struct overloads_reducer { using type = O; };
-template <class I, class O> requires(requires { typename I::overload_types; })
-struct overloads_reducer<I, O>
-    { using type = reduction_t<typename I::overload_types, O, flat_reducer>; };
+template <class O, class I> struct flat_reduction : final_reduction<O> {};
+template <class... Os, class I> requires(!contains_traits<I, Os...>::applicable)
+struct flat_reduction<std::tuple<Os...>, I>
+    : final_reduction<std::tuple<Os..., I>> {};
+template <class... Os, class... Is>
+struct flat_reduction<std::tuple<Os...>, std::tuple<Is...>>
+    : recursive_reduction<flat_reduction, std::tuple<Os...>, Is...> {};
+template <class O, class I> struct overloads_reduction : final_reduction<O> {};
+template <class O, class I> requires(requires { typename I::overload_types; })
+struct overloads_reduction<O, I>
+    : flat_reduction<O, typename I::overload_types> {};
 
 template <class... Os> requires(sizeof...(Os) > 0u)
 struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
 template <class... Ds> requires(sizeof...(Ds) > 0u)
 struct combined_dispatch_prototype : Ds... {
-  using overload_types =
-      reduction_t<std::tuple<Ds...>, std::tuple<>, overloads_reducer>;
+  using overload_types = typename recursive_reduction<
+      overloads_reduction, std::tuple<>, Ds...>::type;
   using Ds::operator()...;
 };
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
-  using dispatch_types = reduction_t<Ds, std::tuple<>, flat_reducer>;
+  using dispatch_types = typename flat_reduction<std::tuple<>, Ds>::type;
   static constexpr proxiable_ptr_constraints constraints = C;
   using reflection_type = R;
 };
