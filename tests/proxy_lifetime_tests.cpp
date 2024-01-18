@@ -649,12 +649,10 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToSelf) {
 #elif defined(__GNUC__) && __GNUC__ >= 13
 #pragma GCC diagnostic pop
 #endif  // __clang__
-    ASSERT_FALSE(p.has_value());
-    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(p.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
