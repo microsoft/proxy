@@ -598,46 +598,40 @@ struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
 template <class Args, class Os>
 concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
 
-template <class T, class U> struct flattening_traits_impl;
-template <class T>
-struct flattening_traits_impl<std::tuple<>, T> { using type = T; };
-template <class T, class... Ts, class U>
-struct flattening_traits_impl<std::tuple<T, Ts...>, U>
-    : flattening_traits_impl<std::tuple<Ts...>, U> {};
-template <class T, class... Ts, class... Us>
-    requires(!contains_traits<T, Us...>::applicable)
-struct flattening_traits_impl<std::tuple<T, Ts...>, std::tuple<Us...>>
-    : flattening_traits_impl<std::tuple<Ts...>, std::tuple<Us..., T>> {};
-template <class T> struct flattening_traits { using type = std::tuple<T>; };
-template <>
-struct flattening_traits<std::tuple<>> { using type = std::tuple<>; };
-template <class T, class... Ts>
-struct flattening_traits<std::tuple<T, Ts...>> : flattening_traits_impl<
-    typename flattening_traits<T>::type,
-    typename flattening_traits<std::tuple<Ts...>>::type> {};
+template <class I, class O, template <class, class> class R>
+struct reduction_traits { using type = typename R<I, O>::type; };
+template <class I, class O, template <class, class> class R>
+using reduction_t = typename reduction_traits<I, O, R>::type;
+template <template <class, class> class R, class O, class... Is>
+struct reduction_traits_impl { using type = O; };
+template <template <class, class> class R, class O, class I, class... Is>
+struct reduction_traits_impl<R, O, I, Is...>
+    : reduction_traits_impl<R, reduction_t<I, O, R>, Is...> {};
+template <class... Is, class O, template <class, class> class R>
+struct reduction_traits<std::tuple<Is...>, O, R>
+    : reduction_traits_impl<R, O, Is...> {};
 
-template <class... Ds>
-struct overloads_combination_traits { using type = std::tuple<>; };
-template <class D, class... Ds>
-struct overloads_combination_traits<D, Ds...>
-    : overloads_combination_traits<Ds...> {};
-template <class D, class... Ds>
-    requires(requires { typename D::overload_types; })
-struct overloads_combination_traits<D, Ds...>
-    : flattening_traits<std::tuple<typename D::overload_types,
-        typename overloads_combination_traits<Ds...>::type>> {};
+template <class I, class O> struct flat_reducer { using type = O; };
+template <class I, class... Os> requires(!contains_traits<I, Os...>::applicable)
+struct flat_reducer<I, std::tuple<Os...>>
+    { using type = std::tuple<Os..., I>; };
+template <class I, class O> struct overloads_reducer { using type = O; };
+template <class I, class O> requires(requires { typename I::overload_types; })
+struct overloads_reducer<I, O>
+    { using type = reduction_t<typename I::overload_types, O, flat_reducer>; };
 
 template <class... Os> requires(sizeof...(Os) > 0u)
 struct dispatch_prototype { using overload_types = std::tuple<Os...>; };
 template <class... Ds> requires(sizeof...(Ds) > 0u)
 struct combined_dispatch_prototype : Ds... {
-  using overload_types = typename overloads_combination_traits<Ds...>::type;
+  using overload_types =
+      reduction_t<std::tuple<Ds...>, std::tuple<>, overloads_reducer>;
   using Ds::operator()...;
 };
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
-  using dispatch_types = typename flattening_traits<Ds>::type;
+  using dispatch_types = reduction_t<Ds, std::tuple<>, flat_reducer>;
   static constexpr proxiable_ptr_constraints constraints = C;
   using reflection_type = R;
 };
