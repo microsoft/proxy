@@ -96,7 +96,7 @@ template <class P>
         requires(const P p) { p.operator->(); })
 struct ptr_traits<P> : applicable_traits {
   static auto to_address(const P& p) noexcept { return std::to_address(p); }
-  using reference_type = ptr_traits<
+  using reference_type = typename ptr_traits<
       decltype(to_address(std::declval<const P&>()))>::reference_type;
 };
 template <class T>
@@ -118,7 +118,7 @@ template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...) noexcept(NE);
   template <class T> struct resolver { T operator()(Args...); };
-  using argument_types = std::tuple<Args&&...>; // For helper macros
+  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
 
   template <class D, class P>
   static constexpr bool applicable_ptr = NE ?
@@ -160,6 +160,9 @@ struct dispatch_traits_overload_resolution_impl<
   template <class... Args>
   static constexpr std::size_t overload_index =
       std::invoke_result_t<resolver, Args...>::value;
+  template <class... Args>
+  static constexpr bool matched_overload_is_noexcept = overload_traits<
+      std::tuple_element_t<overload_index<Args...>, Os>>::is_noexcept;
 };
 template <class D, class Os>
 struct dispatch_traits_impl : inapplicable_traits {};
@@ -504,6 +507,8 @@ class proxy {
   }
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
+      noexcept(details::dispatch_traits<D>
+          ::template matched_overload_is_noexcept<Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
           BasicTraits::template has_dispatch<D> &&
           details::dispatch_traits<D>::template has_overload<Args...>) {
@@ -517,6 +522,8 @@ class proxy {
 
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
+      noexcept(details::dispatch_traits<DefaultDispatch>
+          ::template matched_overload_is_noexcept<Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
           !std::is_void_v<DefaultDispatch> &&
           details::dependent_t<details::dispatch_traits<DefaultDispatch>,
@@ -595,24 +602,29 @@ proxy<F> make_proxy(T&& value) {
 // facade types prior to C++26
 namespace details {
 
-template <class O> struct overload_args_traits;
-template <class R, class... Args>
-struct overload_args_traits<R(Args...)> { using type = std::tuple<Args&&...>; };
-template <class Args, class Os>
-struct overloads_matching_traits : inapplicable_traits {};
-template <class... Args, class... Os>
-struct overloads_matching_traits<std::tuple<Args...>, std::tuple<Os...>>
-    : contains_traits<std::tuple<Args&&...>,
-          typename overload_args_traits<Os>::type...> {};
-template <class Args, class Os>
-concept matches_overloads = overloads_matching_traits<Args, Os>::applicable;
-
 template <class T> struct final_reduction { using type = T; };
 template <template <class, class> class R, class O, class... Is>
 struct recursive_reduction : final_reduction<O> {};
 template <template <class, class> class R, class O, class I, class... Is>
 struct recursive_reduction<R, O, I, Is...>
     : recursive_reduction<R, typename R<O, I>::type, Is...> {};
+
+template <class Args>
+struct overload_matching_helper {
+  template <class O, class I> struct reduction : final_reduction<O> {};
+  template <class O, class I>
+      requires(std::is_same_v<
+          typename overload_traits<I>::forwarding_argument_types, Args>)
+  struct reduction<O, I> : final_reduction<I> {};
+};
+template <class Args, class... Os>
+using applicable_overload = typename recursive_reduction<
+    overload_matching_helper<Args>::template reduction, void, Os...>::type;
+template <class Args, class... Os>
+concept has_overload = !std::is_void_v<applicable_overload<Args, Os...>>;
+template <class Args, class... Os>
+constexpr bool matched_overload_is_noexcept =
+    overload_traits<applicable_overload<Args, Os...>>::is_noexcept;
 
 template <class O, class I> struct flat_reduction : final_reduction<O> {};
 template <class... Os, class I> requires(!contains_traits<I, Os...>::applicable)
@@ -650,9 +662,14 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
-              std::tuple<__VA_ARGS__>> && \
-              requires{ __self.NAME(std::forward<__Args>(__args)...); }) { \
+          noexcept(::pro::details::matched_overload_is_noexcept< \
+              std::tuple<__Args&&...>, __VA_ARGS__>) \
+          requires(::pro::details::has_overload< \
+              std::tuple<__Args&&...>, __VA_ARGS__> && \
+              requires{ __self.NAME(std::forward<__Args>(__args)...); } && \
+              (!::pro::details::matched_overload_is_noexcept< \
+                  std::tuple<__Args&&...>, __VA_ARGS__> || \
+              noexcept(__self.NAME(std::forward<__Args>(__args)...)))) { \
         return __self.NAME(std::forward<__Args>(__args)...); \
       } \
     }
@@ -660,9 +677,14 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          requires(::pro::details::matches_overloads<std::tuple<__Args...>, \
-              std::tuple<__VA_ARGS__>> && \
-              requires{ FUNC(__self, std::forward<__Args>(__args)...); }) { \
+          noexcept(::pro::details::matched_overload_is_noexcept< \
+              std::tuple<__Args&&...>, __VA_ARGS__>) \
+          requires(::pro::details::has_overload< \
+              std::tuple<__Args&&...>, __VA_ARGS__> && \
+              requires{ FUNC(__self, std::forward<__Args>(__args)...); } && \
+              (!::pro::details::matched_overload_is_noexcept< \
+                  std::tuple<__Args&&...>, __VA_ARGS__> || \
+              noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) { \
         return FUNC(__self, std::forward<__Args>(__args)...); \
       } \
     }

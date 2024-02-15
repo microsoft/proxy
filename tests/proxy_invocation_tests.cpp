@@ -15,12 +15,12 @@ namespace {
 
 namespace poly {
 
-template <class O>
-PRO_DEF_FREE_DISPATCH(Call, std::invoke, O);
-template <class O>
-PRO_DEF_FACADE(Callable, Call<O>, pro::copyable_ptr_constraints);
+template <class... O>
+PRO_DEF_FREE_DISPATCH(Call, std::invoke, O...);
+template <class... O>
+PRO_DEF_FACADE(Callable, Call<O...>, pro::copyable_ptr_constraints);
 
-PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t());
+PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t() noexcept);
 
 template <class T>
 PRO_DEF_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<Callable<void(T&)>>));
@@ -43,24 +43,33 @@ struct Append {
 
 }  // namespace poly
 
-template <class F, class D, class... Args>
-concept InvocableWithDispatch = requires(pro::proxy<F> p, Args... args)
-    { { p.template invoke<D>(std::forward<Args>(args)...) }; };
-template <class F, class... Args>
-concept InvocableWithoutDispatch = std::is_invocable_v<pro::proxy<F>, Args...>;
+template <class F, class D, bool NE, class... Args>
+concept InvocableWithDispatch =
+    requires(const pro::proxy<F> p, Args... args) {
+      { p.template invoke<D>(std::forward<Args>(args)...) };
+      typename std::enable_if_t<NE == noexcept(p.template invoke<D>(std::forward<Args>(args)...))>;
+    };
+template <class F, bool NE, class... Args>
+concept InvocableWithoutDispatch =
+  requires(const pro::proxy<F> p, Args... args) {
+    { p(std::forward<Args>(args)...) };
+    typename std::enable_if_t<NE == noexcept(p(std::forward<Args>(args)...))>;
+};
 
 // Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, double>);
-static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithoutDispatch<poly::Callable<int(double)>, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, int(double), double>);  // Wrong dispatch
-static_assert(InvocableWithoutDispatch<poly::Callable<int(double)>, float>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, false, double>);
+static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithoutDispatch<poly::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
+static_assert(InvocableWithoutDispatch<poly::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithoutDispatch<poly::Callable<int(double), void(int) noexcept>, true, int>);  // Invoking noexcept overloads
+static_assert(InvocableWithoutDispatch<poly::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
 
 // Static assertions for a facade of multiple dispatches
-static_assert(InvocableWithDispatch<poly::Iterable<int>, poly::GetSize>);
-static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::ForEach<int>, pro::proxy<poly::Callable<void(double&)>>>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::Append<int>>);  // Wrong dispatch
-static_assert(!InvocableWithoutDispatch<poly::Iterable<int>>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithDispatch<poly::Iterable<int>, poly::GetSize, true>);
+static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::ForEach<int>, false, pro::proxy<poly::Callable<void(double&)>>>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::Append<int>, false>);  // Wrong dispatch
+static_assert(!InvocableWithoutDispatch<poly::Iterable<int>, false>);  // Invoking without specifying a dispatch
 
 template <class... Args>
 std::vector<std::type_index> GetTypeIndices()
@@ -161,6 +170,19 @@ TEST(ProxyInvocationTests, TestOverloadResolution) {
   p("lalala", 0);
   ASSERT_EQ(side_effect, (GetTypeIndices<std::string, int>()));
   ASSERT_FALSE((std::is_invocable_v<decltype(p), std::vector<int>>));
+}
+
+TEST(ProxyInvocationTests, TestNoexcept) {
+  std::vector<std::type_index> side_effect;
+  auto p = pro::make_proxy<poly::Callable<void(int) noexcept, void(double)>>([&](auto&&... args) noexcept
+    { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
+  static_assert(noexcept(p(123)));
+  p(123);
+  ASSERT_EQ(side_effect, GetTypeIndices<int>());
+  static_assert(!noexcept(p(1.23)));
+  p(1.23);
+  ASSERT_EQ(side_effect, GetTypeIndices<double>());
+  ASSERT_FALSE((std::is_invocable_v<decltype(p), char*>));
 }
 
 TEST(ProxyInvocationTests, TestFunctionPointer) {
