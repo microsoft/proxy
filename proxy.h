@@ -90,20 +90,20 @@ consteval bool has_destructibility(constraint_level level) {
 }
 
 // As per std::to_address() wording in [pointer.conversion]
+template <class P> struct ptr_traits : inapplicable_traits {};
 template <class P>
-concept is_address_deducible = std::is_pointer_v<P> ||
-    requires(const P p) { std::pointer_traits<P>::to_address(p); } ||
-    requires(const P p) { p.operator->(); };
-
-// Bypass function pointer restriction of std::to_address()
-template <class P>
-auto deduce_address(const P& p) {
-  if constexpr (std::is_pointer_v<P>) {
-    return p;
-  } else {
-    return std::to_address(p);
-  }
-}
+    requires(requires(const P p) { std::pointer_traits<P>::to_address(p); } ||
+        requires(const P p) { p.operator->(); })
+struct ptr_traits<P> : applicable_traits {
+  static auto to_address(const P& p) noexcept { return std::to_address(p); }
+  using reference_type = ptr_traits<
+      decltype(to_address(std::declval<const P&>()))>::reference_type;
+};
+template <class T>
+struct ptr_traits<T*> : applicable_traits {
+  static auto to_address(T* p) noexcept { return p; }
+  using reference_type = T&;
+};
 
 template <class T, class... Us> struct contains_traits : inapplicable_traits {};
 template <class T, class... Us>
@@ -114,25 +114,34 @@ struct contains_traits<T, U, Us...> : contains_traits<T, Us...> {};
 template <class... Ts> struct default_traits { using type = void; };
 template <class T> struct default_traits<T> { using type = T; };
 
-template <class O> struct overload_traits : inapplicable_traits {};
-template <class R, class... Args>
-struct overload_traits<R(Args...)> : applicable_traits {
-  using dispatcher_type = R (*)(const char*, Args...);
+template <bool NE, class R, class... Args>
+struct overload_traits_impl : applicable_traits {
+  using dispatcher_type = R (*)(const char*, Args...) noexcept(NE);
   template <class T> struct resolver { T operator()(Args...); };
+  using argument_types = std::tuple<Args&&...>; // For helper macros
 
   template <class D, class P>
-  static constexpr bool applicable_ptr = requires(const P& p, Args... args)
-      { D{}(*deduce_address(p), std::forward<Args>(args)...); };
+  static constexpr bool applicable_ptr = NE ?
+      std::is_nothrow_invocable_v<
+          D, typename ptr_traits<P>::reference_type, Args...> :
+      std::is_invocable_v<D, typename ptr_traits<P>::reference_type, Args...>;
+  static constexpr bool is_noexcept = NE;
   template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) {
-    const P& p = *reinterpret_cast<const P*>(erased);
+  static R dispatcher(const char* erased, Args... args) noexcept(NE) {
+    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
     if constexpr (std::is_void_v<R>) {
-      D{}(*deduce_address(p), std::forward<Args>(args)...);
+      D{}(*ptr, std::forward<Args>(args)...);
     } else {
-      return D{}(*deduce_address(p), std::forward<Args>(args)...);
+      return D{}(*ptr, std::forward<Args>(args)...);
     }
   }
 };
+template <class O> struct overload_traits : inapplicable_traits {};
+template <class R, class... Args>
+struct overload_traits<R(Args...)> : overload_traits_impl<false, R, Args...> {};
+template <class R, class... Args>
+struct overload_traits<R(Args...) noexcept>
+    : overload_traits_impl<true, R, Args...> {};
 
 template <class Os, class Is> struct dispatch_traits_overload_resolution_impl;
 template <class Os, std::size_t... Is>
@@ -303,7 +312,7 @@ template <class F>
 concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
 
 template <class P, class F>
-concept proxiable = facade<F> && details::is_address_deducible<P> &&
+concept proxiable = facade<F> && details::ptr_traits<P>::applicable &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <basic_facade F>
