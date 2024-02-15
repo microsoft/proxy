@@ -16,7 +16,7 @@ namespace {
 namespace poly {
 
 PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
-PRO_DEF_MEMBER_DISPATCH(Area, double());
+PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly
@@ -27,7 +27,7 @@ class Rectangle {
       { out << "{Rectangle: width = " << width_ << ", height = " << height_ << "}"; }
   void SetWidth(double width) { width_ = width; }
   void SetHeight(double height) { height_ = height; }
-  double Area() const { return width_ * height_; }
+  double Area() const noexcept { return width_ * height_; }
 
  private:
   double width_;
@@ -38,7 +38,7 @@ class Circle {
  public:
   void Draw(std::ostream& out) const { out << "{Circle: radius = " << radius_ << "}"; }
   void SetRadius(double radius) { radius_ = radius; }
-  double Area() const { return std::numbers::pi * radius_ * radius_; }
+  double Area() const noexcept { return std::numbers::pi * radius_ * radius_; }
 
  private:
   double radius_;
@@ -47,7 +47,7 @@ class Circle {
 class Point {
  public:
   void Draw(std::ostream& out) const { out << "{Point}"; }
-  constexpr double Area() const { return 0; }
+  constexpr double Area() const noexcept { return 0; }
 };
 
 std::string PrintDrawableToString(pro::proxy<poly::Drawable> p) {
