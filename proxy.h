@@ -114,16 +114,12 @@ struct contains_traits<T, U, Us...> : contains_traits<T, Us...> {};
 template <class... Ts> struct default_traits { using type = void; };
 template <class T> struct default_traits<T> { using type = T; };
 
-template <class... Args>
-struct overload_traits_resolution_impl {
-  template <class T> struct resolver { T operator()(Args...); };
-  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
-};
 template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
-struct overload_traits<R(Args...)> : applicable_traits,
-    overload_traits_resolution_impl<Args...> {
+struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
+  struct resolver { R (*operator()(Args...))(Args...); };
+  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
 
   template <class D, class P>
   static constexpr bool applicable_ptr = std::is_invocable_v<
@@ -140,9 +136,10 @@ struct overload_traits<R(Args...)> : applicable_traits,
   }
 };
 template <class R, class... Args>
-struct overload_traits<R(Args...) noexcept> : applicable_traits,
-    overload_traits_resolution_impl<Args...> {
+struct overload_traits<R(Args...) noexcept> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...) noexcept;
+  struct resolver { R (*operator()(Args...))(Args...) noexcept; };
+  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
 
   template <class D, class P>
   static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
@@ -159,34 +156,26 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits,
   }
 };
 
-template <class Os, class Is> struct dispatch_traits_overload_resolution_impl;
-template <class Os, std::size_t... Is>
-struct dispatch_traits_overload_resolution_impl<
-    Os, std::index_sequence<Is...>> {
+template <class... Os>
+struct overload_resolution_traits {
  private:
-  template <std::size_t I>
-  using single_resolver = typename overload_traits<std::tuple_element_t<I, Os>>
-      ::template resolver<std::integral_constant<std::size_t, I>>;
-  struct resolver : single_resolver<Is>...
-      { using single_resolver<Is>::operator()...; };
+  struct resolver : overload_traits<Os>::resolver...
+      { using overload_traits<Os>::resolver::operator()...; };
 
  public:
   template <class... Args>
-  static constexpr bool has_overload = std::is_invocable_v<resolver, Args...>;
-  template <class... Args>
-  static constexpr std::size_t overload_index =
-      std::invoke_result_t<resolver, Args...>::value;
+  using matched_overload =
+      std::remove_pointer_t<std::invoke_result_t<resolver, Args...>>;
   template <class... Args>
   static constexpr bool matched_overload_is_noexcept = overload_traits<
-      std::tuple_element_t<overload_index<Args...>, Os>>::is_noexcept;
+      matched_overload<Args...>>::is_noexcept;
 };
 template <class D, class Os>
 struct dispatch_traits_impl : inapplicable_traits {};
 template <class D, class... Os>
     requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
 struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
-    dispatch_traits_overload_resolution_impl<std::tuple<Os...>,
-        std::make_index_sequence<sizeof...(Os)>> {
+    overload_resolution_traits<Os...> {
   using dispatcher_types =
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
 
@@ -338,7 +327,6 @@ template <basic_facade F>
 class proxy {
   using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
-  using DefaultDispatch = typename BasicTraits::default_dispatch;
 
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyConstructor = std::conditional_t<
@@ -521,29 +509,31 @@ class proxy {
     initialize<P>(il, std::forward<Args>(args)...);
     return *reinterpret_cast<P*>(ptr_);
   }
-  template <class D = DefaultDispatch, class... Args>
+  template <class D = typename BasicTraits::default_dispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
       noexcept(details::dispatch_traits<D>
           ::template matched_overload_is_noexcept<Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
           BasicTraits::template has_dispatch<D> &&
-          details::dispatch_traits<D>::template has_overload<Args...>) {
-    constexpr std::size_t OverloadIndex =
-        details::dispatch_traits<D>::template overload_index<Args...>;
+          requires { typename details::dispatch_traits<D>
+              ::template matched_overload<Args...>; }) {
+    using DispatcherType = typename details::overload_traits<
+        details::dispatch_traits<D>::template matched_overload<Args...>>
+        ::dispatcher_type;
     const auto& dispatchers = static_cast<const typename Traits::meta_type*>(
         meta_)->template dispatch_meta<D>::dispatchers;
-    const auto& dispatcher = std::get<OverloadIndex>(dispatchers);
+    const auto& dispatcher = std::get<DispatcherType>(dispatchers);
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
 
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
-      noexcept(details::dispatch_traits<DefaultDispatch>
+      noexcept(details::dispatch_traits<typename BasicTraits::default_dispatch>
           ::template matched_overload_is_noexcept<Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
-          !std::is_void_v<DefaultDispatch> &&
-          details::dependent_t<details::dispatch_traits<DefaultDispatch>,
-              Args...>::template has_overload<Args...>)
+          !std::is_void_v<typename BasicTraits::default_dispatch> &&
+          requires { typename details::dispatch_traits<typename BasicTraits
+              ::default_dispatch>::template matched_overload<Args...>; })
       { return invoke(std::forward<Args>(args)...); }
 
  private:
@@ -634,13 +624,13 @@ struct overload_matching_helper {
   struct reduction<O, I> : final_reduction<I> {};
 };
 template <class Args, class... Os>
-using applicable_overload = typename recursive_reduction<
+    requires(!std::is_void_v<typename recursive_reduction<
+        overload_matching_helper<Args>::template reduction, void, Os...>::type>)
+using matched_overload = typename recursive_reduction<
     overload_matching_helper<Args>::template reduction, void, Os...>::type;
 template <class Args, class... Os>
-concept has_overload = !std::is_void_v<applicable_overload<Args, Os...>>;
-template <class Args, class... Os>
 constexpr bool matched_overload_is_noexcept =
-    overload_traits<applicable_overload<Args, Os...>>::is_noexcept;
+    overload_traits<matched_overload<Args, Os...>>::is_noexcept;
 
 template <class O, class I> struct flat_reduction : final_reduction<O> {};
 template <class... Os, class I> requires(!contains_traits<I, Os...>::applicable)
@@ -680,10 +670,12 @@ struct facade_prototype {
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
           noexcept(::pro::details::matched_overload_is_noexcept< \
               std::tuple<__Args&&...>, __VA_ARGS__>) \
-          requires(::pro::details::has_overload< \
-              std::tuple<__Args&&...>, __VA_ARGS__> && \
-              requires{ __self.NAME(std::forward<__Args>(__args)...); } && \
-              (!::pro::details::matched_overload_is_noexcept< \
+          requires( \
+              requires{ \
+                typename ::pro::details::matched_overload< \
+                    std::tuple<__Args&&...>, __VA_ARGS__>; \
+                __self.NAME(std::forward<__Args>(__args)...); \
+              } && (!::pro::details::matched_overload_is_noexcept< \
                   std::tuple<__Args&&...>, __VA_ARGS__> || \
               noexcept(__self.NAME(std::forward<__Args>(__args)...)))) { \
         return __self.NAME(std::forward<__Args>(__args)...); \
@@ -695,9 +687,12 @@ struct facade_prototype {
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
           noexcept(::pro::details::matched_overload_is_noexcept< \
               std::tuple<__Args&&...>, __VA_ARGS__>) \
-          requires(::pro::details::has_overload< \
-              std::tuple<__Args&&...>, __VA_ARGS__> && \
-              requires{ FUNC(__self, std::forward<__Args>(__args)...); } && \
+          requires( \
+              requires{ \
+                typename ::pro::details::matched_overload< \
+                    std::tuple<__Args&&...>, __VA_ARGS__>; \
+                FUNC(__self, std::forward<__Args>(__args)...); \
+              } && \
               (!::pro::details::matched_overload_is_noexcept< \
                   std::tuple<__Args&&...>, __VA_ARGS__> || \
               noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) { \
