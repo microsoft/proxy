@@ -114,20 +114,23 @@ struct contains_traits<T, U, Us...> : contains_traits<T, Us...> {};
 template <class... Ts> struct default_traits { using type = void; };
 template <class T> struct default_traits<T> { using type = T; };
 
-template <bool NE, class R, class... Args>
-struct overload_traits_impl : applicable_traits {
-  using dispatcher_type = R (*)(const char*, Args...) noexcept(NE);
+template <class... Args>
+struct overload_traits_resolution_impl {
   template <class T> struct resolver { T operator()(Args...); };
   using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
+};
+template <class O> struct overload_traits : inapplicable_traits {};
+template <class R, class... Args>
+struct overload_traits<R(Args...)> : applicable_traits,
+    overload_traits_resolution_impl<Args...> {
+  using dispatcher_type = R (*)(const char*, Args...);
 
   template <class D, class P>
-  static constexpr bool applicable_ptr = NE ?
-      std::is_nothrow_invocable_v<
-          D, typename ptr_traits<P>::reference_type, Args...> :
-      std::is_invocable_v<D, typename ptr_traits<P>::reference_type, Args...>;
-  static constexpr bool is_noexcept = NE;
+  static constexpr bool applicable_ptr = std::is_invocable_v<
+      D, typename ptr_traits<P>::reference_type, Args...>;
+  static constexpr bool is_noexcept = false;
   template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) noexcept(NE) {
+  static R dispatcher(const char* erased, Args... args) {
     auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
     if constexpr (std::is_void_v<R>) {
       D{}(*ptr, std::forward<Args>(args)...);
@@ -136,12 +139,25 @@ struct overload_traits_impl : applicable_traits {
     }
   }
 };
-template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
-struct overload_traits<R(Args...)> : overload_traits_impl<false, R, Args...> {};
-template <class R, class... Args>
-struct overload_traits<R(Args...) noexcept>
-    : overload_traits_impl<true, R, Args...> {};
+struct overload_traits<R(Args...) noexcept> : applicable_traits,
+    overload_traits_resolution_impl<Args...> {
+  using dispatcher_type = R (*)(const char*, Args...) noexcept;
+
+  template <class D, class P>
+  static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
+      D, typename ptr_traits<P>::reference_type, Args...>;
+  static constexpr bool is_noexcept = true;
+  template <class D, class P>
+  static R dispatcher(const char* erased, Args... args) noexcept {
+    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
+    if constexpr (std::is_void_v<R>) {
+      D{}(*ptr, std::forward<Args>(args)...);
+    } else {
+      return D{}(*ptr, std::forward<Args>(args)...);
+    }
+  }
+};
 
 template <class Os, class Is> struct dispatch_traits_overload_resolution_impl;
 template <class Os, std::size_t... Is>
