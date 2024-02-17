@@ -519,11 +519,10 @@ class proxy {
       requires(facade<details::dependent_t<F, Args...>> &&
           BasicTraits::template has_dispatch<D> &&
           requires { typename MatchedOverload<D, Args...>; }) {
-    using DispatcherType = typename details::overload_traits<
-        MatchedOverload<D, Args...>>::dispatcher_type;
     const auto& dispatchers = static_cast<const typename Traits::meta_type*>(
         meta_)->template dispatch_meta<D>::dispatchers;
-    auto dispatcher = std::get<DispatcherType>(dispatchers);
+    auto dispatcher = std::get<typename details::overload_traits<
+        MatchedOverload<D, Args...>>::dispatcher_type>(dispatchers);
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
 
