@@ -166,9 +166,6 @@ struct overload_resolution_traits {
   template <class... Args>
   using matched_overload =
       std::remove_pointer_t<std::invoke_result_t<resolver, Args...>>;
-  template <class... Args>
-  static constexpr bool matched_overload_is_noexcept = overload_traits<
-      matched_overload<Args...>>::is_noexcept;
 };
 template <class D, class Os>
 struct dispatch_traits_impl : inapplicable_traits {};
@@ -327,6 +324,10 @@ template <basic_facade F>
 class proxy {
   using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
+  using DefaultDispatch = typename BasicTraits::default_dispatch;
+  template <class D, class... Args>
+  using MatchedOverload =
+      typename details::dispatch_traits<D>::template matched_overload<Args...>;
 
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyConstructor = std::conditional_t<
@@ -367,6 +368,9 @@ class proxy {
   static constexpr bool HasNothrowMoveAssignment = HasNothrowMoveConstructor &&
       HasNothrowDestructor;
   static constexpr bool HasMoveAssignment = HasMoveConstructor && HasDestructor;
+  template <class D, class... Args>
+  static constexpr bool HasNothrowInvocation =
+      details::overload_traits<MatchedOverload<D, Args...>>::is_noexcept;
 
  public:
   proxy() noexcept { meta_ = nullptr; }
@@ -509,31 +513,25 @@ class proxy {
     initialize<P>(il, std::forward<Args>(args)...);
     return *reinterpret_cast<P*>(ptr_);
   }
-  template <class D = typename BasicTraits::default_dispatch, class... Args>
+  template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
-      noexcept(details::dispatch_traits<D>
-          ::template matched_overload_is_noexcept<Args...>)
+      noexcept(HasNothrowInvocation<D, Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
           BasicTraits::template has_dispatch<D> &&
-          requires { typename details::dispatch_traits<D>
-              ::template matched_overload<Args...>; }) {
+          requires { typename MatchedOverload<D, Args...>; }) {
     using DispatcherType = typename details::overload_traits<
-        typename details::dispatch_traits<D>
-            ::template matched_overload<Args...>>::dispatcher_type;
+        MatchedOverload<D, Args...>>::dispatcher_type;
     const auto& dispatchers = static_cast<const typename Traits::meta_type*>(
         meta_)->template dispatch_meta<D>::dispatchers;
-    const auto& dispatcher = std::get<DispatcherType>(dispatchers);
+    auto dispatcher = std::get<DispatcherType>(dispatchers);
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
 
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
-      noexcept(details::dispatch_traits<typename BasicTraits::default_dispatch>
-          ::template matched_overload_is_noexcept<Args...>)
+      noexcept(HasNothrowInvocation<DefaultDispatch, Args...>)
       requires(facade<details::dependent_t<F, Args...>> &&
-          !std::is_void_v<typename BasicTraits::default_dispatch> &&
-          requires { typename details::dispatch_traits<typename BasicTraits
-              ::default_dispatch>::template matched_overload<Args...>; })
+          requires { typename MatchedOverload<DefaultDispatch, Args...>; })
       { return invoke(std::forward<Args>(args)...); }
 
  private:
