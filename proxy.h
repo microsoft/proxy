@@ -51,6 +51,13 @@ namespace details {
 struct applicable_traits { static constexpr bool applicable = true; };
 struct inapplicable_traits { static constexpr bool applicable = false; };
 
+template <class T> struct final_reduction { using type = T; };
+template <template <class, class> class R, class O, class... Is>
+struct recursive_reduction : final_reduction<O> {};
+template <template <class, class> class R, class O, class I, class... Is>
+struct recursive_reduction<R, O, I, Is...>
+    : recursive_reduction<R, typename R<O, I>::type, Is...> {};
+
 template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
@@ -105,15 +112,6 @@ struct ptr_traits<T*> : applicable_traits {
   using reference_type = T&;
 };
 
-template <class T, class... Us> struct contains_traits : inapplicable_traits {};
-template <class T, class... Us>
-struct contains_traits<T, T, Us...> : applicable_traits {};
-template <class T, class U, class... Us>
-struct contains_traits<T, U, Us...> : contains_traits<T, Us...> {};
-
-template <class... Ts> struct default_traits { using type = void; };
-template <class T> struct default_traits<T> { using type = T; };
-
 template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
 struct overload_traits<R(Args...)> : applicable_traits {
@@ -156,23 +154,19 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   }
 };
 
-template <class... Os>
-struct overload_resolution_traits {
+template <class D, class Os>
+struct dispatch_traits_impl : inapplicable_traits {};
+template <class D, class... Os>
+    requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
+struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
  private:
-  struct resolver : overload_traits<Os>::resolver...
+  struct overload_resolver : overload_traits<Os>::resolver...
       { using overload_traits<Os>::resolver::operator()...; };
 
  public:
   template <class... Args>
   using matched_overload =
-      std::remove_pointer_t<std::invoke_result_t<resolver, Args...>>;
-};
-template <class D, class Os>
-struct dispatch_traits_impl : inapplicable_traits {};
-template <class D, class... Os>
-    requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
-struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits,
-    overload_resolution_traits<Os...> {
+      std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
   using dispatcher_types =
       std::tuple<typename overload_traits<Os>::dispatcher_type...>;
 
@@ -231,39 +225,33 @@ struct facade_meta : Ms... {
 };
 
 template <constraint_level C, class M> struct conditional_meta_tag {};
-template <class M, class Ms> struct facade_meta_traits_impl;
-template <class M, class... Ms>
-struct facade_meta_traits_impl<M, facade_meta<Ms...>>
-    { using type = facade_meta<M, Ms...>; };
-template <constraint_level C, class M, class... Ms>
+template <class O, class I>
+struct facade_meta_reduction : final_reduction<O> {};
+template <class... Ms, constraint_level C, class M>
     requires(C > constraint_level::none && C < constraint_level::trivial)
-struct facade_meta_traits_impl<conditional_meta_tag<C, M>, facade_meta<Ms...>>
-    { using type = facade_meta<M, Ms...>; };
-template <constraint_level C, class M, class... Ms>
-    requires(C < constraint_level::nontrivial || C > constraint_level::nothrow)
-struct facade_meta_traits_impl<conditional_meta_tag<C, M>, facade_meta<Ms...>>
-    { using type = facade_meta<Ms...>; };
-template <class... Ms> struct facade_meta_traits;
-template <class M, class... Ms>
-struct facade_meta_traits<M, Ms...> : facade_meta_traits_impl<
-    M, typename facade_meta_traits<Ms...>::type> {};
-template <> struct facade_meta_traits<> { using type = facade_meta<>; };
+struct facade_meta_reduction<facade_meta<Ms...>, conditional_meta_tag<C, M>>
+    : final_reduction<facade_meta<Ms..., M>> {};
 
+template <class... Ds>
+struct default_dispatch_traits { using default_dispatch = void; };
+template <class D>
+struct default_dispatch_traits<D> { using default_dispatch = D; };
 template <class F, class Ds>
 struct basic_facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds>
-struct basic_facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
-  using meta_type = typename facade_meta_traits<
+struct basic_facade_traits_impl<F, std::tuple<Ds...>>
+    : applicable_traits, default_dispatch_traits<Ds...> {
+  using meta_type = typename recursive_reduction<facade_meta_reduction,
+      facade_meta<>,
       conditional_meta_tag<F::constraints.copyability, copy_meta>,
       conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
       conditional_meta_tag<F::constraints.destructibility, destruction_meta>,
       conditional_meta_tag<std::is_void_v<typename F::reflection_type> ?
           constraint_level::none : constraint_level::nothrow,
           typename F::reflection_type>>::type;
-  using default_dispatch = typename default_traits<Ds...>::type;
 
   template <class D>
-  static constexpr bool has_dispatch = contains_traits<D, Ds...>::applicable;
+  static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
 };
 template <class F> struct basic_facade_traits : inapplicable_traits {};
 template <class F>
@@ -605,13 +593,6 @@ proxy<F> make_proxy(T&& value) {
 // facade types prior to C++26
 namespace details {
 
-template <class T> struct final_reduction { using type = T; };
-template <template <class, class> class R, class O, class... Is>
-struct recursive_reduction : final_reduction<O> {};
-template <template <class, class> class R, class O, class I, class... Is>
-struct recursive_reduction<R, O, I, Is...>
-    : recursive_reduction<R, typename R<O, I>::type, Is...> {};
-
 template <class Args>
 struct overload_matching_helper {
   template <class O, class I> struct reduction : final_reduction<O> {};
@@ -630,7 +611,7 @@ constexpr bool matched_overload_is_noexcept =
     overload_traits<matched_overload<Args, Os...>>::is_noexcept;
 
 template <class O, class I> struct flat_reduction : final_reduction<O> {};
-template <class... Os, class I> requires(!contains_traits<I, Os...>::applicable)
+template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
 struct flat_reduction<std::tuple<Os...>, I>
     : final_reduction<std::tuple<Os..., I>> {};
 template <class... Os, class... Is>
@@ -674,9 +655,8 @@ struct facade_prototype {
                 __self.NAME(std::forward<__Args>(__args)...); \
               } && (!::pro::details::matched_overload_is_noexcept< \
                   std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(__self.NAME(std::forward<__Args>(__args)...)))) { \
-        return __self.NAME(std::forward<__Args>(__args)...); \
-      } \
+              noexcept(__self.NAME(std::forward<__Args>(__args)...)))) \
+          { return __self.NAME(std::forward<__Args>(__args)...); } \
     }
 #define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) \
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
@@ -689,12 +669,10 @@ struct facade_prototype {
                 typename ::pro::details::matched_overload< \
                     std::tuple<__Args&&...>, __VA_ARGS__>; \
                 FUNC(__self, std::forward<__Args>(__args)...); \
-              } && \
-              (!::pro::details::matched_overload_is_noexcept< \
+              } && (!::pro::details::matched_overload_is_noexcept< \
                   std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) { \
-        return FUNC(__self, std::forward<__Args>(__args)...); \
-      } \
+              noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) \
+          { return FUNC(__self, std::forward<__Args>(__args)...); } \
     }
 #define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
     struct NAME : ::pro::details::combined_dispatch_prototype<__VA_ARGS__> {}
