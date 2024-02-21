@@ -120,6 +120,12 @@ struct meta {
 
   decltype(&MP::template value<void>) value;
 };
+template <class... Ms>
+struct composite_meta : Ms... {
+  template <class T>
+  constexpr explicit composite_meta(std::in_place_type_t<T>)
+      : Ms(std::in_place_type<T>)... {}
+};
 
 template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
@@ -175,13 +181,6 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   static constexpr bool is_noexcept = true;
 };
 
-template <class... Ms>
-struct composite_meta : Ms... {
-  template <class P>
-  constexpr explicit composite_meta(std::in_place_type_t<P>)
-      : Ms(std::in_place_type<P>)... {}
-};
-
 template <class D, class Os>
 struct dispatch_traits_impl : inapplicable_traits {};
 template <class D, class... Os>
@@ -209,39 +208,60 @@ template <class D>
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
 
-struct copy_meta {
+template <constraint_level C> struct copyability_meta_provider;
+template <>
+struct copyability_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  constexpr explicit copy_meta(std::in_place_type_t<P>)
-      : clone([](char* self, const char* rhs)
-            { new(self) P(*reinterpret_cast<const P*>(rhs)); }) {}
-
-  void (*clone)(char*, const char*);
+  static void value(char* self, const char* rhs)
+      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
 };
-struct relocation_meta {
+template <>
+struct copyability_meta_provider<constraint_level::nothrow> {
   template <class P>
-  constexpr explicit relocation_meta(std::in_place_type_t<P>)
-      : relocate([](char* self, char* rhs) {
-              new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
-              reinterpret_cast<P*>(rhs)->~P();
-            }) {}
-
-  void (*relocate)(char*, char*);
+  static void value(char* self, const char* rhs) noexcept
+      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
 };
-struct destruction_meta {
+template <constraint_level C> struct relocatability_meta_provider;
+template <>
+struct relocatability_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  constexpr explicit destruction_meta(std::in_place_type_t<P>)
-      : destroy([](char* self) { reinterpret_cast<P*>(self)->~P(); }) {}
-
-  void (*destroy)(char*);
+  static void value(char* self, char* rhs) {
+    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
+    reinterpret_cast<P*>(rhs)->~P();
+  }
 };
+template <>
+struct relocatability_meta_provider<constraint_level::nothrow> {
+  template <class P>
+  static void value(char* self, char* rhs) noexcept {
+    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
+    reinterpret_cast<P*>(rhs)->~P();
+  }
+};
+template <constraint_level C> struct destructibility_meta_provider;
+template <>
+struct destructibility_meta_provider<constraint_level::nontrivial> {
+  template <class P>
+  static void value(char* self) { reinterpret_cast<P*>(self)->~P(); }
+};
+template <>
+struct destructibility_meta_provider<constraint_level::nothrow> {
+  template <class P>
+  static void value(char* self) noexcept { reinterpret_cast<P*>(self)->~P(); }
+};
+template <template <constraint_level> class MP, constraint_level C>
+struct constrained_meta_traits { using type = void; };
+template <template <constraint_level> class MP, constraint_level C>
+    requires(C > constraint_level::none && C < constraint_level::trivial)
+struct constrained_meta_traits<MP, C> { using type = meta<MP<C>>; };
+template <template <constraint_level> class MP, constraint_level C>
+using constrained_meta = typename constrained_meta_traits<MP, C>::type;
 
-template <constraint_level C, class M> struct conditional_meta_tag {};
 template <class O, class I>
 struct facade_meta_reduction : final_reduction<O> {};
-template <class... Ms, constraint_level C, class M>
-    requires(C > constraint_level::none && C < constraint_level::trivial)
-struct facade_meta_reduction<composite_meta<Ms...>, conditional_meta_tag<C, M>>
-    : final_reduction<composite_meta<Ms..., M>> {};
+template <class... Ms, class I> requires(!std::is_void_v<I>)
+struct facade_meta_reduction<composite_meta<Ms...>, I>
+    : final_reduction<composite_meta<Ms..., I>> {};
 
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
@@ -252,14 +272,15 @@ struct basic_facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds>
 struct basic_facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
+  using copyability_meta = constrained_meta<
+      copyability_meta_provider, F::constraints.copyability>;
+  using relocatability_meta = constrained_meta<
+      relocatability_meta_provider, F::constraints.relocatability>;
+  using destructibility_meta = constrained_meta<
+      destructibility_meta_provider, F::constraints.destructibility>;
   using meta_type = typename recursive_reduction<facade_meta_reduction,
-      composite_meta<>,
-      conditional_meta_tag<F::constraints.copyability, copy_meta>,
-      conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
-      conditional_meta_tag<F::constraints.destructibility, destruction_meta>,
-      conditional_meta_tag<std::is_void_v<typename F::reflection_type> ?
-          constraint_level::none : constraint_level::nothrow,
-          typename F::reflection_type>>::type;
+      composite_meta<>, copyability_meta, relocatability_meta,
+      destructibility_meta, typename F::reflection_type>::type;
 
   template <class D>
   static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
@@ -377,7 +398,8 @@ class proxy {
   proxy(const proxy& rhs) noexcept(HasNothrowCopyConstructor)
       requires(!HasTrivialCopyConstructor && HasCopyConstructor) {
     if (rhs.meta_ != nullptr) {
-      rhs.meta_->clone(ptr_, rhs.ptr_);
+      using meta_type = typename BasicTraits::copyability_meta;
+      rhs.meta_->meta_type::value(ptr_, rhs.ptr_);
       meta_ = rhs.meta_;
     } else {
       meta_ = nullptr;
@@ -392,7 +414,8 @@ class proxy {
           constraint_level::trivial) {
         memcpy(ptr_, rhs.ptr_, F::constraints.max_size);
       } else {
-        rhs.meta_->relocate(ptr_, rhs.ptr_);
+        using meta_type = typename BasicTraits::relocatability_meta;
+        rhs.meta_->meta_type::value(ptr_, rhs.ptr_);
       }
       meta_ = rhs.meta_;
       rhs.meta_ = nullptr;
@@ -464,7 +487,8 @@ class proxy {
   ~proxy() noexcept(HasNothrowDestructor)
       requires(!HasTrivialDestructor && HasDestructor) {
     if (meta_ != nullptr) {
-      meta_->destroy(ptr_);
+      using meta_type = typename BasicTraits::destructibility_meta;
+      meta_->meta_type::value(ptr_);
     }
   }
   ~proxy() requires(HasTrivialDestructor) = default;
@@ -520,9 +544,8 @@ class proxy {
           requires { typename MatchedOverload<D, Args...>; }) {
     using meta_type = typename details::overload_traits<
         MatchedOverload<D, Args...>>::template meta_type<D>;
-    auto dispatcher = static_cast<const typename Traits::meta_type*>(
-        meta_)->meta_type::value;
-    return dispatcher(ptr_, std::forward<Args>(args)...);
+    return static_cast<const typename Traits::meta_type*>(meta_)
+        ->meta_type::value(ptr_, std::forward<Args>(args)...);
   }
 
   template <class... Args>
