@@ -112,10 +112,34 @@ struct ptr_traits<T*> : applicable_traits {
   using reference_type = T&;
 };
 
+template <class MP>
+struct meta {
+  template <class T>
+  constexpr explicit meta(std::in_place_type_t<T>)
+      : value(&MP::template value<T>) {}
+
+  decltype(&MP::template value<void>) value;
+};
+
 template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
 struct overload_traits<R(Args...)> : applicable_traits {
-  using dispatcher_type = R (*)(const char*, Args...);
+ private:
+  template <class D>
+  struct meta_provider {
+    template <class P>
+    static R value(const char* erased, Args... args) {
+      auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
+      if constexpr (std::is_void_v<R>) {
+        D{}(*ptr, std::forward<Args>(args)...);
+      } else {
+        return D{}(*ptr, std::forward<Args>(args)...);
+      }
+    }
+  };
+
+ public:
+  template <class D> using meta_type = meta<meta_provider<D>>;
   struct resolver { R (*operator()(Args...))(Args...); };
   using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
 
@@ -123,19 +147,25 @@ struct overload_traits<R(Args...)> : applicable_traits {
   static constexpr bool applicable_ptr = std::is_invocable_v<
       D, typename ptr_traits<P>::reference_type, Args...>;
   static constexpr bool is_noexcept = false;
-  template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) {
-    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
-    if constexpr (std::is_void_v<R>) {
-      D{}(*ptr, std::forward<Args>(args)...);
-    } else {
-      return D{}(*ptr, std::forward<Args>(args)...);
-    }
-  }
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...) noexcept> : applicable_traits {
-  using dispatcher_type = R (*)(const char*, Args...) noexcept;
+ private:
+  template <class D>
+  struct meta_provider {
+    template <class P>
+    static R value(const char* erased, Args... args) noexcept {
+      auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
+      if constexpr (std::is_void_v<R>) {
+        D{}(*ptr, std::forward<Args>(args)...);
+      } else {
+        return D{}(*ptr, std::forward<Args>(args)...);
+      }
+    }
+  };
+
+ public:
+  template <class D> using meta_type = meta<meta_provider<D>>;
   struct resolver { R (*operator()(Args...))(Args...) noexcept; };
   using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
 
@@ -143,15 +173,13 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
       D, typename ptr_traits<P>::reference_type, Args...>;
   static constexpr bool is_noexcept = true;
-  template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) noexcept {
-    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
-    if constexpr (std::is_void_v<R>) {
-      D{}(*ptr, std::forward<Args>(args)...);
-    } else {
-      return D{}(*ptr, std::forward<Args>(args)...);
-    }
-  }
+};
+
+template <class... Ms>
+struct composite_meta : Ms... {
+  template <class P>
+  constexpr explicit composite_meta(std::in_place_type_t<P>)
+      : Ms(std::in_place_type<P>)... {}
 };
 
 template <class D, class Os>
@@ -167,15 +195,12 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
   template <class... Args>
   using matched_overload =
       std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
-  using dispatcher_types =
-      std::tuple<typename overload_traits<Os>::dispatcher_type...>;
+  using meta_type =
+      composite_meta<typename overload_traits<Os>::template meta_type<D>...>;
 
   template <class P>
   static constexpr bool applicable_ptr =
       (overload_traits<Os>::template applicable_ptr<D, P> && ...);
-  template <class P>
-  static constexpr dispatcher_types dispatchers{
-      overload_traits<Os>::template dispatcher<D, P>...};
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D>
@@ -184,14 +209,6 @@ template <class D>
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
 
-template <class D>
-struct dispatch_meta {
-  template <class P>
-  constexpr explicit dispatch_meta(std::in_place_type_t<P>)
-      : dispatchers(dispatch_traits<D>::template dispatchers<P>) {}
-
-  typename dispatch_traits<D>::dispatcher_types dispatchers;
-};
 struct copy_meta {
   template <class P>
   constexpr explicit copy_meta(std::in_place_type_t<P>)
@@ -217,20 +234,14 @@ struct destruction_meta {
 
   void (*destroy)(char*);
 };
-template <class... Ms>
-struct facade_meta : Ms... {
-  template <class P>
-  constexpr explicit facade_meta(std::in_place_type_t<P>)
-      : Ms(std::in_place_type<P>)... {}
-};
 
 template <constraint_level C, class M> struct conditional_meta_tag {};
 template <class O, class I>
 struct facade_meta_reduction : final_reduction<O> {};
 template <class... Ms, constraint_level C, class M>
     requires(C > constraint_level::none && C < constraint_level::trivial)
-struct facade_meta_reduction<facade_meta<Ms...>, conditional_meta_tag<C, M>>
-    : final_reduction<facade_meta<Ms..., M>> {};
+struct facade_meta_reduction<composite_meta<Ms...>, conditional_meta_tag<C, M>>
+    : final_reduction<composite_meta<Ms..., M>> {};
 
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
@@ -242,7 +253,7 @@ template <class F, class... Ds>
 struct basic_facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
   using meta_type = typename recursive_reduction<facade_meta_reduction,
-      facade_meta<>,
+      composite_meta<>,
       conditional_meta_tag<F::constraints.copyability, copy_meta>,
       conditional_meta_tag<F::constraints.relocatability, relocation_meta>,
       conditional_meta_tag<F::constraints.destructibility, destruction_meta>,
@@ -274,8 +285,8 @@ template <class F, class Ds>
 struct facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
 struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
-  using meta_type = facade_meta<
-      typename basic_facade_traits<F>::meta_type, dispatch_meta<Ds>...>;
+  using meta_type = composite_meta<typename basic_facade_traits<F>::meta_type,
+      typename dispatch_traits<Ds>::meta_type...>;
 
   template <class P>
   static constexpr bool applicable_ptr =
@@ -507,10 +518,10 @@ class proxy {
       requires(facade<details::dependent_t<F, Args...>> &&
           BasicTraits::template has_dispatch<D> &&
           requires { typename MatchedOverload<D, Args...>; }) {
-    const auto& dispatchers = static_cast<const typename Traits::meta_type*>(
-        meta_)->template dispatch_meta<D>::dispatchers;
-    auto dispatcher = std::get<typename details::overload_traits<
-        MatchedOverload<D, Args...>>::dispatcher_type>(dispatchers);
+    using meta_type = typename details::overload_traits<
+        MatchedOverload<D, Args...>>::template meta_type<D>;
+    auto dispatcher = static_cast<const typename Traits::meta_type*>(
+        meta_)->meta_type::value;
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
 
