@@ -51,9 +51,8 @@ namespace details {
 struct applicable_traits { static constexpr bool applicable = true; };
 struct inapplicable_traits { static constexpr bool applicable = false; };
 
-template <class T> struct final_reduction { using type = T; };
 template <template <class, class> class R, class O, class... Is>
-struct recursive_reduction : final_reduction<O> {};
+struct recursive_reduction : std::type_identity<O> {};
 template <template <class, class> class R, class O, class I, class... Is>
 struct recursive_reduction<R, O, I, Is...>
     : recursive_reduction<R, typename R<O, I>::type, Is...> {};
@@ -96,6 +95,9 @@ consteval bool has_destructibility(constraint_level level) {
     case constraint_level::none: return true;
     default: return false;
   }
+}
+consteval bool requires_lifetime_meta(constraint_level level) {
+  return level > constraint_level::none && level < constraint_level::trivial;
 }
 
 // As per std::to_address() wording in [pointer.conversion]
@@ -237,24 +239,22 @@ struct destructibility_meta_provider<constraint_level::nothrow> {
       { reinterpret_cast<P*>(self)->~P(); }
 };
 template <template <constraint_level> class MP, constraint_level C>
-struct constrained_meta_traits { using type = void; };
-template <template <constraint_level> class MP, constraint_level C>
-    requires(C > constraint_level::none && C < constraint_level::trivial)
-struct constrained_meta_traits<MP, C> {
-  struct type {
-    template <class P>
-    constexpr explicit type(std::in_place_type_t<P>)
-        : dispatcher(&MP<C>::template dispatcher<P>) {}
+struct lifetime_meta_impl {
+  template <class P>
+  constexpr explicit lifetime_meta_impl(std::in_place_type_t<P>)
+      : dispatcher(&MP<C>::template dispatcher<P>) {}
 
-    decltype(&MP<C>::template dispatcher<void>) dispatcher;
-  };
+  decltype(&MP<C>::template dispatcher<void>) dispatcher;
 };
+template <template <constraint_level> class MP, constraint_level C>
+using lifetime_meta = std::conditional_t<
+    requires_lifetime_meta(C), lifetime_meta_impl<MP, C>, void>;
 
 template <class O, class I>
-struct facade_meta_reduction : final_reduction<O> {};
+struct facade_meta_reduction : std::type_identity<O> {};
 template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
-    : final_reduction<composite_meta<Ms..., I>> {};
+    : std::type_identity<composite_meta<Ms..., I>> {};
 
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
@@ -265,12 +265,12 @@ struct basic_facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds>
 struct basic_facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
-  using copyability_meta = typename constrained_meta_traits<
-      copyability_meta_provider, F::constraints.copyability>::type;
-  using relocatability_meta = typename constrained_meta_traits<
-      relocatability_meta_provider, F::constraints.relocatability>::type;
-  using destructibility_meta = typename constrained_meta_traits<
-      destructibility_meta_provider, F::constraints.destructibility>::type;
+  using copyability_meta = lifetime_meta<
+      copyability_meta_provider, F::constraints.copyability>;
+  using relocatability_meta = lifetime_meta<
+      relocatability_meta_provider, F::constraints.relocatability>;
+  using destructibility_meta = lifetime_meta<
+      destructibility_meta_provider, F::constraints.destructibility>;
   using meta = recursive_reduction_t<facade_meta_reduction,
       composite_meta<>, copyability_meta, relocatability_meta,
       destructibility_meta, typename F::reflection_type>;
@@ -316,10 +316,6 @@ struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
 };
 template <class F>
 struct facade_traits : facade_traits_impl<F, typename F::dispatch_types> {};
-
-template <class T, class...> struct dependent_traits { using type = T; };
-template <class T, class... Us>
-using dependent_t = typename dependent_traits<T, Us...>::type;
 
 }  // namespace details
 
@@ -529,8 +525,7 @@ class proxy {
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
       noexcept(HasNothrowInvocation<D, Args...>)
-      requires(facade<details::dependent_t<F, Args...>> &&
-          BasicTraits::template has_dispatch<D> &&
+      requires(facade<F> && BasicTraits::template has_dispatch<D> &&
           requires { typename MatchedOverload<D, Args...>; }) {
     using dispatcher_type = typename details::overload_traits<
         MatchedOverload<D, Args...>>::dispatcher_type;
@@ -542,7 +537,7 @@ class proxy {
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
       noexcept(HasNothrowInvocation<DefaultDispatch, Args...>)
-      requires(facade<details::dependent_t<F, Args...>> &&
+      requires(facade<F> &&
           requires { typename MatchedOverload<DefaultDispatch, Args...>; })
       { return invoke(std::forward<Args>(args)...); }
 
@@ -620,11 +615,11 @@ namespace details {
 
 template <class Args>
 struct overload_matching_helper {
-  template <class O, class I> struct reduction : final_reduction<O> {};
+  template <class O, class I> struct reduction : std::type_identity<O> {};
   template <class O, class I>
       requires(std::is_same_v<
           typename overload_traits<I>::forwarding_argument_types, Args>)
-  struct reduction<O, I> : final_reduction<I> {};
+  struct reduction<O, I> : std::type_identity<I> {};
 };
 template <class Args, class... Os>
     requires(!std::is_void_v<recursive_reduction_t<
@@ -635,14 +630,15 @@ template <class Args, class... Os>
 constexpr bool matched_overload_is_noexcept =
     overload_traits<matched_overload<Args, Os...>>::is_noexcept;
 
-template <class O, class I> struct flat_reduction : final_reduction<O> {};
+template <class O, class I> struct flat_reduction : std::type_identity<O> {};
 template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
 struct flat_reduction<std::tuple<Os...>, I>
-    : final_reduction<std::tuple<Os..., I>> {};
+    : std::type_identity<std::tuple<Os..., I>> {};
 template <class... Os, class... Is>
 struct flat_reduction<std::tuple<Os...>, std::tuple<Is...>>
     : recursive_reduction<flat_reduction, std::tuple<Os...>, Is...> {};
-template <class O, class I> struct overloads_reduction : final_reduction<O> {};
+template <class O, class I>
+struct overloads_reduction : std::type_identity<O> {};
 template <class O, class I> requires(requires { typename I::overload_types; })
 struct overloads_reduction<O, I>
     : flat_reduction<O, typename I::overload_types> {};
