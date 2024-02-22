@@ -125,7 +125,6 @@ struct overload_traits<R(Args...)> : applicable_traits {
   static constexpr bool applicable_ptr = std::is_invocable_v<
       D, typename ptr_traits<P>::reference_type, Args...>;
   static constexpr bool is_noexcept = false;
-
   template <class D, class P>
   static R dispatcher(const char* erased, Args... args) {
     auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
@@ -146,7 +145,6 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
       D, typename ptr_traits<P>::reference_type, Args...>;
   static constexpr bool is_noexcept = true;
-
   template <class D, class P>
   static R dispatcher(const char* erased, Args... args) noexcept {
     auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
