@@ -537,7 +537,7 @@ class proxy {
     using dispatcher_type = typename details::overload_traits<
         MatchedOverload<D, Args...>>::dispatcher_type;
     const auto& dispatchers = static_cast<const typename Traits::meta*>(meta_)
-        ->details::dispatch_traits<D>::meta::dispatchers;
+        ->details::template dispatch_traits<D>::meta::dispatchers;
     auto dispatcher = std::get<dispatcher_type>(dispatchers);
     return dispatcher(ptr_, std::forward<Args>(args)...);
   }
