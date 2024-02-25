@@ -288,7 +288,7 @@ template <class F>
         } &&
         std::is_same_v<decltype(F::constraints),
             const proxiable_ptr_constraints> &&
-        std::popcount(F::constraints.max_align) == 1u &&
+        std::has_single_bit(F::constraints.max_align) &&
         F::constraints.max_size % F::constraints.max_align == 0u &&
         (std::is_void_v<typename F::reflection_type> ||
             std::is_trivially_copyable_v<typename F::reflection_type>))

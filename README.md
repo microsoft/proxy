@@ -12,7 +12,7 @@ If so, this library is for you. 😉
 
 For decades, object-based virtual table has been a de facto implementation of runtime polymorphism in many (compiled) programming languages. There are many drawbacks in this mechanism, including life management (because each object may have different size and ownership) and reflection (because it is hard to balance between usability and memory allocation). To workaround these drawbacks, some languages like Java or C# choose to sacrifice performance by introducing GC to facilitate lifetime management, and JIT-compile the source code at runtime to generate full metadata. We improved the theory and implemented as a C++ library without sacrificing performance, proposed to merge into the C++ standard.
 
-The "proxy" is a single-header, cross-platform C++ library that Microsoft uses to make runtime polymorphism easier to implement and faster. Please find the design details at https://wg21.link/p0957.
+The "proxy" is a single-header, cross-platform C++ library that Microsoft uses to make runtime polymorphism easier to implement and faster. Please find the design details at https://wg21.link/p3086.
 
 ## Quick start
 
@@ -24,8 +24,8 @@ The majority of the library is defined in namespace `pro`. Some macros are provi
 // Abstraction (poly is short for polymorphism)
 namespace poly {
 
-PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
-PRO_DEF_MEMBER_DISPATCH(Area, double());
+PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream& out));
+PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 }  // namespace poly
@@ -37,7 +37,7 @@ class Rectangle {
       { out << "{Rectangle: width = " << width_ << ", height = " << height_ << "}"; }
   void SetWidth(double width) { width_ = width; }
   void SetHeight(double height) { height_ = height; }
-  double Area() const { return width_ * height_; }
+  double Area() const noexcept { return width_ * height_; }
 
  private:
   double width_;
@@ -139,7 +139,7 @@ int main() {
 }
 ```
 
-Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/5a3jeE1M8)).
+Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/voEacxT76)).
 
 ## Minimum requirements for compilers
 
