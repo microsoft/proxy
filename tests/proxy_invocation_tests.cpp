@@ -126,8 +126,8 @@ TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
   using SomeCombination = std::tuple<poly::ForEach<int>, std::tuple<poly::GetSize, poly::ForEach<int>>>;
   PRO_DEF_FACADE(DuplicatedIterable, PRO_MAKE_DISPATCH_PACK(poly::ForEach<int>, SomeCombination, poly::ForEach<int>, poly::GetSize, poly::GetSize));
-  static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta_type) ==
-      sizeof(pro::details::facade_traits<poly::Iterable<int>>::meta_type));
+  static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta) ==
+      sizeof(pro::details::facade_traits<poly::Iterable<int>>::meta));
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<DuplicatedIterable> p = &l;
   ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
