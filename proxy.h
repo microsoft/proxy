@@ -153,15 +153,15 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   static constexpr bool is_noexcept = true;
 };
 
-template <class M> struct nullable_traits : inapplicable_traits {};
-template <class M>
+template <class T> struct nullable_traits : inapplicable_traits {};
+template <class T>
     requires(
-        requires(const M& cv, M& v) {
-          M{};
+        requires(const T& cv, T& v) {
+          T{};
           { cv.has_value() } -> std::convertible_to<bool>;
           v.reset();
         })
-struct nullable_traits<M> : applicable_traits {};
+struct nullable_traits<T> : applicable_traits {};
 
 template <class MP>
 struct dispatcher_meta {
