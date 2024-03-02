@@ -551,10 +551,9 @@ class proxy {
       noexcept(HasNothrowInvocation<D, Args...>)
       requires(Traits::template has_dispatch<D> &&
           requires { typename MatchedOverload<D, Args...>; }) {
-    using meta_type = details::dispatcher_meta<
-        typename details::overload_traits<
-            MatchedOverload<D, Args...>>::template meta_provider<D>>;
-    return meta_->meta_type::dispatcher(ptr_, std::forward<Args>(args)...);
+    return meta_->template dispatcher_meta<typename details::overload_traits<
+        MatchedOverload<D, Args...>>::template meta_provider<D>>
+        ::dispatcher(ptr_, std::forward<Args>(args)...);
   }
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
