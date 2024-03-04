@@ -738,7 +738,7 @@ struct facade_prototype {
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
           noexcept(__helper::template is_noexcept<__Args...>) \
           requires( \
-              requires{ typename __helper::template overload<__Args...>; } && \
+              requires{ typename __helper::overload<__Args...>; } && \
               __helper::template applicable<__closure, __T, __Args...>) \
           { return __closure{}(__self, std::forward<__Args>(__args)...); } \
     }
