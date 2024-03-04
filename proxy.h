@@ -675,12 +675,13 @@ struct dispatch_prototype_helper {
   using overload = first_applicable_t<overload_matching_helper<
       std::tuple<Args&&...>>::template traits, Os...>;
   template <class... Args>
-  using traits = overload_traits<overload<Args...>>;
+  static constexpr bool applicable = requires { typename overload<Args...>; };
   template <class... Args>
-  static constexpr bool is_noexcept = traits<Args...>::is_noexcept;
+  static constexpr bool is_noexcept =
+      overload_traits<overload<Args...>>::is_noexcept;
   template <class F, class T, class... Args>
-  static constexpr bool applicable =
-      traits<Args...>::template applicable_callable<F, T>;
+  static constexpr bool applicable_callable =
+      overload_traits<overload<Args...>>::template applicable_callable<F, T>;
 };
 template <class Args, class... Os>
 using matched_overload =
@@ -726,7 +727,7 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
      private: \
       using __helper = ::pro::details::dispatch_prototype_helper<__VA_ARGS__>; \
-      struct __closure { \
+      struct __F { \
         template <class __T, class... __Args> \
         decltype(auto) operator()(__T& __self, __Args&&... __args) \
             noexcept(noexcept(EXPR)) requires(requires { EXPR; }) \
@@ -737,10 +738,9 @@ struct facade_prototype {
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
           noexcept(__helper::template is_noexcept<__Args...>) \
-          requires( \
-              requires{ typename __helper::overload<__Args...>; } && \
-              __helper::template applicable<__closure, __T, __Args...>) \
-          { return __closure{}(__self, std::forward<__Args>(__args)...); } \
+          requires(__helper::template applicable<__Args...> && \
+              __helper::template applicable_callable<__F, __T, __Args...>) \
+          { return __F{}(__self, std::forward<__Args>(__args)...); } \
     }
 #define PRO_DEF_MEMBER_DISPATCH(NAME, ...) ___PRO_DEF_DISPATCH_IMPL( \
     NAME, __self.NAME(std::forward<__Args>(__args)...), __VA_ARGS__)
