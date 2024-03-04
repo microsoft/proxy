@@ -111,7 +111,6 @@ struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
   struct resolver { R (*operator()(Args...))(Args...); };
   using forwarding_argument_types = std::tuple<Args&&...>;
-  using return_type = R;
   template <class D>
   struct meta_provider {
     template <class P>
@@ -125,11 +124,12 @@ struct overload_traits<R(Args...)> : applicable_traits {
     }
   };
 
+  template <class F, class T>
+  static constexpr bool applicable_callable =
+      std::is_invocable_r_v<R, F, T&, Args...>;
   template <class D, class P>
-  static constexpr bool applicable_ptr = std::is_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...> &&
-      (std::is_void_v<R> || std::is_convertible_v<std::invoke_result_t<
-          D, typename ptr_traits<P>::reference_type, Args...>, R>);
+  static constexpr bool applicable_ptr =
+      applicable_callable<D, typename ptr_traits<P>::reference_type>;
   static constexpr bool is_noexcept = false;
 };
 template <class R, class... Args>
@@ -137,7 +137,6 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...) noexcept;
   struct resolver { R (*operator()(Args...))(Args...) noexcept; };
   using forwarding_argument_types = std::tuple<Args&&...>;
-  using return_type = R;
   template <class D>
   struct meta_provider {
     template <class P>
@@ -151,11 +150,12 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
     }
   };
 
+  template <class F, class T>
+  static constexpr bool applicable_callable =
+      std::is_nothrow_invocable_r_v<R, F, T&, Args...>;
   template <class D, class P>
-  static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...> &&
-      (std::is_void_v<R> || std::is_nothrow_convertible_v<std::invoke_result_t<
-          D, typename ptr_traits<P>::reference_type, Args...>, R>);
+  static constexpr bool applicable_ptr =
+      applicable_callable<D, typename ptr_traits<P>::reference_type>;
   static constexpr bool is_noexcept = true;
 };
 
@@ -677,14 +677,10 @@ struct dispatch_prototype_helper {
   template <class... Args>
   using traits = overload_traits<overload<Args...>>;
   template <class... Args>
-  using return_type = typename traits<Args...>::return_type;
-  template <class... Args>
   static constexpr bool is_noexcept = traits<Args...>::is_noexcept;
-  template <class R, class... Args>
-  static constexpr bool return_type_is_valid =
-      std::is_void_v<return_type<Args...>> || (is_noexcept<Args...> ?
-          std::is_nothrow_convertible_v<R, return_type<Args...>> :
-          std::is_convertible_v<R, return_type<Args...>>);
+  template <class F, class T, class... Args>
+  static constexpr bool applicable =
+      traits<Args...>::template applicable_callable<F, T>;
 };
 template <class Args, class... Os>
 using matched_overload =
@@ -730,19 +726,21 @@ struct facade_prototype {
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
      private: \
       using __helper = ::pro::details::dispatch_prototype_helper<__VA_ARGS__>; \
+      struct __closure { \
+        template <class __T, class... __Args> \
+        decltype(auto) operator()(__T& __self, __Args&&... __args) \
+            noexcept(noexcept(EXPR)) requires(requires { EXPR; }) \
+            { return EXPR; } \
+      }; \
     \
      public: \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
           noexcept(__helper::template is_noexcept<__Args...>) \
           requires( \
-              requires{ \
-                typename __helper::template overload<__Args...>; \
-                EXPR; \
-              } && (!__helper::template is_noexcept<__Args...> || ( \
-                  noexcept(EXPR) && __helper::template return_type_is_valid< \
-                      decltype(EXPR), __Args...>))) \
-          { return EXPR; } \
+              requires{ typename __helper::template overload<__Args...>; } && \
+              __helper::template applicable<__closure, __T, __Args...>) \
+          { return __closure{}(__self, std::forward<__Args>(__args)...); } \
     }
 #define PRO_DEF_MEMBER_DISPATCH(NAME, ...) ___PRO_DEF_DISPATCH_IMPL( \
     NAME, __self.NAME(std::forward<__Args>(__args)...), __VA_ARGS__)
