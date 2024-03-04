@@ -110,7 +110,8 @@ template <class R, class... Args>
 struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
   struct resolver { R (*operator()(Args...))(Args...); };
-  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
+  using forwarding_argument_types = std::tuple<Args&&...>;
+  using return_type = R;
   template <class D>
   struct meta_provider {
     template <class P>
@@ -126,14 +127,17 @@ struct overload_traits<R(Args...)> : applicable_traits {
 
   template <class D, class P>
   static constexpr bool applicable_ptr = std::is_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...>;
+      D, typename ptr_traits<P>::reference_type, Args...> &&
+      (std::is_void_v<R> || std::is_convertible_v<std::invoke_result_t<
+          D, typename ptr_traits<P>::reference_type, Args...>, R>);
   static constexpr bool is_noexcept = false;
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...) noexcept> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...) noexcept;
   struct resolver { R (*operator()(Args...))(Args...) noexcept; };
-  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
+  using forwarding_argument_types = std::tuple<Args&&...>;
+  using return_type = R;
   template <class D>
   struct meta_provider {
     template <class P>
@@ -149,7 +153,9 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
 
   template <class D, class P>
   static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...>;
+      D, typename ptr_traits<P>::reference_type, Args...> &&
+      (std::is_void_v<R> || std::is_nothrow_convertible_v<std::invoke_result_t<
+          D, typename ptr_traits<P>::reference_type, Args...>, R>);
   static constexpr bool is_noexcept = true;
 };
 
@@ -663,6 +669,23 @@ struct overload_matching_helper {
           typename overload_traits<O>::forwarding_argument_types, Args>)
   struct traits<O> : applicable_traits {};
 };
+template <class... Os>
+struct dispatch_prototype_helper {
+  template <class... Args>
+  using overload = first_applicable_t<overload_matching_helper<
+      std::tuple<Args&&...>>::template traits, Os...>;
+  template <class... Args>
+  using traits = overload_traits<overload<Args...>>;
+  template <class... Args>
+  using return_type = typename traits<Args...>::return_type;
+  template <class... Args>
+  static constexpr bool is_noexcept = traits<Args...>::is_noexcept;
+  template <class R, class... Args>
+  static constexpr bool return_type_is_valid =
+      std::is_void_v<return_type<Args...>> || (is_noexcept<Args...> ?
+          std::is_nothrow_convertible_v<R, return_type<Args...>> :
+          std::is_convertible_v<R, return_type<Args...>>);
+};
 template <class Args, class... Os>
 using matched_overload =
     first_applicable_t<overload_matching_helper<Args>::template traits, Os...>;
@@ -703,38 +726,28 @@ struct facade_prototype {
 
 }  // namespace pro
 
-#define PRO_DEF_MEMBER_DISPATCH(NAME, ...) \
+#define ___PRO_DEF_DISPATCH_IMPL(NAME, EXPR, ...) \
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
+     private: \
+      using __helper = ::pro::details::dispatch_prototype_helper<__VA_ARGS__>; \
+    \
+     public: \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          noexcept(::pro::details::matched_overload_is_noexcept< \
-              std::tuple<__Args&&...>, __VA_ARGS__>) \
+          noexcept(__helper::template is_noexcept<__Args...>) \
           requires( \
               requires{ \
-                typename ::pro::details::matched_overload< \
-                    std::tuple<__Args&&...>, __VA_ARGS__>; \
-                __self.NAME(std::forward<__Args>(__args)...); \
-              } && (!::pro::details::matched_overload_is_noexcept< \
-                  std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(__self.NAME(std::forward<__Args>(__args)...)))) \
-          { return __self.NAME(std::forward<__Args>(__args)...); } \
+                typename __helper::template overload<__Args...>; \
+                EXPR; \
+              } && (!__helper::template is_noexcept<__Args...> || ( \
+                  noexcept(EXPR) && __helper::template return_type_is_valid< \
+                      decltype(EXPR), __Args...>))) \
+          { return EXPR; } \
     }
-#define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) \
-    struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
-      template <class __T, class... __Args> \
-      decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          noexcept(::pro::details::matched_overload_is_noexcept< \
-              std::tuple<__Args&&...>, __VA_ARGS__>) \
-          requires( \
-              requires{ \
-                typename ::pro::details::matched_overload< \
-                    std::tuple<__Args&&...>, __VA_ARGS__>; \
-                FUNC(__self, std::forward<__Args>(__args)...); \
-              } && (!::pro::details::matched_overload_is_noexcept< \
-                  std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) \
-          { return FUNC(__self, std::forward<__Args>(__args)...); } \
-    }
+#define PRO_DEF_MEMBER_DISPATCH(NAME, ...) ___PRO_DEF_DISPATCH_IMPL( \
+    NAME, __self.NAME(std::forward<__Args>(__args)...), __VA_ARGS__)
+#define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) ___PRO_DEF_DISPATCH_IMPL( \
+    NAME, FUNC(__self, std::forward<__Args>(__args)...), __VA_ARGS__)
 #define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
     struct NAME : ::pro::details::combined_dispatch_prototype<__VA_ARGS__> {}
 #define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
