@@ -150,7 +150,7 @@ static_assert(sizeof(pro::proxy<TrivialFacade>) == 2 * sizeof(void*));  // VTABL
 
 struct ReflectionOfSmallPtr {
   template <class P> requires(sizeof(P) <= sizeof(void*))
-  constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
+  constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) noexcept {}
 };
 PRO_DEF_FACADE(RelocatableFacadeWithReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, ReflectionOfSmallPtr);
 static_assert(!pro::proxiable<MockMovablePtr, RelocatableFacadeWithReflection>);

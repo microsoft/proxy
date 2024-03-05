@@ -161,19 +161,19 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
 
 template <class T> struct nullable_traits : inapplicable_traits {};
 template <class T>
-    requires(
+    requires(std::is_nothrow_default_constructible_v<T> &&
+        std::is_trivially_copyable_v<T> &&
         requires(const T& cv, T& v) {
-          T{};
-          { cv.has_value() } -> std::convertible_to<bool>;
-          v.reset();
+          { cv.has_value() } noexcept -> std::same_as<bool>;
+          { v.reset() } noexcept;
         })
 struct nullable_traits<T> : applicable_traits {};
 
 template <class MP>
 struct dispatcher_meta {
-  constexpr dispatcher_meta() : dispatcher(nullptr) {}
+  constexpr dispatcher_meta() noexcept : dispatcher(nullptr) {}
   template <class P>
-  constexpr explicit dispatcher_meta(std::in_place_type_t<P>)
+  constexpr explicit dispatcher_meta(std::in_place_type_t<P>) noexcept
       : dispatcher(&MP::template dispatcher<P>) {}
   bool has_value() const noexcept { return dispatcher != nullptr; }
   void reset() noexcept { dispatcher = nullptr; }
@@ -186,9 +186,9 @@ struct composite_meta : Ms... {
   static constexpr bool is_nullable =
       requires { typename first_applicable_t<nullable_traits, Ms...>; };
 
-  constexpr composite_meta() requires(is_nullable) = default;
+  constexpr composite_meta() noexcept requires(is_nullable) = default;
   template <class P>
-  constexpr explicit composite_meta(std::in_place_type_t<P>)
+  constexpr explicit composite_meta(std::in_place_type_t<P>) noexcept
       : Ms(std::in_place_type<P>)... {}
 
   bool has_value() const noexcept requires(is_nullable)
@@ -306,8 +306,9 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
-          typename F::reflection_type, std::in_place_type_t<P>>);
+      (std::is_void_v<typename F::reflection_type> ||
+          std::is_nothrow_constructible_v<
+              typename F::reflection_type, std::in_place_type_t<P>>);
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
@@ -329,9 +330,10 @@ using ptr_prototype = void*[2];
 
 template <class M>
 struct meta_ptr {
-  constexpr meta_ptr() : ptr_(nullptr) {};
+  constexpr meta_ptr() noexcept : ptr_(nullptr) {};
   template <class P>
-  constexpr explicit meta_ptr(std::in_place_type_t<P>) : ptr_(&storage<P>) {}
+  constexpr explicit meta_ptr(std::in_place_type_t<P>) noexcept
+      : ptr_(&storage<P>) {}
   bool has_value() const noexcept { return ptr_ != nullptr; }
   void reset() noexcept { ptr_ = nullptr; }
   const M* operator->() const noexcept { return ptr_; }
