@@ -12,10 +12,10 @@ namespace poly {
 struct SboObserver {
  public:
   template <class P>
-  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<P>>)
+  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<P>>) noexcept
       : SboEnabled(true) {}
   template <class P>
-  constexpr explicit SboObserver(std::in_place_type_t<P>)
+  constexpr explicit SboObserver(std::in_place_type_t<P>) noexcept
       : SboEnabled(false) {}
 
   bool SboEnabled;
@@ -31,6 +31,34 @@ PRO_DEF_FACADE(TestSmallStringable, utils::poly::ToString, pro::proxiable_ptr_co
 PRO_DEF_FACADE(TestLargeStringable, utils::poly::ToString, pro::copyable_ptr_constraints, SboObserver);
 
 }  // namespace poly
+
+PRO_DEF_MEMBER_DISPATCH(MemFn0, void(int) noexcept);
+PRO_DEF_FACADE(TestMemFn0, MemFn0);
+struct TestMemFn0_Normal { void MemFn0(int) noexcept {} };
+static_assert(pro::proxiable<TestMemFn0_Normal*, TestMemFn0>);
+struct TestMemFn0_Unsupproted { void MemFn1(int) noexcept {} };
+static_assert(!pro::proxiable<TestMemFn0_Unsupproted*, TestMemFn0>);
+struct TestMemFn0_MissingNoexcept { void MemFn0(int) {} };
+static_assert(!pro::proxiable<TestMemFn0_MissingNoexcept*, TestMemFn0>);
+struct TestMemFn0_ArgumentConvertible { void MemFn0(std::int64_t&&) noexcept {} };
+static_assert(pro::proxiable<TestMemFn0_ArgumentConvertible*, TestMemFn0>);
+struct TestMemFn0_ArgumentNotMatch { void MemFn0(int&) noexcept {} };
+static_assert(!pro::proxiable<TestMemFn0_ArgumentNotMatch*, TestMemFn0>);
+struct TestMemFn0_ReturnTypeNotMatch { std::string MemFn0(int) noexcept { return {}; } };
+static_assert(pro::proxiable<TestMemFn0_ReturnTypeNotMatch*, TestMemFn0>);
+
+PRO_DEF_MEMBER_DISPATCH(MemFn1, int(double));
+PRO_DEF_FACADE(TestMemFn1, MemFn1);
+struct TestMemFn1_Normal { int MemFn1(double) { return 0; } };
+static_assert(pro::proxiable<TestMemFn1_Normal*, TestMemFn1>);
+struct TestMemFn1_HasNoexcept { int MemFn1(double) noexcept { return 0; } };
+static_assert(pro::proxiable<TestMemFn1_HasNoexcept*, TestMemFn1>);
+struct TestMemFn1_ReturnTypeConvertible { std::int8_t MemFn1(double) { return 0; } };
+static_assert(pro::proxiable<TestMemFn1_ReturnTypeConvertible*, TestMemFn1>);
+struct TestMemFn1_ReturnTypeNotConvertible { std::string MemFn1(double) { return {}; } };
+static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotConvertible*, TestMemFn1>);
+struct TestMemFn1_ReturnTypeNotExist { void MemFn1(double) {} };
+static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotExist*, TestMemFn1>);
 
 }  // namespace
 

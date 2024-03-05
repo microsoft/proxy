@@ -24,27 +24,6 @@ struct proxiable_ptr_constraints {
   constraint_level relocatability;
   constraint_level destructibility;
 };
-constexpr proxiable_ptr_constraints relocatable_ptr_constraints{
-  .max_size = sizeof(void*) * 2u,
-  .max_align = alignof(void*),
-  .copyability = constraint_level::none,
-  .relocatability = constraint_level::nothrow,
-  .destructibility = constraint_level::nothrow,
-};
-constexpr proxiable_ptr_constraints copyable_ptr_constraints{
-  .max_size = sizeof(void*) * 2u,
-  .max_align = alignof(void*),
-  .copyability = constraint_level::nontrivial,
-  .relocatability = constraint_level::nothrow,
-  .destructibility = constraint_level::nothrow,
-};
-constexpr proxiable_ptr_constraints trivial_ptr_constraints{
-  .max_size = sizeof(void*),
-  .max_align = alignof(void*),
-  .copyability = constraint_level::trivial,
-  .relocatability = constraint_level::trivial,
-  .destructibility = constraint_level::trivial,
-};
 
 namespace details {
 
@@ -58,6 +37,16 @@ struct recursive_reduction<R, O, I, Is...>
     : recursive_reduction<R, typename R<O, I>::type, Is...> {};
 template <template <class, class> class R, class O, class... Is>
 using recursive_reduction_t = typename recursive_reduction<R, O, Is...>::type;
+
+template <template <class> class T, class... Is>
+struct first_applicable {};
+template <template <class> class T, class I, class... Is>
+    requires(T<I>::applicable)
+struct first_applicable<T, I, Is...> : std::type_identity<I> {};
+template <template <class> class T, class I, class... Is>
+struct first_applicable<T, I, Is...> : first_applicable<T, Is...> {};
+template <template <class> class T, class... Is>
+using first_applicable_t = typename first_applicable<T, Is...>::type;
 
 template <class T>
 consteval bool has_copyability(constraint_level level) {
@@ -121,41 +110,91 @@ template <class R, class... Args>
 struct overload_traits<R(Args...)> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...);
   struct resolver { R (*operator()(Args...))(Args...); };
-  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
-
-  template <class D, class P>
-  static constexpr bool applicable_ptr = std::is_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...>;
-  static constexpr bool is_noexcept = false;
-  template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) {
-    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
-    if constexpr (std::is_void_v<R>) {
-      D{}(*ptr, std::forward<Args>(args)...);
-    } else {
-      return D{}(*ptr, std::forward<Args>(args)...);
+  using forwarding_argument_types = std::tuple<Args&&...>;
+  template <class D>
+  struct meta_provider {
+    template <class P>
+    static R dispatcher(const char* erased, Args... args) {
+      auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
+      if constexpr (std::is_void_v<R>) {
+        D{}(*ptr, std::forward<Args>(args)...);
+      } else {
+        return D{}(*ptr, std::forward<Args>(args)...);
+      }
     }
-  }
+  };
+
+  template <class F, class T>
+  static constexpr bool applicable_callable =
+      std::is_invocable_r_v<R, F, T&, Args...>;
+  template <class D, class P>
+  static constexpr bool applicable_ptr =
+      applicable_callable<D, typename ptr_traits<P>::reference_type>;
+  static constexpr bool is_noexcept = false;
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...) noexcept> : applicable_traits {
   using dispatcher_type = R (*)(const char*, Args...) noexcept;
   struct resolver { R (*operator()(Args...))(Args...) noexcept; };
-  using forwarding_argument_types = std::tuple<Args&&...>;  // For helper macros
-
-  template <class D, class P>
-  static constexpr bool applicable_ptr = std::is_nothrow_invocable_v<
-      D, typename ptr_traits<P>::reference_type, Args...>;
-  static constexpr bool is_noexcept = true;
-  template <class D, class P>
-  static R dispatcher(const char* erased, Args... args) noexcept {
-    auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
-    if constexpr (std::is_void_v<R>) {
-      D{}(*ptr, std::forward<Args>(args)...);
-    } else {
-      return D{}(*ptr, std::forward<Args>(args)...);
+  using forwarding_argument_types = std::tuple<Args&&...>;
+  template <class D>
+  struct meta_provider {
+    template <class P>
+    static R dispatcher(const char* erased, Args... args) noexcept {
+      auto ptr = ptr_traits<P>::to_address(*reinterpret_cast<const P*>(erased));
+      if constexpr (std::is_void_v<R>) {
+        D{}(*ptr, std::forward<Args>(args)...);
+      } else {
+        return D{}(*ptr, std::forward<Args>(args)...);
+      }
     }
-  }
+  };
+
+  template <class F, class T>
+  static constexpr bool applicable_callable =
+      std::is_nothrow_invocable_r_v<R, F, T&, Args...>;
+  template <class D, class P>
+  static constexpr bool applicable_ptr =
+      applicable_callable<D, typename ptr_traits<P>::reference_type>;
+  static constexpr bool is_noexcept = true;
+};
+
+template <class T> struct nullable_traits : inapplicable_traits {};
+template <class T>
+    requires(
+        requires(const T& cv, T& v) {
+          { T{} } noexcept;
+          { cv.has_value() } noexcept -> std::same_as<bool>;
+          { v.reset() } noexcept;
+        })
+struct nullable_traits<T> : applicable_traits {};
+
+template <class MP>
+struct dispatcher_meta {
+  constexpr dispatcher_meta() noexcept : dispatcher(nullptr) {}
+  template <class P>
+  constexpr explicit dispatcher_meta(std::in_place_type_t<P>) noexcept
+      : dispatcher(&MP::template dispatcher<P>) {}
+  bool has_value() const noexcept { return dispatcher != nullptr; }
+  void reset() noexcept { dispatcher = nullptr; }
+
+  decltype(&MP::template dispatcher<void>) dispatcher;
+};
+
+template <class... Ms>
+struct composite_meta : Ms... {
+  static constexpr bool is_nullable =
+      requires { typename first_applicable_t<nullable_traits, Ms...>; };
+
+  constexpr composite_meta() noexcept requires(is_nullable) = default;
+  template <class P>
+  constexpr explicit composite_meta(std::in_place_type_t<P>) noexcept
+      : Ms(std::in_place_type<P>)... {}
+
+  bool has_value() const noexcept requires(is_nullable)
+      { return first_applicable_t<nullable_traits, Ms...>::has_value(); }
+  void reset() noexcept requires(is_nullable)
+      { first_applicable_t<nullable_traits, Ms...>::reset(); }
 };
 
 template <class D, class Os>
@@ -168,13 +207,8 @@ struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
       { using overload_traits<Os>::resolver::operator()...; };
 
  public:
-  struct meta {
-    template <class P>
-    constexpr explicit meta(std::in_place_type_t<P>)
-        : dispatchers(overload_traits<Os>::template dispatcher<D, P>...) {}
-
-    std::tuple<typename overload_traits<Os>::dispatcher_type...> dispatchers;
-  };
+  using meta = composite_meta<dispatcher_meta<
+      typename overload_traits<Os>::template meta_provider<D>>...>;
   template <class... Args>
   using matched_overload =
       std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
@@ -190,12 +224,6 @@ template <class D>
 struct dispatch_traits<D>
     : dispatch_traits_impl<D, typename D::overload_types> {};
 
-template <class... Ms>
-struct composite_meta : Ms... {
-  template <class P>
-  constexpr explicit composite_meta(std::in_place_type_t<P>)
-      : Ms(std::in_place_type<P>)... {}
-};
 template <constraint_level C> struct copyability_meta_provider;
 template <>
 struct copyability_meta_provider<constraint_level::nontrivial> {
@@ -239,16 +267,8 @@ struct destructibility_meta_provider<constraint_level::nothrow> {
       { reinterpret_cast<P*>(self)->~P(); }
 };
 template <template <constraint_level> class MP, constraint_level C>
-struct lifetime_meta_impl {
-  template <class P>
-  constexpr explicit lifetime_meta_impl(std::in_place_type_t<P>)
-      : dispatcher(&MP<C>::template dispatcher<P>) {}
-
-  decltype(&MP<C>::template dispatcher<void>) dispatcher;
-};
-template <template <constraint_level> class MP, constraint_level C>
 using lifetime_meta = std::conditional_t<
-    requires_lifetime_meta(C), lifetime_meta_impl<MP, C>, void>;
+    requires_lifetime_meta(C), dispatcher_meta<MP<C>>, void>;
 
 template <class O, class I>
 struct facade_meta_reduction : std::type_identity<O> {};
@@ -261,9 +281,9 @@ struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
 struct default_dispatch_traits<D> { using default_dispatch = D; };
 template <class F, class Ds>
-struct basic_facade_traits_impl : inapplicable_traits {};
-template <class F, class... Ds>
-struct basic_facade_traits_impl<F, std::tuple<Ds...>>
+struct facade_traits_impl : inapplicable_traits {};
+template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
+struct facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
   using copyability_meta = lifetime_meta<
       copyability_meta_provider, F::constraints.copyability>;
@@ -273,12 +293,24 @@ struct basic_facade_traits_impl<F, std::tuple<Ds...>>
       destructibility_meta_provider, F::constraints.destructibility>;
   using meta = recursive_reduction_t<facade_meta_reduction,
       composite_meta<>, copyability_meta, relocatability_meta,
-      destructibility_meta, typename F::reflection_type>;
+      destructibility_meta, typename dispatch_traits<Ds>::meta...,
+      typename F::reflection_type>;
 
   template <class D>
   static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
+  template <class P>
+  static constexpr bool applicable_ptr =
+      sizeof(P) <= F::constraints.max_size &&
+      alignof(P) <= F::constraints.max_align &&
+      has_copyability<P>(F::constraints.copyability) &&
+      has_relocatability<P>(F::constraints.relocatability) &&
+      has_destructibility<P>(F::constraints.destructibility) &&
+      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
+      (std::is_void_v<typename F::reflection_type> ||
+          std::is_nothrow_constructible_v<
+              typename F::reflection_type, std::in_place_type_t<P>>);
 };
-template <class F> struct basic_facade_traits : inapplicable_traits {};
+template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
     requires(
         requires {
@@ -292,48 +324,47 @@ template <class F>
         F::constraints.max_size % F::constraints.max_align == 0u &&
         (std::is_void_v<typename F::reflection_type> ||
             std::is_trivially_copyable_v<typename F::reflection_type>))
-struct basic_facade_traits<F>
-    : basic_facade_traits_impl<F, typename F::dispatch_types> {};
+struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
 
-template <class F, class Ds>
-struct facade_traits_impl : inapplicable_traits {};
-template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
-struct facade_traits_impl<F, std::tuple<Ds...>> : applicable_traits {
-  using meta = composite_meta<typename basic_facade_traits<F>::meta,
-      typename dispatch_traits<Ds>::meta...>;
+using ptr_prototype = void*[2];
 
+template <class M>
+struct meta_ptr {
+  constexpr meta_ptr() noexcept : ptr_(nullptr) {};
   template <class P>
-  static constexpr bool applicable_ptr =
-      sizeof(P) <= F::constraints.max_size &&
-      alignof(P) <= F::constraints.max_align &&
-      has_copyability<P>(F::constraints.copyability) &&
-      has_relocatability<P>(F::constraints.relocatability) &&
-      has_destructibility<P>(F::constraints.destructibility) &&
-      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      (std::is_void_v<typename F::reflection_type> || std::is_constructible_v<
-          typename F::reflection_type, std::in_place_type_t<P>>);
-  template <class P> static constexpr meta meta_storage{std::in_place_type<P>};
+  constexpr explicit meta_ptr(std::in_place_type_t<P>) noexcept
+      : ptr_(&storage<P>) {}
+  bool has_value() const noexcept { return ptr_ != nullptr; }
+  void reset() noexcept { ptr_ = nullptr; }
+  const M* operator->() const noexcept { return ptr_; }
+
+ private:
+  const M* ptr_;
+  template <class P>
+  static constexpr M storage{std::in_place_type<P>};
 };
-template <class F>
-struct facade_traits : facade_traits_impl<F, typename F::dispatch_types> {};
+template <class M>
+    requires(sizeof(M) <= sizeof(ptr_prototype) &&
+        alignof(M) <= alignof(ptr_prototype) && nullable_traits<M>::applicable)
+struct meta_ptr<M> : M {
+  using M::M;
+  const M* operator->() const noexcept { return this; }
+};
 
 }  // namespace details
 
 template <class F>
-concept basic_facade = details::basic_facade_traits<F>::applicable;
-
-template <class F>
-concept facade = basic_facade<F> && details::facade_traits<F>::applicable;
+concept facade = details::facade_traits<F>::applicable;
 
 template <class P, class F>
 concept proxiable = facade<F> && details::ptr_traits<P>::applicable &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
-template <basic_facade F>
+template <class F>
 class proxy {
-  using BasicTraits = details::basic_facade_traits<F>;
   using Traits = details::facade_traits<F>;
-  using DefaultDispatch = typename BasicTraits::default_dispatch;
+  static_assert(Traits::applicable);
+  using DefaultDispatch = typename Traits::default_dispatch;
   template <class D, class... Args>
   using MatchedOverload =
       typename details::dispatch_traits<D>::template matched_overload<Args...>;
@@ -382,32 +413,32 @@ class proxy {
       details::overload_traits<MatchedOverload<D, Args...>>::is_noexcept;
 
  public:
-  proxy() noexcept { meta_ = nullptr; }
+  proxy() noexcept = default;
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy& rhs) noexcept(HasNothrowCopyConstructor)
       requires(!HasTrivialCopyConstructor && HasCopyConstructor) {
-    if (rhs.meta_ != nullptr) {
-      rhs.meta_->BasicTraits::copyability_meta::dispatcher(ptr_, rhs.ptr_);
+    if (rhs.meta_.has_value()) {
+      rhs.meta_->Traits::copyability_meta::dispatcher(ptr_, rhs.ptr_);
       meta_ = rhs.meta_;
     } else {
-      meta_ = nullptr;
+      meta_.reset();
     }
   }
   proxy(const proxy&) noexcept requires(HasTrivialCopyConstructor) = default;
   proxy(const proxy&) requires(!HasCopyConstructor) = delete;
   proxy(proxy&& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
-    if (rhs.meta_ != nullptr) {
+    if (rhs.meta_.has_value()) {
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         memcpy(ptr_, rhs.ptr_, F::constraints.max_size);
       } else {
-        rhs.meta_->BasicTraits::relocatability_meta::dispatcher(ptr_, rhs.ptr_);
+        rhs.meta_->Traits::relocatability_meta::dispatcher(ptr_, rhs.ptr_);
       }
       meta_ = rhs.meta_;
-      rhs.meta_ = nullptr;
+      rhs.meta_.reset();
     } else {
-      meta_ = nullptr;
+      meta_.reset();
     }
   }
   proxy(proxy&&) requires(!HasMoveConstructor) = delete;
@@ -473,34 +504,35 @@ class proxy {
       { return *this = proxy{std::forward<P>(ptr)}; }
   ~proxy() noexcept(HasNothrowDestructor)
       requires(!HasTrivialDestructor && HasDestructor) {
-    if (meta_ != nullptr) {
-      meta_->BasicTraits::destructibility_meta::dispatcher(ptr_);
+    if (meta_.has_value()) {
+      meta_->Traits::destructibility_meta::dispatcher(ptr_);
     }
   }
   ~proxy() requires(HasTrivialDestructor) = default;
   ~proxy() requires(!HasDestructor) = delete;
 
-  bool has_value() const noexcept { return meta_ != nullptr; }
+  bool has_value() const noexcept { return meta_.has_value(); }
   decltype(auto) reflect() const noexcept
-      requires(!std::is_void_v<typename F::reflection_type>)
-      { return static_cast<const typename F::reflection_type&>(*meta_); }
+      requires(!std::is_void_v<typename F::reflection_type>) {
+    return *static_cast<const typename F::reflection_type*>(meta_.operator->());
+  }
   void reset() noexcept(HasNothrowDestructor) requires(HasDestructor)
-      { this->~proxy(); meta_ = nullptr; }
+      { this->~proxy(); meta_.reset(); }
   void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
     if constexpr (F::constraints.relocatability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
       std::swap(ptr_, rhs.ptr);
     } else {
-      if (meta_ != nullptr) {
-        if (rhs.meta_ != nullptr) {
+      if (meta_.has_value()) {
+        if (rhs.meta_.has_value()) {
           proxy temp = std::move(*this);
           new(this) proxy(std::move(rhs));
           new(&rhs) proxy(std::move(temp));
         } else {
           new(&rhs) proxy(std::move(*this));
         }
-      } else if (rhs.meta_ != nullptr) {
+      } else if (rhs.meta_.has_value()) {
         new(this) proxy(std::move(rhs));
       }
     }
@@ -525,31 +557,49 @@ class proxy {
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
       noexcept(HasNothrowInvocation<D, Args...>)
-      requires(facade<F> && BasicTraits::template has_dispatch<D> &&
+      requires(Traits::template has_dispatch<D> &&
           requires { typename MatchedOverload<D, Args...>; }) {
-    using dispatcher_type = typename details::overload_traits<
-        MatchedOverload<D, Args...>>::dispatcher_type;
-    const auto& dispatchers = static_cast<const typename Traits::meta*>(meta_)
-        ->details::template dispatch_traits<D>::meta::dispatchers;
-    auto dispatcher = std::get<dispatcher_type>(dispatchers);
-    return dispatcher(ptr_, std::forward<Args>(args)...);
+    return meta_->template dispatcher_meta<typename details::overload_traits<
+        MatchedOverload<D, Args...>>::template meta_provider<D>>
+        ::dispatcher(ptr_, std::forward<Args>(args)...);
   }
   template <class... Args>
   decltype(auto) operator()(Args&&... args) const
       noexcept(HasNothrowInvocation<DefaultDispatch, Args...>)
-      requires(facade<F> &&
-          requires { typename MatchedOverload<DefaultDispatch, Args...>; })
+      requires(requires { typename MatchedOverload<DefaultDispatch, Args...>; })
       { return invoke(std::forward<Args>(args)...); }
 
  private:
   template <class P, class... Args>
   void initialize(Args&&... args) {
     new(ptr_) P(std::forward<Args>(args)...);
-    meta_ = &Traits::template meta_storage<P>;
+    meta_ = details::meta_ptr<typename Traits::meta>{std::in_place_type<P>};
   }
 
-  const typename BasicTraits::meta* meta_;
+  details::meta_ptr<typename Traits::meta> meta_;
   alignas(F::constraints.max_align) char ptr_[F::constraints.max_size];
+};
+
+constexpr proxiable_ptr_constraints relocatable_ptr_constraints{
+  .max_size = sizeof(details::ptr_prototype),
+  .max_align = alignof(details::ptr_prototype),
+  .copyability = constraint_level::none,
+  .relocatability = constraint_level::nothrow,
+  .destructibility = constraint_level::nothrow,
+};
+constexpr proxiable_ptr_constraints copyable_ptr_constraints{
+  .max_size = sizeof(details::ptr_prototype),
+  .max_align = alignof(details::ptr_prototype),
+  .copyability = constraint_level::nontrivial,
+  .relocatability = constraint_level::nothrow,
+  .destructibility = constraint_level::nothrow,
+};
+constexpr proxiable_ptr_constraints trivial_ptr_constraints{
+  .max_size = sizeof(void*),
+  .max_align = alignof(void*),
+  .copyability = constraint_level::trivial,
+  .relocatability = constraint_level::trivial,
+  .destructibility = constraint_level::trivial,
 };
 
 namespace details {
@@ -615,17 +665,29 @@ namespace details {
 
 template <class Args>
 struct overload_matching_helper {
-  template <class O, class I> struct reduction : std::type_identity<O> {};
-  template <class O, class I>
+  template <class O> struct traits : inapplicable_traits {};
+  template <class O>
       requires(std::is_same_v<
-          typename overload_traits<I>::forwarding_argument_types, Args>)
-  struct reduction<O, I> : std::type_identity<I> {};
+          typename overload_traits<O>::forwarding_argument_types, Args>)
+  struct traits<O> : applicable_traits {};
+};
+template <class... Os>
+struct dispatch_prototype_helper {
+  template <class... Args>
+  using overload = first_applicable_t<overload_matching_helper<
+      std::tuple<Args&&...>>::template traits, Os...>;
+  template <class... Args>
+  static constexpr bool applicable = requires { typename overload<Args...>; };
+  template <class... Args>
+  static constexpr bool is_noexcept =
+      overload_traits<overload<Args...>>::is_noexcept;
+  template <class F, class T, class... Args>
+  static constexpr bool applicable_callable =
+      overload_traits<overload<Args...>>::template applicable_callable<F, T>;
 };
 template <class Args, class... Os>
-    requires(!std::is_void_v<recursive_reduction_t<
-        overload_matching_helper<Args>::template reduction, void, Os...>>)
-using matched_overload = recursive_reduction_t<
-    overload_matching_helper<Args>::template reduction, void, Os...>;
+using matched_overload =
+    first_applicable_t<overload_matching_helper<Args>::template traits, Os...>;
 template <class Args, class... Os>
 constexpr bool matched_overload_is_noexcept =
     overload_traits<matched_overload<Args, Os...>>::is_noexcept;
@@ -663,38 +725,29 @@ struct facade_prototype {
 
 }  // namespace pro
 
-#define PRO_DEF_MEMBER_DISPATCH(NAME, ...) \
+#define ___PRO_DEF_DISPATCH_IMPL(NAME, EXPR, ...) \
     struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
+     private: \
+      using __helper = ::pro::details::dispatch_prototype_helper<__VA_ARGS__>; \
+      struct __F { \
+        template <class __T, class... __Args> \
+        decltype(auto) operator()(__T& __self, __Args&&... __args) \
+            noexcept(noexcept(EXPR)) requires(requires { EXPR; }) \
+            { return EXPR; } \
+      }; \
+    \
+     public: \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          noexcept(::pro::details::matched_overload_is_noexcept< \
-              std::tuple<__Args&&...>, __VA_ARGS__>) \
-          requires( \
-              requires{ \
-                typename ::pro::details::matched_overload< \
-                    std::tuple<__Args&&...>, __VA_ARGS__>; \
-                __self.NAME(std::forward<__Args>(__args)...); \
-              } && (!::pro::details::matched_overload_is_noexcept< \
-                  std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(__self.NAME(std::forward<__Args>(__args)...)))) \
-          { return __self.NAME(std::forward<__Args>(__args)...); } \
+          noexcept(__helper::template is_noexcept<__Args...>) \
+          requires(__helper::template applicable<__Args...> && \
+              __helper::template applicable_callable<__F, __T, __Args...>) \
+          { return __F{}(__self, std::forward<__Args>(__args)...); } \
     }
-#define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) \
-    struct NAME : ::pro::details::dispatch_prototype<__VA_ARGS__> { \
-      template <class __T, class... __Args> \
-      decltype(auto) operator()(__T& __self, __Args&&... __args) \
-          noexcept(::pro::details::matched_overload_is_noexcept< \
-              std::tuple<__Args&&...>, __VA_ARGS__>) \
-          requires( \
-              requires{ \
-                typename ::pro::details::matched_overload< \
-                    std::tuple<__Args&&...>, __VA_ARGS__>; \
-                FUNC(__self, std::forward<__Args>(__args)...); \
-              } && (!::pro::details::matched_overload_is_noexcept< \
-                  std::tuple<__Args&&...>, __VA_ARGS__> || \
-              noexcept(FUNC(__self, std::forward<__Args>(__args)...)))) \
-          { return FUNC(__self, std::forward<__Args>(__args)...); } \
-    }
+#define PRO_DEF_MEMBER_DISPATCH(NAME, ...) ___PRO_DEF_DISPATCH_IMPL( \
+    NAME, __self.NAME(std::forward<__Args>(__args)...), __VA_ARGS__)
+#define PRO_DEF_FREE_DISPATCH(NAME, FUNC, ...) ___PRO_DEF_DISPATCH_IMPL( \
+    NAME, FUNC(__self, std::forward<__Args>(__args)...), __VA_ARGS__)
 #define PRO_DEF_COMBINED_DISPATCH(NAME, ...) \
     struct NAME : ::pro::details::combined_dispatch_prototype<__VA_ARGS__> {}
 #define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>

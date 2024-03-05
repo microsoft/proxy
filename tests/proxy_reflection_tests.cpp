@@ -16,7 +16,7 @@ concept ReflectionApplicable = requires(pro::proxy<F> p) {
 class RttiReflection {
  public:
   template <class P>
-  constexpr explicit RttiReflection(std::in_place_type_t<P>)
+  constexpr explicit RttiReflection(std::in_place_type_t<P>) noexcept
       : type_(typeid(P)) {}
 
   const char* GetName() const noexcept { return type_.name(); }
@@ -28,7 +28,7 @@ class RttiReflection {
 struct TraitsReflection {
  public:
   template <class P>
-  constexpr explicit TraitsReflection(std::in_place_type_t<P>)
+  constexpr explicit TraitsReflection(std::in_place_type_t<P>) noexcept
       : is_default_constructible_(std::is_default_constructible_v<P>),
         is_copy_constructible_(std::is_copy_constructible_v<P>),
         is_nothrow_move_constructible_(std::is_nothrow_move_constructible_v<P>),
