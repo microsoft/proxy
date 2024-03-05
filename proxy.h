@@ -161,9 +161,9 @@ struct overload_traits<R(Args...) noexcept> : applicable_traits {
 
 template <class T> struct nullable_traits : inapplicable_traits {};
 template <class T>
-    requires(std::is_nothrow_default_constructible_v<T> &&
-        std::is_trivially_copyable_v<T> &&
+    requires(
         requires(const T& cv, T& v) {
+          { T{} } noexcept;
           { cv.has_value() } noexcept -> std::same_as<bool>;
           { v.reset() } noexcept;
         })
