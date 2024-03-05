@@ -335,8 +335,6 @@ template <class F>
           typename F::reflection_type;
         } &&
         is_constexpr<facade_constraints_visitor<F>> &&
-        std::is_same_v<decltype(F::constraints),
-            const proxiable_ptr_constraints> &&
         std::has_single_bit(F::constraints.max_align) &&
         F::constraints.max_size % F::constraints.max_align == 0u &&
         (std::is_void_v<typename F::reflection_type> ||

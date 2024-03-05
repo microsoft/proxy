@@ -242,7 +242,14 @@ static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
 
 struct BadFacade_MissingReflectionType {
   using dispatch_types = std::tuple<>;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
 };
 static_assert(!pro::facade<BadFacade_MissingReflectionType>);
 
