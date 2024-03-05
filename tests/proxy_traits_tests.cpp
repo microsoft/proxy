@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#include <stdexcept>
 #include <type_traits>
 #include "proxy.h"
 
@@ -150,7 +151,7 @@ static_assert(sizeof(pro::proxy<TrivialFacade>) == 2 * sizeof(void*));  // VTABL
 
 struct ReflectionOfSmallPtr {
   template <class P> requires(sizeof(P) <= sizeof(void*))
-  constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) noexcept {}
+  constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
 };
 PRO_DEF_FACADE(RelocatableFacadeWithReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, ReflectionOfSmallPtr);
 static_assert(!pro::proxiable<MockMovablePtr, RelocatableFacadeWithReflection>);
@@ -158,6 +159,13 @@ static_assert(!pro::proxiable<MockCopyablePtr, RelocatableFacadeWithReflection>)
 static_assert(pro::proxiable<MockCopyableSmallPtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacadeWithReflection>);
+
+struct RuntimeReflection {
+  template <class P>
+  explicit RuntimeReflection(std::in_place_type_t<P>) { throw std::runtime_error{"Not supported"}; }
+};
+PRO_DEF_FACADE(FacadeWithRuntimeReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, RuntimeReflection);
+static_assert(!pro::proxiable<MockTrivialPtr, FacadeWithRuntimeReflection>);
 
 struct BadFacade_MissingDispatchTypes {
 #ifdef __clang__
@@ -224,6 +232,13 @@ struct BadFacade_BadConstraints_BadSize {
   using reflection_type = void;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
+
+struct BadFacade_BadConstraints_NotConstant {
+  using dispatch_types = std::tuple<>;
+  static inline const auto constraints = pro::relocatable_ptr_constraints;
+  using reflection_type = void;
+};
+static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
 
 struct BadFacade_MissingReflectionType {
   using dispatch_types = std::tuple<>;

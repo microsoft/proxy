@@ -276,6 +276,25 @@ template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
+template <int> struct is_constexpr_helper;
+template <class V>
+concept is_constexpr = requires { typename is_constexpr_helper<(V{}(), 0)>; };
+
+template <class F>
+struct facade_constraints_visitor {
+  constexpr auto operator()() requires(requires {
+      { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>; })
+      { return F::constraints; }
+};
+template <class R, class P>
+struct facade_reflection_visitor {
+  constexpr auto operator()()
+      requires(std::is_constructible_v<R, std::in_place_type_t<P>>)
+      { return R{std::in_place_type<P>}; }
+};
+template <class P>
+struct facade_reflection_visitor<void, P> { constexpr void operator()() {} };
+
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
@@ -306,18 +325,16 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      (std::is_void_v<typename F::reflection_type> ||
-          std::is_nothrow_constructible_v<
-              typename F::reflection_type, std::in_place_type_t<P>>);
+      is_constexpr<facade_reflection_visitor<typename F::reflection_type, P>>;
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
     requires(
         requires {
           typename F::dispatch_types;
-          F::constraints;
           typename F::reflection_type;
         } &&
+        is_constexpr<facade_constraints_visitor<F>> &&
         std::is_same_v<decltype(F::constraints),
             const proxiable_ptr_constraints> &&
         std::has_single_bit(F::constraints.max_align) &&
