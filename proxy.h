@@ -277,23 +277,9 @@ struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
 template <int> struct is_constexpr_helper;
-template <class V>
-concept is_constexpr = requires { typename is_constexpr_helper<(V{}(), 0)>; };
-
-template <class F>
-struct facade_constraints_visitor {
-  constexpr auto operator()() requires(requires {
-      { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>; })
-      { return F::constraints; }
-};
-template <class R, class P>
-struct facade_reflection_visitor {
-  constexpr auto operator()()
-      requires(std::is_constructible_v<R, std::in_place_type_t<P>>)
-      { return R{std::in_place_type<P>}; }
-};
-template <class P>
-struct facade_reflection_visitor<void, P> { constexpr void operator()() {} };
+template <class Expr>
+consteval bool is_constexpr(Expr)
+    { return requires { typename is_constexpr_helper<(Expr{}(), 0)>; }; }
 
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
@@ -304,6 +290,18 @@ struct facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
 struct facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
+  template <class P>
+  static consteval bool is_reflection_type_well_formed() {
+    using R = typename F::reflection_type;
+    if constexpr (std::is_void_v<R>) {
+      return true;
+    } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
+      return is_constexpr([] { return R{std::in_place_type<P>}; });
+    } else {
+      return false;
+    }
+  }
+
   using copyability_meta = lifetime_meta<
       copyability_meta_provider, F::constraints.copyability>;
   using relocatability_meta = lifetime_meta<
@@ -325,16 +323,17 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      is_constexpr<facade_reflection_visitor<typename F::reflection_type, P>>;
+      is_reflection_type_well_formed<P>();
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
     requires(
         requires {
           typename F::dispatch_types;
+          { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
         } &&
-        is_constexpr<facade_constraints_visitor<F>> &&
+        is_constexpr([] { return F::constraints; }) &&
         std::has_single_bit(F::constraints.max_align) &&
         F::constraints.max_size % F::constraints.max_align == 0u &&
         (std::is_void_v<typename F::reflection_type> ||
