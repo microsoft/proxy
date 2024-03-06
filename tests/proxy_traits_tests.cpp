@@ -249,8 +249,8 @@ static_assert(!pro::facade<BadFacade_MissingReflectionType>);
 struct BadFacade_BadReflectionType {
   using dispatch_types = std::tuple<>;
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
-  using reflection_type = std::unique_ptr<int>;
+  using reflection_type = std::unique_ptr<int>;  // Probably constexpr, unknown until the evaluation of proxiablility
 };
-static_assert(!pro::facade<BadFacade_BadReflectionType>);
+static_assert(pro::facade<BadFacade_BadReflectionType>);
 
 }  // namespace

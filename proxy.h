@@ -48,10 +48,9 @@ struct first_applicable<T, I, Is...> : first_applicable<T, Is...> {};
 template <template <class> class T, class... Is>
 using first_applicable_t = typename first_applicable<T, Is...>::type;
 
-template <int> struct is_constexpr_helper;
 template <class Expr>
 consteval bool is_constexpr(Expr)
-    { return requires { typename is_constexpr_helper<(Expr{}(), 0)>; }; }
+    { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
 template <class T>
 consteval bool has_copyability(constraint_level level) {
@@ -338,10 +337,7 @@ template <class F>
           typename F::dispatch_types;
           { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
-        } &&
-        is_facade_constraints_well_formed<F>() &&
-        (std::is_void_v<typename F::reflection_type> ||
-            std::is_trivially_copyable_v<typename F::reflection_type>))
+        } && is_facade_constraints_well_formed<F>())
 struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
 
 using ptr_prototype = void*[2];
