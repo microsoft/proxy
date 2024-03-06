@@ -283,12 +283,9 @@ consteval bool is_constexpr(Expr)
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
-  if constexpr (requires { { F::constraints } ->
-      std::same_as<const proxiable_ptr_constraints&>; }) {
-    if constexpr (is_constexpr([] { return F::constraints; })) {
-      return std::has_single_bit(F::constraints.max_align) &&
-        F::constraints.max_size % F::constraints.max_align == 0u;
-    }
+  if constexpr (is_constexpr([] { return F::constraints; })) {
+    return std::has_single_bit(F::constraints.max_align) &&
+      F::constraints.max_size % F::constraints.max_align == 0u;
   }
   return false;
 }
@@ -308,9 +305,8 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       return true;
     } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
       return is_constexpr([] { return R{std::in_place_type<P>}; });
-    } else {
-      return false;
     }
+    return false;
   }
 
   using copyability_meta = lifetime_meta<
@@ -341,6 +337,7 @@ template <class F>
     requires(
         requires {
           typename F::dispatch_types;
+          { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
         } &&
         is_facade_constraints_well_formed<F>() &&
