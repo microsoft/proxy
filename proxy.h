@@ -48,6 +48,11 @@ struct first_applicable<T, I, Is...> : first_applicable<T, Is...> {};
 template <template <class> class T, class... Is>
 using first_applicable_t = typename first_applicable<T, Is...>::type;
 
+template <int> struct is_constexpr_helper;
+template <class Expr>
+consteval bool is_constexpr(Expr)
+    { return requires { typename is_constexpr_helper<(Expr{}(), 0)>; }; }
+
 template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
@@ -276,16 +281,21 @@ template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
-template <int> struct is_constexpr_helper;
-template <class Expr>
-consteval bool is_constexpr(Expr)
-    { return requires { typename is_constexpr_helper<(Expr{}(), 0)>; }; }
-
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (is_constexpr([] { return F::constraints; })) {
     return std::has_single_bit(F::constraints.max_align) &&
       F::constraints.max_size % F::constraints.max_align == 0u;
+  }
+  return false;
+}
+template <class F, class P>
+consteval bool is_facade_reflection_type_well_formed() {
+  using R = typename F::reflection_type;
+  if constexpr (std::is_void_v<R>) {
+    return true;
+  } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
+    return is_constexpr([] { return R{std::in_place_type<P>}; });
   }
   return false;
 }
@@ -298,17 +308,6 @@ struct facade_traits_impl : inapplicable_traits {};
 template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
 struct facade_traits_impl<F, std::tuple<Ds...>>
     : applicable_traits, default_dispatch_traits<Ds...> {
-  template <class P>
-  static consteval bool is_reflection_type_well_formed() {
-    using R = typename F::reflection_type;
-    if constexpr (std::is_void_v<R>) {
-      return true;
-    } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
-      return is_constexpr([] { return R{std::in_place_type<P>}; });
-    }
-    return false;
-  }
-
   using copyability_meta = lifetime_meta<
       copyability_meta_provider, F::constraints.copyability>;
   using relocatability_meta = lifetime_meta<
@@ -330,7 +329,7 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      is_reflection_type_well_formed<P>();
+      is_facade_reflection_type_well_formed<F, P>();
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
