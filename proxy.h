@@ -49,7 +49,7 @@ template <template <class> class T, class... Is>
 using first_applicable_t = typename first_applicable<T, Is...>::type;
 
 template <class Expr>
-consteval bool is_constexpr(Expr)
+consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
 template <class T>
@@ -282,7 +282,7 @@ struct facade_meta_reduction<composite_meta<Ms...>, I>
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
-  if constexpr (is_constexpr([] { return F::constraints; })) {
+  if constexpr (is_consteval([] { return F::constraints; })) {
     return std::has_single_bit(F::constraints.max_align) &&
       F::constraints.max_size % F::constraints.max_align == 0u;
   }
@@ -294,7 +294,7 @@ consteval bool is_facade_reflection_type_well_formed() {
   if constexpr (std::is_void_v<R>) {
     return true;
   } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
-    return is_constexpr([] { return R{std::in_place_type<P>}; });
+    return is_consteval([] { return R{std::in_place_type<P>}; });
   }
   return false;
 }
