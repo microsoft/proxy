@@ -284,7 +284,7 @@ template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (is_consteval([] { return F::constraints; })) {
     return std::has_single_bit(F::constraints.max_align) &&
-      F::constraints.max_size % F::constraints.max_align == 0u;
+        F::constraints.max_size % F::constraints.max_align == 0u;
   }
   return false;
 }
