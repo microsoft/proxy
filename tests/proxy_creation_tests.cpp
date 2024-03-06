@@ -12,10 +12,10 @@ namespace poly {
 struct SboObserver {
  public:
   template <class P>
-  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<P>>) noexcept
+  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<P>>)
       : SboEnabled(true) {}
   template <class P>
-  constexpr explicit SboObserver(std::in_place_type_t<P>) noexcept
+  constexpr explicit SboObserver(std::in_place_type_t<P>)
       : SboEnabled(false) {}
 
   bool SboEnabled;

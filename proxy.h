@@ -48,6 +48,10 @@ struct first_applicable<T, I, Is...> : first_applicable<T, Is...> {};
 template <template <class> class T, class... Is>
 using first_applicable_t = typename first_applicable<T, Is...>::type;
 
+template <class Expr>
+consteval bool is_consteval(Expr)
+    { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
+
 template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
@@ -276,6 +280,24 @@ template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
+template <class F>
+consteval bool is_facade_constraints_well_formed() {
+  if constexpr (is_consteval([] { return F::constraints; })) {
+    return std::has_single_bit(F::constraints.max_align) &&
+        F::constraints.max_size % F::constraints.max_align == 0u;
+  }
+  return false;
+}
+template <class F, class P>
+consteval bool is_facade_reflection_type_well_formed() {
+  using R = typename F::reflection_type;
+  if constexpr (std::is_void_v<R>) {
+    return true;
+  } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
+    return is_consteval([] { return R{std::in_place_type<P>}; });
+  }
+  return false;
+}
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
@@ -306,24 +328,16 @@ struct facade_traits_impl<F, std::tuple<Ds...>>
       has_relocatability<P>(F::constraints.relocatability) &&
       has_destructibility<P>(F::constraints.destructibility) &&
       (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      (std::is_void_v<typename F::reflection_type> ||
-          std::is_nothrow_constructible_v<
-              typename F::reflection_type, std::in_place_type_t<P>>);
+      is_facade_reflection_type_well_formed<F, P>();
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
     requires(
         requires {
           typename F::dispatch_types;
-          F::constraints;
+          { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
-        } &&
-        std::is_same_v<decltype(F::constraints),
-            const proxiable_ptr_constraints> &&
-        std::has_single_bit(F::constraints.max_align) &&
-        F::constraints.max_size % F::constraints.max_align == 0u &&
-        (std::is_void_v<typename F::reflection_type> ||
-            std::is_trivially_copyable_v<typename F::reflection_type>))
+        } && is_facade_constraints_well_formed<F>())
 struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
 
 using ptr_prototype = void*[2];
