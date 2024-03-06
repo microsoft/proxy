@@ -281,6 +281,17 @@ template <class Expr>
 consteval bool is_constexpr(Expr)
     { return requires { typename is_constexpr_helper<(Expr{}(), 0)>; }; }
 
+template <class F>
+consteval bool is_facade_constraints_well_formed() {
+  if constexpr (requires { { F::constraints } ->
+      std::same_as<const proxiable_ptr_constraints&>; }) {
+    if constexpr (is_constexpr([] { return F::constraints; })) {
+      return std::has_single_bit(F::constraints.max_align) &&
+        F::constraints.max_size % F::constraints.max_align == 0u;
+    }
+  }
+  return false;
+}
 template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
@@ -330,12 +341,9 @@ template <class F>
     requires(
         requires {
           typename F::dispatch_types;
-          { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
         } &&
-        is_constexpr([] { return F::constraints; }) &&
-        std::has_single_bit(F::constraints.max_align) &&
-        F::constraints.max_size % F::constraints.max_align == 0u &&
+        is_facade_constraints_well_formed<F>() &&
         (std::is_void_v<typename F::reflection_type> ||
             std::is_trivially_copyable_v<typename F::reflection_type>))
 struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
