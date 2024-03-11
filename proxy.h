@@ -699,12 +699,6 @@ struct dispatch_prototype_helper {
   static constexpr bool applicable_callable =
       overload_traits<overload<Args...>>::template applicable_callable<F, T>;
 };
-template <class Args, class... Os>
-using matched_overload =
-    first_applicable_t<overload_matching_helper<Args>::template traits, Os...>;
-template <class Args, class... Os>
-constexpr bool matched_overload_is_noexcept =
-    overload_traits<matched_overload<Args, Os...>>::is_noexcept;
 
 template <class O, class I> struct flat_reduction : std::type_identity<O> {};
 template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
