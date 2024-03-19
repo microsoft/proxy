@@ -636,32 +636,84 @@ class sbo_ptr {
   mutable T value_;
 };
 
-template <class T>
+template <class T, class Alloc>
 class deep_ptr {
+  struct storage {
+    template <class... Args>
+    explicit storage(const Alloc& alloc, Args&&... args)
+        : value(std::forward<Args>(args)...), alloc(alloc) {}
+
+    T value;
+    [[no_unique_address]] Alloc alloc;
+  };
+  using ReboundAlloc = typename std::allocator_traits<Alloc>
+      ::template rebind_alloc<storage>;
+
  public:
   template <class... Args>
-  deep_ptr(Args&&... args) requires(std::is_constructible_v<T, Args...>)
-      : ptr_(new T(std::forward<Args>(args)...)) {}
+  deep_ptr(const Alloc& alloc, Args&&... args)
+      requires(std::is_constructible_v<T, Args...>)
+      : ptr_(allocate(alloc, std::forward<Args>(args)...)) {}
   deep_ptr(const deep_ptr& rhs) requires(std::is_copy_constructible_v<T>)
-      : ptr_(rhs.ptr_ == nullptr ? nullptr : new T(*rhs.ptr_)) {}
-  deep_ptr(deep_ptr&& rhs) noexcept : ptr_(rhs.ptr_) { rhs.ptr_ = nullptr; }
-  ~deep_ptr() noexcept { delete ptr_; }
+      : ptr_(rhs.ptr_ == nullptr ? nullptr :
+            allocate(rhs.ptr_->alloc, std::as_const(rhs.ptr_->value))) {}
+  deep_ptr(deep_ptr&& rhs) noexcept : ptr_(std::exchange(rhs.ptr_, nullptr)) {}
+  ~deep_ptr() noexcept {
+    if (ptr_ != nullptr) {
+      ReboundAlloc al(ptr_->alloc);
+      ptr_->~storage();
+      al.deallocate(ptr_, 1);
+    }
+  }
 
-  T* operator->() const noexcept { return ptr_; }
+  T* operator->() const noexcept { return &ptr_->value; }
 
  private:
-  T* ptr_;
+  template <class... Args>
+  static storage* allocate(const Alloc& alloc, Args&&... args) {
+    ReboundAlloc al(alloc);
+    auto deleter = [&](storage* ptr) { al.deallocate(ptr, 1); };
+    std::unique_ptr<storage, decltype(deleter)> result{al.allocate(1), deleter};
+    new(result.get()) storage(alloc, std::forward<Args>(args)...);
+    return result.release();
+  }
+
+  storage* ptr_;
 };
 
+template <class F, class T, class Alloc, class... Args>
+proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
+  if constexpr (proxiable<details::sbo_ptr<T>, F>) {
+    return proxy<F>{std::in_place_type<details::sbo_ptr<T>>,
+        std::forward<Args>(args)...};
+  } else {
+    return proxy<F>{std::in_place_type<details::deep_ptr<T, Alloc>>,
+        alloc, std::forward<Args>(args)...};
+  }
+}
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
-  return proxy<F>{std::in_place_type<
-      std::conditional_t<proxiable<sbo_ptr<T>, F>, sbo_ptr<T>, deep_ptr<T>>>,
-      std::forward<Args>(args)...};
+  return allocate_proxy_impl<F, T>(
+      std::allocator<T>{}, std::forward<Args>(args)...);
 }
 
 }  // namespace details
 
+template <class F, class T, class Alloc, class... Args>
+proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
+  return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
+}
+template <class F, class T, class Alloc, class U, class... Args>
+proxy<F> allocate_proxy(const Alloc& alloc, std::initializer_list<U> il,
+    Args&&... args) {
+  return details::allocate_proxy_impl<F, T>(
+      alloc, il, std::forward<Args>(args)...);
+}
+template <class F, class Alloc, class T>
+proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
+  return details::allocate_proxy_impl<F, std::decay_t<T>>(
+      alloc, std::forward<T>(value));
+}
 template <class F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
