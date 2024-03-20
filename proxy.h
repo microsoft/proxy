@@ -64,7 +64,7 @@ concept tuple_like =
 template <template <class...> class T, class TL, class Is> struct instantiated;
 template <template <class...> class T, class TL, std::size_t... Is>
 struct instantiated<T, TL, std::index_sequence<Is...>>
-    : std::type_identity<T<std::tuple_element_t<Is, TL>...>> {};
+    { using type = T<std::tuple_element_t<Is, TL>...>; };
 template <template <class...> class T, class TL>
 using instantiated_t = typename instantiated<
     T, TL, std::make_index_sequence<std::tuple_size_v<TL>>>::type;
