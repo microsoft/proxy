@@ -53,6 +53,23 @@ consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
 template <class T>
+concept tuple_like =
+    requires { { std::tuple_size<T>::value } ->
+        std::same_as<const std::size_t&>; } &&
+    is_consteval([] { return std::tuple_size<T>::value; }) &&
+    []<std::size_t... I>(std::index_sequence<I...>) {
+          return (requires { typename std::tuple_element_t<I, T>; } && ...);
+        }(std::make_index_sequence<std::tuple_size_v<T>>{});
+
+template <template <class...> class T, class TL, class Is> struct instantiated;
+template <template <class...> class T, class TL, std::size_t... Is>
+struct instantiated<T, TL, std::index_sequence<Is...>>
+    : std::type_identity<T<std::tuple_element_t<Is, TL>...>> {};
+template <template <class...> class T, class TL>
+using instantiated_t = typename instantiated<
+    T, TL, std::make_index_sequence<std::tuple_size_v<TL>>>::type;
+
+template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
     case constraint_level::trivial:
@@ -201,32 +218,36 @@ struct composite_meta : Ms... {
       { first_applicable_t<nullable_traits, Ms...>::reset(); }
 };
 
-template <class D, class Os>
-struct dispatch_traits_impl : inapplicable_traits {};
-template <class D, class... Os>
-    requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
-struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
- private:
-  struct overload_resolver : overload_traits<Os>::resolver...
-      { using overload_traits<Os>::resolver::operator()...; };
+template <class D>
+struct dispatch_helper {
+  template <class... Os>
+  struct traits : inapplicable_traits {};
+  template <class... Os>
+      requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
+  struct traits<Os...> : applicable_traits {
+   private:
+    struct overload_resolver : overload_traits<Os>::resolver...
+        { using overload_traits<Os>::resolver::operator()...; };
 
- public:
-  using meta = composite_meta<dispatcher_meta<
-      typename overload_traits<Os>::template meta_provider<D>>...>;
-  template <class... Args>
-  using matched_overload =
-      std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
+   public:
+    using meta = composite_meta<dispatcher_meta<
+        typename overload_traits<Os>::template meta_provider<D>>...>;
+    template <class... Args>
+    using matched_overload =
+        std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
 
-  template <class P>
-  static constexpr bool applicable_ptr =
-      (overload_traits<Os>::template applicable_ptr<D, P> && ...);
+    template <class P>
+    static constexpr bool applicable_ptr =
+        (overload_traits<Os>::template applicable_ptr<D, P> && ...);
+  };
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D>
     requires(requires { typename D::overload_types; } &&
+        tuple_like<typename D::overload_types> &&
         std::is_trivially_default_constructible_v<D>)
-struct dispatch_traits<D>
-    : dispatch_traits_impl<D, typename D::overload_types> {};
+struct dispatch_traits<D> : instantiated_t<
+    dispatch_helper<D>::template traits, typename D::overload_types> {};
 
 template <constraint_level C> struct copyability_meta_provider;
 template <>
