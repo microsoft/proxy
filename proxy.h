@@ -665,46 +665,77 @@ class sbo_ptr {
 };
 
 template <class T, class Alloc>
-class deep_ptr {
-  struct storage {
-    template <class... Args>
-    explicit storage(const Alloc& alloc, Args&&... args)
-        : value(std::forward<Args>(args)...), alloc(alloc) {}
+static auto rebind_allocator(const Alloc& alloc) {
+  return typename std::allocator_traits<Alloc>::template rebind_alloc<T>(alloc);
+}
+template <class T, class Alloc, class... Args>
+static T* allocate(const Alloc& alloc, Args&&... args) {
+  auto al = rebind_allocator<T>(alloc);
+  auto deleter = [&](T* ptr) { al.deallocate(ptr, 1); };
+  std::unique_ptr<T, decltype(deleter)> result{al.allocate(1), deleter};
+  new(result.get()) T(std::forward<Args>(args)...);
+  return result.release();
+}
+template <class Alloc, class T>
+static void deallocate(const Alloc& alloc, T* ptr) {
+  auto al = rebind_allocator<T>(alloc);
+  ptr->~T();
+  al.deallocate(ptr, 1);
+}
 
-    T value;
-    Alloc alloc;
-  };
-  using ReboundAlloc = typename std::allocator_traits<Alloc>
-      ::template rebind_alloc<storage>;
-
+template <class T, class Alloc>
+class allocated_ptr {
  public:
   template <class... Args>
-  deep_ptr(const Alloc& alloc, Args&&... args)
+  allocated_ptr(const Alloc& alloc, Args&&... args)
       requires(std::is_constructible_v<T, Args...>)
-      : ptr_(allocate(alloc, std::forward<Args>(args)...)) {}
-  deep_ptr(const deep_ptr& rhs) requires(std::is_copy_constructible_v<T>)
-      : ptr_(rhs.ptr_ == nullptr ? nullptr :
-            allocate(rhs.ptr_->alloc, std::as_const(rhs.ptr_->value))) {}
-  deep_ptr(deep_ptr&& rhs) noexcept : ptr_(std::exchange(rhs.ptr_, nullptr)) {}
-  ~deep_ptr() noexcept {
-    if (ptr_ != nullptr) {
-      ReboundAlloc al(ptr_->alloc);
-      ptr_->~storage();
-      al.deallocate(ptr_, 1);
-    }
-  }
+      : alloc_(alloc), ptr_(allocate<T>(alloc, std::forward<Args>(args)...)) {}
+  allocated_ptr(const allocated_ptr& rhs)
+      requires(std::is_copy_constructible_v<T>)
+      : alloc_(rhs.alloc_), ptr_(rhs.ptr_ == nullptr ? nullptr :
+            allocate<T>(alloc_, std::as_const(*rhs.ptr_))) {}
+  allocated_ptr(allocated_ptr&& rhs)
+      noexcept(std::is_nothrow_move_constructible_v<Alloc>)
+      : alloc_(std::move(rhs.alloc_)), ptr_(std::exchange(rhs.ptr_, nullptr)) {}
+  ~allocated_ptr() { if (ptr_ != nullptr) { deallocate(alloc_, ptr_); } }
+
+  T* operator->() const noexcept { return ptr_; }
+
+ private:
+#if __has_cpp_attribute(msvc::no_unique_address)
+  [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+  [[__no_unique_address__]]
+#endif
+  Alloc alloc_;
+  T* ptr_;
+};
+
+template <class T, class Alloc>
+class compact_ptr {
+ public:
+  template <class... Args>
+  compact_ptr(const Alloc& alloc, Args&&... args)
+      requires(std::is_constructible_v<T, Args...>)
+      : ptr_(allocate<storage>(alloc, alloc, std::forward<Args>(args)...)) {}
+  compact_ptr(const compact_ptr& rhs) requires(std::is_copy_constructible_v<T>)
+      : ptr_(rhs.ptr_ == nullptr ? nullptr : allocate<storage>(rhs.ptr_->alloc,
+            rhs.ptr_->alloc, std::as_const(rhs.ptr_->value))) {}
+  compact_ptr(compact_ptr&& rhs) noexcept
+      : ptr_(std::exchange(rhs.ptr_, nullptr)) {}
+  ~compact_ptr() { if (ptr_ != nullptr) { deallocate(ptr_->alloc, ptr_); } }
 
   T* operator->() const noexcept { return &ptr_->value; }
 
  private:
-  template <class... Args>
-  static storage* allocate(const Alloc& alloc, Args&&... args) {
-    ReboundAlloc al(alloc);
-    auto deleter = [&](storage* ptr) { al.deallocate(ptr, 1); };
-    std::unique_ptr<storage, decltype(deleter)> result{al.allocate(1), deleter};
-    new(result.get()) storage(alloc, std::forward<Args>(args)...);
-    return result.release();
-  }
+  struct storage {
+    template <class... Args>
+    explicit storage(const Alloc& alloc, Args&&... args)
+        : alloc(alloc), value(std::forward<Args>(args)...) {}
+
+    Alloc alloc;
+    T value;
+  };
 
   storage* ptr_;
 };
@@ -714,8 +745,11 @@ proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
   if constexpr (proxiable<details::sbo_ptr<T>, F>) {
     return proxy<F>{std::in_place_type<details::sbo_ptr<T>>,
         std::forward<Args>(args)...};
+  } else if constexpr (proxiable<details::allocated_ptr<T, Alloc>, F>) {
+    return proxy<F>{std::in_place_type<details::allocated_ptr<T, Alloc>>,
+        alloc, std::forward<Args>(args)...};
   } else {
-    return proxy<F>{std::in_place_type<details::deep_ptr<T, Alloc>>,
+    return proxy<F>{std::in_place_type<details::compact_ptr<T, Alloc>>,
         alloc, std::forward<Args>(args)...};
   }
 }
