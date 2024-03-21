@@ -224,8 +224,7 @@ struct composite_meta : Ms... {
 
 template <class D>
 struct dispatch_helper {
-  template <class... Os>
-  struct traits : inapplicable_traits {};
+  template <class... Os> struct traits : inapplicable_traits {};
   template <class... Os>
       requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
   struct traits<Os...> : applicable_traits {
@@ -328,8 +327,7 @@ template <class D>
 struct default_dispatch_traits<D> { using default_dispatch = D; };
 template <class F>
 struct facade_helper {
-  template <class... Ds>
-  struct traits : inapplicable_traits {};
+  template <class... Ds> struct traits : inapplicable_traits {};
   template <class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
   struct traits<Ds...> : applicable_traits, default_dispatch_traits<Ds...> {
     using copyability_meta = lifetime_meta<
@@ -382,8 +380,7 @@ struct meta_ptr {
 
  private:
   const M* ptr_;
-  template <class P>
-  static constexpr M storage{std::in_place_type<P>};
+  template <class P> static constexpr M storage{std::in_place_type<P>};
 };
 template <class M>
     requires(sizeof(M) <= sizeof(ptr_prototype) &&
