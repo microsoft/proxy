@@ -53,13 +53,17 @@ consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
 template <class T>
-concept tuple_like =
-    requires { { std::tuple_size<T>::value } ->
-        std::same_as<const std::size_t&>; } &&
-    is_consteval([] { return std::tuple_size<T>::value; }) &&
-    []<std::size_t... I>(std::index_sequence<I...>) {
-          return (requires { typename std::tuple_element_t<I, T>; } && ...);
-        }(std::make_index_sequence<std::tuple_size_v<T>>{});
+consteval bool is_tuple_like_well_formed() {
+  if constexpr (requires { { std::tuple_size<T>::value } ->
+      std::same_as<const std::size_t&>; }) {
+    if constexpr (is_consteval([] { return std::tuple_size<T>::value; })) {
+      return []<std::size_t... I>(std::index_sequence<I...>) {
+            return (requires { typename std::tuple_element_t<I, T>; } && ...);
+          }(std::make_index_sequence<std::tuple_size_v<T>>{});
+    }
+  }
+  return false;
+}
 
 template <template <class...> class T, class TL, class Is> struct instantiated;
 template <template <class...> class T, class TL, std::size_t... Is>
@@ -244,7 +248,7 @@ struct dispatch_helper {
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D>
     requires(requires { typename D::overload_types; } &&
-        tuple_like<typename D::overload_types> &&
+        is_tuple_like_well_formed<typename D::overload_types>() &&
         std::is_trivially_default_constructible_v<D>)
 struct dispatch_traits<D> : instantiated_t<
     dispatch_helper<D>::template traits, typename D::overload_types> {};
@@ -309,9 +313,8 @@ consteval bool is_facade_constraints_well_formed() {
   }
   return false;
 }
-template <class F, class P>
-consteval bool is_facade_reflection_type_well_formed() {
-  using R = typename F::reflection_type;
+template <class R, class P>
+consteval bool is_reflection_type_well_formed() {
   if constexpr (std::is_void_v<R>) {
     return true;
   } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
@@ -323,33 +326,35 @@ template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
 struct default_dispatch_traits<D> { using default_dispatch = D; };
-template <class F, class Ds>
-struct facade_traits_impl : inapplicable_traits {};
-template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
-struct facade_traits_impl<F, std::tuple<Ds...>>
-    : applicable_traits, default_dispatch_traits<Ds...> {
-  using copyability_meta = lifetime_meta<
-      copyability_meta_provider, F::constraints.copyability>;
-  using relocatability_meta = lifetime_meta<
-      relocatability_meta_provider, F::constraints.relocatability>;
-  using destructibility_meta = lifetime_meta<
-      destructibility_meta_provider, F::constraints.destructibility>;
-  using meta = recursive_reduction_t<facade_meta_reduction,
-      composite_meta<>, copyability_meta, relocatability_meta,
-      destructibility_meta, typename dispatch_traits<Ds>::meta...,
-      typename F::reflection_type>;
+template <class F>
+struct facade_helper {
+  template <class... Ds>
+  struct traits : inapplicable_traits {};
+  template <class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
+  struct traits<Ds...> : applicable_traits, default_dispatch_traits<Ds...> {
+    using copyability_meta = lifetime_meta<
+        copyability_meta_provider, F::constraints.copyability>;
+    using relocatability_meta = lifetime_meta<
+        relocatability_meta_provider, F::constraints.relocatability>;
+    using destructibility_meta = lifetime_meta<
+        destructibility_meta_provider, F::constraints.destructibility>;
+    using meta = recursive_reduction_t<facade_meta_reduction,
+        composite_meta<>, copyability_meta, relocatability_meta,
+        destructibility_meta, typename dispatch_traits<Ds>::meta...,
+        typename F::reflection_type>;
 
-  template <class D>
-  static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
-  template <class P>
-  static constexpr bool applicable_ptr =
-      sizeof(P) <= F::constraints.max_size &&
-      alignof(P) <= F::constraints.max_align &&
-      has_copyability<P>(F::constraints.copyability) &&
-      has_relocatability<P>(F::constraints.relocatability) &&
-      has_destructibility<P>(F::constraints.destructibility) &&
-      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      is_facade_reflection_type_well_formed<F, P>();
+    template <class D>
+    static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
+    template <class P>
+    static constexpr bool applicable_ptr =
+        sizeof(P) <= F::constraints.max_size &&
+        alignof(P) <= F::constraints.max_align &&
+        has_copyability<P>(F::constraints.copyability) &&
+        has_relocatability<P>(F::constraints.relocatability) &&
+        has_destructibility<P>(F::constraints.destructibility) &&
+        (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
+        is_reflection_type_well_formed<typename F::reflection_type, P>();
+  };
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
@@ -358,8 +363,10 @@ template <class F>
           typename F::dispatch_types;
           { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
-        } && is_facade_constraints_well_formed<F>())
-struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
+        } && is_tuple_like_well_formed<typename F::dispatch_types>() &&
+        is_facade_constraints_well_formed<F>())
+struct facade_traits<F> : instantiated_t<
+    facade_helper<F>::template traits, typename F::dispatch_types> {};
 
 using ptr_prototype = void*[2];
 
@@ -665,7 +672,7 @@ class deep_ptr {
         : value(std::forward<Args>(args)...), alloc(alloc) {}
 
     T value;
-    [[no_unique_address]] Alloc alloc;
+    Alloc alloc;
   };
   using ReboundAlloc = typename std::allocator_traits<Alloc>
       ::template rebind_alloc<storage>;
