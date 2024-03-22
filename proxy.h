@@ -8,7 +8,6 @@
 #include <concepts>
 #include <initializer_list>
 #include <memory>
-#include <new>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -498,8 +497,8 @@ class proxy {
       { initialize<P>(il, std::forward<Args>(args)...); }
   proxy& operator=(std::nullptr_t) noexcept(HasNothrowDestructor)
       requires(HasDestructor) {
-    this->~proxy();
-    new(this) proxy();
+    std::destroy_at(this);
+    std::construct_at(this);
     return *this;
   }
   proxy& operator=(const proxy& rhs)
@@ -508,8 +507,8 @@ class proxy {
   proxy& operator=(const proxy& rhs) noexcept
       requires(!HasTrivialCopyAssignment && HasNothrowCopyAssignment) {
     if (this != &rhs) {
-      this->~proxy();
-      new(this) proxy(rhs);
+      std::destroy_at(this);
+      std::construct_at(this, rhs);
     }
     return *this;
   }
@@ -520,11 +519,11 @@ class proxy {
     requires(HasMoveAssignment) {
     if (this != &rhs) {
       if constexpr (HasNothrowMoveAssignment) {
-        this->~proxy();
+        std::destroy_at(this);
       } else {
         reset();  // For weak exception safety
       }
-      new(this) proxy(std::move(rhs));
+      std::construct_at(this, std::move(rhs));
     }
     return *this;
   }
@@ -532,7 +531,7 @@ class proxy {
   template <class P>
   proxy& operator=(P&& ptr) noexcept
       requires(HasNothrowPolyAssignment<std::decay_t<P>, P>) {
-    this->~proxy();
+    std::destroy_at(this);
     initialize<std::decay_t<P>>(std::forward<P>(ptr));
     return *this;
   }
@@ -566,13 +565,13 @@ class proxy {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
           proxy temp = std::move(*this);
-          new(this) proxy(std::move(rhs));
-          new(&rhs) proxy(std::move(temp));
+          std::construct_at(this, std::move(rhs));
+          std::construct_at(&rhs, std::move(temp));
         } else {
-          new(&rhs) proxy(std::move(*this));
+          std::construct_at(&rhs, std::move(*this));
         }
       } else if (rhs.meta_.has_value()) {
-        new(this) proxy(std::move(rhs));
+        std::construct_at(this, std::move(rhs));
       }
     }
   }
@@ -611,7 +610,7 @@ class proxy {
  private:
   template <class P, class... Args>
   void initialize(Args&&... args) {
-    new(ptr_) P(std::forward<Args>(args)...);
+    std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
     meta_ = details::meta_ptr<typename Traits::meta>{std::in_place_type<P>};
   }
 
@@ -758,28 +757,28 @@ proxy<F> make_proxy_impl(Args&&... args) {
 
 }  // namespace details
 
-template <class F, class T, class Alloc, class... Args>
+template <facade F, class T, class Alloc, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
   return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
 }
-template <class F, class T, class Alloc, class U, class... Args>
+template <facade F, class T, class Alloc, class U, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, std::initializer_list<U> il,
     Args&&... args) {
   return details::allocate_proxy_impl<F, T>(
       alloc, il, std::forward<Args>(args)...);
 }
-template <class F, class Alloc, class T>
+template <facade F, class Alloc, class T>
 proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
   return details::allocate_proxy_impl<F, std::decay_t<T>>(
       alloc, std::forward<T>(value));
 }
-template <class F, class T, class... Args>
+template <facade F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
-template <class F, class T, class U, class... Args>
+template <facade F, class T, class U, class... Args>
 proxy<F> make_proxy(std::initializer_list<U> il, Args&&... args)
     { return details::make_proxy_impl<F, T>(il, std::forward<Args>(args)...); }
-template <class F, class T>
+template <facade F, class T>
 proxy<F> make_proxy(T&& value) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
