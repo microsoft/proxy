@@ -811,12 +811,18 @@ struct dispatch_prototype_helper {
 };
 
 template <class O, class I> struct flat_reduction : std::type_identity<O> {};
-template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
+template <class O>
+struct flat_reduction_helper {
+  template <class... Is>
+  using type = recursive_reduction<flat_reduction, O, Is...>;
+};
+template <class... Os, class I>
+    requires(!is_tuple_like_well_formed<I>() && (!std::is_same_v<I, Os> && ...))
 struct flat_reduction<std::tuple<Os...>, I>
     : std::type_identity<std::tuple<Os..., I>> {};
-template <class... Os, class... Is>
-struct flat_reduction<std::tuple<Os...>, std::tuple<Is...>>
-    : recursive_reduction<flat_reduction, std::tuple<Os...>, Is...> {};
+template <class O, class I> requires(is_tuple_like_well_formed<I>())
+struct flat_reduction<O, I>
+    : instantiated_t<flat_reduction_helper<O>::template type, I> {};
 template <class O, class I>
 struct overloads_reduction : std::type_identity<O> {};
 template <class O, class I> requires(requires { typename I::overload_types; })
