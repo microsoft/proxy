@@ -255,43 +255,50 @@ template <constraint_level C> struct copyability_meta_provider;
 template <>
 struct copyability_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  static void dispatcher(char* self, const char* rhs)
-      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
+  static void dispatcher(char* self, const char* rhs) {
+    std::construct_at(reinterpret_cast<P*>(self),
+        *reinterpret_cast<const P*>(rhs));
+  }
 };
 template <>
 struct copyability_meta_provider<constraint_level::nothrow> {
   template <class P>
-  static void dispatcher(char* self, const char* rhs) noexcept
-      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
+  static void dispatcher(char* self, const char* rhs) noexcept {
+    std::construct_at(reinterpret_cast<P*>(self),
+        *reinterpret_cast<const P*>(rhs));
+  }
 };
 template <constraint_level C> struct relocatability_meta_provider;
 template <>
 struct relocatability_meta_provider<constraint_level::nontrivial> {
   template <class P>
   static void dispatcher(char* self, char* rhs) {
-    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
-    reinterpret_cast<P*>(rhs)->~P();
+    std::construct_at(reinterpret_cast<P*>(self),
+        std::move(*reinterpret_cast<P*>(rhs)));
+    std::destroy_at(reinterpret_cast<P*>(rhs));
   }
 };
 template <>
 struct relocatability_meta_provider<constraint_level::nothrow> {
   template <class P>
   static void dispatcher(char* self, char* rhs) noexcept {
-    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
-    reinterpret_cast<P*>(rhs)->~P();
+    std::construct_at(reinterpret_cast<P*>(self),
+        std::move(*reinterpret_cast<P*>(rhs)));
+    std::destroy_at(reinterpret_cast<P*>(rhs));
   }
 };
 template <constraint_level C> struct destructibility_meta_provider;
 template <>
 struct destructibility_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  static void dispatcher(char* self) { reinterpret_cast<P*>(self)->~P(); }
+  static void dispatcher(char* self)
+      { std::destroy_at(reinterpret_cast<P*>(self)); }
 };
 template <>
 struct destructibility_meta_provider<constraint_level::nothrow> {
   template <class P>
   static void dispatcher(char* self) noexcept
-      { reinterpret_cast<P*>(self)->~P(); }
+      { std::destroy_at(reinterpret_cast<P*>(self)); }
 };
 template <template <constraint_level> class MP, constraint_level C>
 using lifetime_meta = std::conditional_t<
@@ -555,7 +562,7 @@ class proxy {
     return *static_cast<const typename F::reflection_type*>(meta_.operator->());
   }
   void reset() noexcept(HasNothrowDestructor) requires(HasDestructor)
-      { this->~proxy(); meta_.reset(); }
+      { std::destroy_at(this); meta_.reset(); }
   void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
     if constexpr (F::constraints.relocatability == constraint_level::trivial) {
@@ -669,13 +676,13 @@ static T* allocate(const Alloc& alloc, Args&&... args) {
   auto al = rebind_allocator<T>(alloc);
   auto deleter = [&](T* ptr) { al.deallocate(ptr, 1); };
   std::unique_ptr<T, decltype(deleter)> result{al.allocate(1), deleter};
-  new(result.get()) T(std::forward<Args>(args)...);
+  std::construct_at(result.get(), std::forward<Args>(args)...);
   return result.release();
 }
 template <class Alloc, class T>
 static void deallocate(const Alloc& alloc, T* ptr) {
   auto al = rebind_allocator<T>(alloc);
-  ptr->~T();
+  std::destroy_at(ptr);
   al.deallocate(ptr, 1);
 }
 
