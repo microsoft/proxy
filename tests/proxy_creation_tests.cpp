@@ -252,7 +252,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_FromValu
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<poly::TestSmallStringable>(std::pmr::polymorphic_allocator{&memory_pool}, session);
+    auto p = pro::allocate_proxy<poly::TestSmallStringable>(std::pmr::polymorphic_allocator<>{&memory_pool}, session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 2");
     ASSERT_FALSE(p.reflect().SboEnabled);
@@ -269,7 +269,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlace)
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator{&memory_pool}, & tracker);
+    auto p = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
     ASSERT_FALSE(p.reflect().SboEnabled);
@@ -286,7 +286,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlaceI
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator{&memory_pool}, { 1, 2, 3 }, & tracker);
+    auto p = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, { 1, 2, 3 }, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
     ASSERT_FALSE(p.reflect().SboEnabled);
@@ -303,7 +303,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_Lifetime
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p1 = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator{&memory_pool}, & tracker);
+    auto p1 = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -327,7 +327,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_Lifetime
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p1 = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator{&memory_pool}, & tracker);
+    auto p1 = pro::allocate_proxy<poly::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
