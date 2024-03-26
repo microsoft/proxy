@@ -8,7 +8,6 @@
 #include <concepts>
 #include <initializer_list>
 #include <memory>
-#include <new>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -51,6 +50,27 @@ using first_applicable_t = typename first_applicable<T, Is...>::type;
 template <class Expr>
 consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
+
+template <class T>
+consteval bool is_tuple_like_well_formed() {
+  if constexpr (requires { { std::tuple_size<T>::value } ->
+      std::same_as<const std::size_t&>; }) {
+    if constexpr (is_consteval([] { return std::tuple_size<T>::value; })) {
+      return []<std::size_t... I>(std::index_sequence<I...>) {
+            return (requires { typename std::tuple_element_t<I, T>; } && ...);
+          }(std::make_index_sequence<std::tuple_size_v<T>>{});
+    }
+  }
+  return false;
+}
+
+template <template <class...> class T, class TL, class Is> struct instantiated;
+template <template <class...> class T, class TL, std::size_t... Is>
+struct instantiated<T, TL, std::index_sequence<Is...>>
+    { using type = T<std::tuple_element_t<Is, TL>...>; };
+template <template <class...> class T, class TL>
+using instantiated_t = typename instantiated<
+    T, TL, std::make_index_sequence<std::tuple_size_v<TL>>>::type;
 
 template <class T>
 consteval bool has_copyability(constraint_level level) {
@@ -201,74 +221,84 @@ struct composite_meta : Ms... {
       { first_applicable_t<nullable_traits, Ms...>::reset(); }
 };
 
-template <class D, class Os>
-struct dispatch_traits_impl : inapplicable_traits {};
-template <class D, class... Os>
-    requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
-struct dispatch_traits_impl<D, std::tuple<Os...>> : applicable_traits {
- private:
-  struct overload_resolver : overload_traits<Os>::resolver...
-      { using overload_traits<Os>::resolver::operator()...; };
+template <class D>
+struct dispatch_helper {
+  template <class... Os> struct traits : inapplicable_traits {};
+  template <class... Os>
+      requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
+  struct traits<Os...> : applicable_traits {
+   private:
+    struct overload_resolver : overload_traits<Os>::resolver...
+        { using overload_traits<Os>::resolver::operator()...; };
 
- public:
-  using meta = composite_meta<dispatcher_meta<
-      typename overload_traits<Os>::template meta_provider<D>>...>;
-  template <class... Args>
-  using matched_overload =
-      std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
+   public:
+    using meta = composite_meta<dispatcher_meta<
+        typename overload_traits<Os>::template meta_provider<D>>...>;
+    template <class... Args>
+    using matched_overload =
+        std::remove_pointer_t<std::invoke_result_t<overload_resolver, Args...>>;
 
-  template <class P>
-  static constexpr bool applicable_ptr =
-      (overload_traits<Os>::template applicable_ptr<D, P> && ...);
+    template <class P>
+    static constexpr bool applicable_ptr =
+        (overload_traits<Os>::template applicable_ptr<D, P> && ...);
+  };
 };
 template <class D> struct dispatch_traits : inapplicable_traits {};
 template <class D>
     requires(requires { typename D::overload_types; } &&
+        is_tuple_like_well_formed<typename D::overload_types>() &&
         std::is_trivially_default_constructible_v<D>)
-struct dispatch_traits<D>
-    : dispatch_traits_impl<D, typename D::overload_types> {};
+struct dispatch_traits<D> : instantiated_t<
+    dispatch_helper<D>::template traits, typename D::overload_types> {};
 
 template <constraint_level C> struct copyability_meta_provider;
 template <>
 struct copyability_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  static void dispatcher(char* self, const char* rhs)
-      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
+  static void dispatcher(char* self, const char* rhs) {
+    std::construct_at(reinterpret_cast<P*>(self),
+        *reinterpret_cast<const P*>(rhs));
+  }
 };
 template <>
 struct copyability_meta_provider<constraint_level::nothrow> {
   template <class P>
-  static void dispatcher(char* self, const char* rhs) noexcept
-      { new(self) P(*reinterpret_cast<const P*>(rhs)); }
+  static void dispatcher(char* self, const char* rhs) noexcept {
+    std::construct_at(reinterpret_cast<P*>(self),
+        *reinterpret_cast<const P*>(rhs));
+  }
 };
 template <constraint_level C> struct relocatability_meta_provider;
 template <>
 struct relocatability_meta_provider<constraint_level::nontrivial> {
   template <class P>
   static void dispatcher(char* self, char* rhs) {
-    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
-    reinterpret_cast<P*>(rhs)->~P();
+    std::construct_at(reinterpret_cast<P*>(self),
+        std::move(*reinterpret_cast<P*>(rhs)));
+    std::destroy_at(reinterpret_cast<P*>(rhs));
   }
 };
 template <>
 struct relocatability_meta_provider<constraint_level::nothrow> {
   template <class P>
   static void dispatcher(char* self, char* rhs) noexcept {
-    new(self) P(std::move(*reinterpret_cast<P*>(rhs)));
-    reinterpret_cast<P*>(rhs)->~P();
+    std::construct_at(reinterpret_cast<P*>(self),
+        std::move(*reinterpret_cast<P*>(rhs)));
+    std::destroy_at(reinterpret_cast<P*>(rhs));
   }
 };
 template <constraint_level C> struct destructibility_meta_provider;
 template <>
 struct destructibility_meta_provider<constraint_level::nontrivial> {
   template <class P>
-  static void dispatcher(char* self) { reinterpret_cast<P*>(self)->~P(); }
+  static void dispatcher(char* self)
+      { std::destroy_at(reinterpret_cast<P*>(self)); }
 };
 template <>
 struct destructibility_meta_provider<constraint_level::nothrow> {
   template <class P>
   static void dispatcher(char* self) noexcept
-      { reinterpret_cast<P*>(self)->~P(); }
+      { std::destroy_at(reinterpret_cast<P*>(self)); }
 };
 template <template <constraint_level> class MP, constraint_level C>
 using lifetime_meta = std::conditional_t<
@@ -288,9 +318,8 @@ consteval bool is_facade_constraints_well_formed() {
   }
   return false;
 }
-template <class F, class P>
-consteval bool is_facade_reflection_type_well_formed() {
-  using R = typename F::reflection_type;
+template <class R, class P>
+consteval bool is_reflection_type_well_formed() {
   if constexpr (std::is_void_v<R>) {
     return true;
   } else if constexpr (std::is_constructible_v<R, std::in_place_type_t<P>>) {
@@ -302,33 +331,34 @@ template <class... Ds>
 struct default_dispatch_traits { using default_dispatch = void; };
 template <class D>
 struct default_dispatch_traits<D> { using default_dispatch = D; };
-template <class F, class Ds>
-struct facade_traits_impl : inapplicable_traits {};
-template <class F, class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
-struct facade_traits_impl<F, std::tuple<Ds...>>
-    : applicable_traits, default_dispatch_traits<Ds...> {
-  using copyability_meta = lifetime_meta<
-      copyability_meta_provider, F::constraints.copyability>;
-  using relocatability_meta = lifetime_meta<
-      relocatability_meta_provider, F::constraints.relocatability>;
-  using destructibility_meta = lifetime_meta<
-      destructibility_meta_provider, F::constraints.destructibility>;
-  using meta = recursive_reduction_t<facade_meta_reduction,
-      composite_meta<>, copyability_meta, relocatability_meta,
-      destructibility_meta, typename dispatch_traits<Ds>::meta...,
-      typename F::reflection_type>;
+template <class F>
+struct facade_helper {
+  template <class... Ds> struct traits : inapplicable_traits {};
+  template <class... Ds> requires(dispatch_traits<Ds>::applicable && ...)
+  struct traits<Ds...> : applicable_traits, default_dispatch_traits<Ds...> {
+    using copyability_meta = lifetime_meta<
+        copyability_meta_provider, F::constraints.copyability>;
+    using relocatability_meta = lifetime_meta<
+        relocatability_meta_provider, F::constraints.relocatability>;
+    using destructibility_meta = lifetime_meta<
+        destructibility_meta_provider, F::constraints.destructibility>;
+    using meta = recursive_reduction_t<facade_meta_reduction,
+        composite_meta<>, copyability_meta, relocatability_meta,
+        destructibility_meta, typename dispatch_traits<Ds>::meta...,
+        typename F::reflection_type>;
 
-  template <class D>
-  static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
-  template <class P>
-  static constexpr bool applicable_ptr =
-      sizeof(P) <= F::constraints.max_size &&
-      alignof(P) <= F::constraints.max_align &&
-      has_copyability<P>(F::constraints.copyability) &&
-      has_relocatability<P>(F::constraints.relocatability) &&
-      has_destructibility<P>(F::constraints.destructibility) &&
-      (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
-      is_facade_reflection_type_well_formed<F, P>();
+    template <class D>
+    static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
+    template <class P>
+    static constexpr bool applicable_ptr =
+        sizeof(P) <= F::constraints.max_size &&
+        alignof(P) <= F::constraints.max_align &&
+        has_copyability<P>(F::constraints.copyability) &&
+        has_relocatability<P>(F::constraints.relocatability) &&
+        has_destructibility<P>(F::constraints.destructibility) &&
+        (dispatch_traits<Ds>::template applicable_ptr<P> && ...) &&
+        is_reflection_type_well_formed<typename F::reflection_type, P>();
+  };
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
@@ -337,8 +367,10 @@ template <class F>
           typename F::dispatch_types;
           { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
           typename F::reflection_type;
-        } && is_facade_constraints_well_formed<F>())
-struct facade_traits<F> : facade_traits_impl<F, typename F::dispatch_types> {};
+        } && is_tuple_like_well_formed<typename F::dispatch_types>() &&
+        is_facade_constraints_well_formed<F>())
+struct facade_traits<F> : instantiated_t<
+    facade_helper<F>::template traits, typename F::dispatch_types> {};
 
 using ptr_prototype = void*[2];
 
@@ -354,8 +386,7 @@ struct meta_ptr {
 
  private:
   const M* ptr_;
-  template <class P>
-  static constexpr M storage{std::in_place_type<P>};
+  template <class P> static constexpr M storage{std::in_place_type<P>};
 };
 template <class M>
     requires(sizeof(M) <= sizeof(ptr_prototype) &&
@@ -473,8 +504,8 @@ class proxy {
       { initialize<P>(il, std::forward<Args>(args)...); }
   proxy& operator=(std::nullptr_t) noexcept(HasNothrowDestructor)
       requires(HasDestructor) {
-    this->~proxy();
-    new(this) proxy();
+    std::destroy_at(this);
+    std::construct_at(this);
     return *this;
   }
   proxy& operator=(const proxy& rhs)
@@ -483,8 +514,8 @@ class proxy {
   proxy& operator=(const proxy& rhs) noexcept
       requires(!HasTrivialCopyAssignment && HasNothrowCopyAssignment) {
     if (this != &rhs) {
-      this->~proxy();
-      new(this) proxy(rhs);
+      std::destroy_at(this);
+      std::construct_at(this, rhs);
     }
     return *this;
   }
@@ -495,11 +526,11 @@ class proxy {
     requires(HasMoveAssignment) {
     if (this != &rhs) {
       if constexpr (HasNothrowMoveAssignment) {
-        this->~proxy();
+        std::destroy_at(this);
       } else {
         reset();  // For weak exception safety
       }
-      new(this) proxy(std::move(rhs));
+      std::construct_at(this, std::move(rhs));
     }
     return *this;
   }
@@ -507,7 +538,7 @@ class proxy {
   template <class P>
   proxy& operator=(P&& ptr) noexcept
       requires(HasNothrowPolyAssignment<std::decay_t<P>, P>) {
-    this->~proxy();
+    std::destroy_at(this);
     initialize<std::decay_t<P>>(std::forward<P>(ptr));
     return *this;
   }
@@ -531,7 +562,7 @@ class proxy {
     return *static_cast<const typename F::reflection_type*>(meta_.operator->());
   }
   void reset() noexcept(HasNothrowDestructor) requires(HasDestructor)
-      { this->~proxy(); meta_.reset(); }
+      { std::destroy_at(this); meta_.reset(); }
   void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
       requires(HasMoveConstructor) {
     if constexpr (F::constraints.relocatability == constraint_level::trivial) {
@@ -541,13 +572,13 @@ class proxy {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
           proxy temp = std::move(*this);
-          new(this) proxy(std::move(rhs));
-          new(&rhs) proxy(std::move(temp));
+          std::construct_at(this, std::move(rhs));
+          std::construct_at(&rhs, std::move(temp));
         } else {
-          new(&rhs) proxy(std::move(*this));
+          std::construct_at(&rhs, std::move(*this));
         }
       } else if (rhs.meta_.has_value()) {
-        new(this) proxy(std::move(rhs));
+        std::construct_at(this, std::move(rhs));
       }
     }
   }
@@ -586,7 +617,7 @@ class proxy {
  private:
   template <class P, class... Args>
   void initialize(Args&&... args) {
-    new(ptr_) P(std::forward<Args>(args)...);
+    std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
     meta_ = details::meta_ptr<typename Traits::meta>{std::in_place_type<P>};
   }
 
@@ -636,39 +667,125 @@ class sbo_ptr {
   mutable T value_;
 };
 
-template <class T>
-class deep_ptr {
+template <class T, class Alloc>
+static auto rebind_allocator(const Alloc& alloc) {
+  return typename std::allocator_traits<Alloc>::template rebind_alloc<T>(alloc);
+}
+template <class T, class Alloc, class... Args>
+static T* allocate(const Alloc& alloc, Args&&... args) {
+  auto al = rebind_allocator<T>(alloc);
+  auto deleter = [&](T* ptr) { al.deallocate(ptr, 1); };
+  std::unique_ptr<T, decltype(deleter)> result{al.allocate(1), deleter};
+  std::construct_at(result.get(), std::forward<Args>(args)...);
+  return result.release();
+}
+template <class Alloc, class T>
+static void deallocate(const Alloc& alloc, T* ptr) {
+  auto al = rebind_allocator<T>(alloc);
+  std::destroy_at(ptr);
+  al.deallocate(ptr, 1);
+}
+
+template <class T, class Alloc>
+class allocated_ptr {
  public:
   template <class... Args>
-  deep_ptr(Args&&... args) requires(std::is_constructible_v<T, Args...>)
-      : ptr_(new T(std::forward<Args>(args)...)) {}
-  deep_ptr(const deep_ptr& rhs) requires(std::is_copy_constructible_v<T>)
-      : ptr_(rhs.ptr_ == nullptr ? nullptr : new T(*rhs.ptr_)) {}
-  deep_ptr(deep_ptr&& rhs) noexcept : ptr_(rhs.ptr_) { rhs.ptr_ = nullptr; }
-  ~deep_ptr() noexcept { delete ptr_; }
+  allocated_ptr(const Alloc& alloc, Args&&... args)
+      requires(std::is_constructible_v<T, Args...>)
+      : alloc_(alloc), ptr_(allocate<T>(alloc, std::forward<Args>(args)...)) {}
+  allocated_ptr(const allocated_ptr& rhs)
+      requires(std::is_copy_constructible_v<T>)
+      : alloc_(rhs.alloc_), ptr_(rhs.ptr_ == nullptr ? nullptr :
+            allocate<T>(alloc_, std::as_const(*rhs.ptr_))) {}
+  allocated_ptr(allocated_ptr&& rhs)
+      noexcept(std::is_nothrow_move_constructible_v<Alloc>)
+      : alloc_(std::move(rhs.alloc_)), ptr_(std::exchange(rhs.ptr_, nullptr)) {}
+  ~allocated_ptr() { if (ptr_ != nullptr) { deallocate(alloc_, ptr_); } }
 
   T* operator->() const noexcept { return ptr_; }
 
  private:
+#if __has_cpp_attribute(msvc::no_unique_address)
+  [[msvc::no_unique_address]]
+#elif __has_cpp_attribute(no_unique_address)
+  [[__no_unique_address__]]
+#endif
+  Alloc alloc_;
   T* ptr_;
 };
 
+template <class T, class Alloc>
+class compact_ptr {
+ public:
+  template <class... Args>
+  compact_ptr(const Alloc& alloc, Args&&... args)
+      requires(std::is_constructible_v<T, Args...>)
+      : ptr_(allocate<storage>(alloc, alloc, std::forward<Args>(args)...)) {}
+  compact_ptr(const compact_ptr& rhs) requires(std::is_copy_constructible_v<T>)
+      : ptr_(rhs.ptr_ == nullptr ? nullptr : allocate<storage>(rhs.ptr_->alloc,
+            rhs.ptr_->alloc, std::as_const(rhs.ptr_->value))) {}
+  compact_ptr(compact_ptr&& rhs) noexcept
+      : ptr_(std::exchange(rhs.ptr_, nullptr)) {}
+  ~compact_ptr() { if (ptr_ != nullptr) { deallocate(ptr_->alloc, ptr_); } }
+
+  T* operator->() const noexcept { return &ptr_->value; }
+
+ private:
+  struct storage {
+    template <class... Args>
+    explicit storage(const Alloc& alloc, Args&&... args)
+        : alloc(alloc), value(std::forward<Args>(args)...) {}
+
+    Alloc alloc;
+    T value;
+  };
+
+  storage* ptr_;
+};
+
+template <class F, class T, class Alloc, class... Args>
+proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
+  if constexpr (proxiable<details::sbo_ptr<T>, F>) {
+    return proxy<F>{std::in_place_type<details::sbo_ptr<T>>,
+        std::forward<Args>(args)...};
+  } else if constexpr (proxiable<details::allocated_ptr<T, Alloc>, F>) {
+    return proxy<F>{std::in_place_type<details::allocated_ptr<T, Alloc>>,
+        alloc, std::forward<Args>(args)...};
+  } else {
+    return proxy<F>{std::in_place_type<details::compact_ptr<T, Alloc>>,
+        alloc, std::forward<Args>(args)...};
+  }
+}
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
-  return proxy<F>{std::in_place_type<
-      std::conditional_t<proxiable<sbo_ptr<T>, F>, sbo_ptr<T>, deep_ptr<T>>>,
-      std::forward<Args>(args)...};
+  return allocate_proxy_impl<F, T>(
+      std::allocator<T>{}, std::forward<Args>(args)...);
 }
 
 }  // namespace details
 
-template <class F, class T, class... Args>
+template <facade F, class T, class Alloc, class... Args>
+proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
+  return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
+}
+template <facade F, class T, class Alloc, class U, class... Args>
+proxy<F> allocate_proxy(const Alloc& alloc, std::initializer_list<U> il,
+    Args&&... args) {
+  return details::allocate_proxy_impl<F, T>(
+      alloc, il, std::forward<Args>(args)...);
+}
+template <facade F, class Alloc, class T>
+proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
+  return details::allocate_proxy_impl<F, std::decay_t<T>>(
+      alloc, std::forward<T>(value));
+}
+template <facade F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
-template <class F, class T, class U, class... Args>
+template <facade F, class T, class U, class... Args>
 proxy<F> make_proxy(std::initializer_list<U> il, Args&&... args)
     { return details::make_proxy_impl<F, T>(il, std::forward<Args>(args)...); }
-template <class F, class T>
+template <facade F, class T>
 proxy<F> make_proxy(T&& value) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
@@ -701,12 +818,18 @@ struct dispatch_prototype_helper {
 };
 
 template <class O, class I> struct flat_reduction : std::type_identity<O> {};
-template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
+template <class O>
+struct flat_reduction_helper {
+  template <class... Is>
+  using type = recursive_reduction<flat_reduction, O, Is...>;
+};
+template <class... Os, class I>
+    requires(!is_tuple_like_well_formed<I>() && (!std::is_same_v<I, Os> && ...))
 struct flat_reduction<std::tuple<Os...>, I>
     : std::type_identity<std::tuple<Os..., I>> {};
-template <class... Os, class... Is>
-struct flat_reduction<std::tuple<Os...>, std::tuple<Is...>>
-    : recursive_reduction<flat_reduction, std::tuple<Os...>, Is...> {};
+template <class O, class I> requires(is_tuple_like_well_formed<I>())
+struct flat_reduction<O, I>
+    : instantiated_t<flat_reduction_helper<O>::template type, I> {};
 template <class O, class I>
 struct overloads_reduction : std::type_identity<O> {};
 template <class O, class I> requires(requires { typename I::overload_types; })

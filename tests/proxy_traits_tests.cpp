@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#include <array>
 #include <stdexcept>
 #include <type_traits>
 #include "proxy.h"
+#include "utils.h"
 
 namespace {
 
@@ -166,6 +168,13 @@ struct RuntimeReflection {
 };
 PRO_DEF_FACADE(FacadeWithRuntimeReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, RuntimeReflection);
 static_assert(!pro::proxiable<MockTrivialPtr, FacadeWithRuntimeReflection>);
+
+struct FacadeWithTupleLikeDispatches {
+  using dispatch_types = std::array<utils::poly::ToString, 1>;
+  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+  using reflection_type = void;
+};
+static_assert(pro::facade<FacadeWithTupleLikeDispatches>);
 
 struct BadFacade_MissingDispatchTypes {
 #ifdef __clang__
