@@ -13,13 +13,13 @@
 
 namespace {
 
-namespace poly {
+namespace spec {
 
 PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
 PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
-}  // namespace poly
+}  // namespace spec
 
 class Rectangle {
  public:
@@ -50,11 +50,11 @@ class Point {
   constexpr double Area() const noexcept { return 0; }
 };
 
-std::string PrintDrawableToString(pro::proxy<poly::Drawable> p) {
+std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
   std::stringstream result;
   result << std::fixed << std::setprecision(5) << "shape = ";
-  p.invoke<poly::Draw>(result);
-  result << ", area = " << p.invoke<poly::Area>();
+  p.invoke<spec::Draw>(result);
+  result << ", area = " << p.invoke<spec::Area>();
   return std::move(result).str();
 }
 
@@ -81,7 +81,7 @@ std::vector<std::string> ParseCommand(const std::string& s) {
   return result;
 }
 
-pro::proxy<poly::Drawable> MakeDrawableFromCommand(const std::string& s) {
+pro::proxy<spec::Drawable> MakeDrawableFromCommand(const std::string& s) {
   std::vector<std::string> parsed = ParseCommand(s);
   if (!parsed.empty()) {
     if (parsed[0u] == "Rectangle") {
@@ -100,7 +100,7 @@ pro::proxy<poly::Drawable> MakeDrawableFromCommand(const std::string& s) {
       if (parsed.size() == 2u) {
         Circle circle;
         circle.SetRadius(std::stod(parsed[1u]));
-        return pro::make_proxy<poly::Drawable>(circle);
+        return pro::make_proxy<spec::Drawable>(circle);
       }
     } else if (parsed[0u] == "Point") {
       if (parsed.size() == 1u) {
@@ -115,7 +115,7 @@ pro::proxy<poly::Drawable> MakeDrawableFromCommand(const std::string& s) {
 }  // namespace
 
 TEST(ProxyIntegrationTests, TestDrawable) {
-  pro::proxy<poly::Drawable> p = MakeDrawableFromCommand("Rectangle 2 3");
+  pro::proxy<spec::Drawable> p = MakeDrawableFromCommand("Rectangle 2 3");
   std::string s = PrintDrawableToString(std::move(p));
   ASSERT_EQ(s, "shape = {Rectangle: width = 2.00000, height = 3.00000}, area = 6.00000");
 

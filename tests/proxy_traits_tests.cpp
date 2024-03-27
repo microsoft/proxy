@@ -170,7 +170,7 @@ PRO_DEF_FACADE(FacadeWithRuntimeReflection, PRO_MAKE_DISPATCH_PACK(), pro::reloc
 static_assert(!pro::proxiable<MockTrivialPtr, FacadeWithRuntimeReflection>);
 
 struct FacadeWithTupleLikeDispatches {
-  using dispatch_types = std::array<utils::poly::ToString, 1>;
+  using dispatch_types = std::array<utils::spec::ToString, 1>;
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
   using reflection_type = void;
 };

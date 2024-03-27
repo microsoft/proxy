@@ -5,14 +5,14 @@
 
 #include <proxy/proxy.h>
 
-namespace poly {
+namespace spec {
 
 PRO_DEF_MEMBER_DISPATCH(at, std::string(int));
 PRO_DEF_FACADE(Dictionary, at);
 
-}  // namespace poly
+}  // namespace spec
 
-void demo_print(pro::proxy<poly::Dictionary> dictionary) {
+void demo_print(pro::proxy<spec::Dictionary> dictionary) {
   std::cout << dictionary(1) << std::endl;
 }
 

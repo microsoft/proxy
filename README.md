@@ -18,17 +18,17 @@ The "proxy" is a single-header, cross-platform C++ library that Microsoft uses t
 
 The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.info](https://vcpkg.info/port/proxy)).
 
-The majority of the library is defined in namespace `pro`. Some macros are provided (currently not included in the proposal of standardization) to simplify the definiton of `proxy` prior to C++26. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
+The majority of the library is defined in namespace `pro`. Some macros are provided (currently not included in the proposal for standardization) to simplify the definition of `proxy` prior to C++26. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
 ```cpp
-// Abstraction (poly is short for polymorphism)
-namespace poly {
+// Specifications of abstraction
+namespace spec {
 
 PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream& out));
 PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
-}  // namespace poly
+}  // namespace spec
 
 // Implementation
 class Rectangle {
@@ -45,36 +45,36 @@ class Rectangle {
 };
 
 // Client - Consumer
-std::string PrintDrawableToString(pro::proxy<poly::Drawable> p) {
+std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
   std::stringstream result;
   result << "shape = ";
-  p.invoke<poly::Draw>(result);
-  result << ", area = " << p.invoke<poly::Area>();
+  p.invoke<spec::Draw>(result);
+  result << ", area = " << p.invoke<spec::Area>();
   return std::move(result).str();
 }
 
 // Client - Producer
-pro::proxy<poly::Drawable> CreateRectangleAsDrawable(int width, int height) {
+pro::proxy<spec::Drawable> CreateRectangleAsDrawable(int width, int height) {
   Rectangle rect;
   rect.SetWidth(width);
   rect.SetHeight(height);
-  return pro::make_proxy<poly::Drawable>(rect);
+  return pro::make_proxy<spec::Drawable>(rect);
 }
 ```
 
 Here is another demo showing how to define overloads in a dispatch. Note that `.invoke<>` can be ommitted when only 1 dispatch is defined in a facade:
 
 ```cpp
-// Abstraction (poly is short for polymorphism)
-namespace poly {
+// Specifications of abstraction
+namespace spec {
 
 PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
 PRO_DEF_FACADE(Logger, Log);
 
-}  // namespace poly
+}  // namespace spec
 
 // Client - Consumer
-void MyVerboseFunction(pro::proxy<poly::Logger> logger) {
+void MyVerboseFunction(pro::proxy<spec::Logger> logger) {
   logger("hello");
   try {
     throw std::runtime_error{"runtime error!"};
@@ -104,8 +104,8 @@ int main() {
 By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.
 
 ```cpp
-// Abstraction (poly is short for polymorphism)
-namespace poly {
+// Specifications of abstraction
+namespace spec {
 
 template <class... Overloads>
 PRO_DEF_FREE_DISPATCH(Call, std::invoke, Overloads...);
@@ -114,14 +114,14 @@ PRO_DEF_FACADE(MovableCallable, Call<Overloads...>);
 template <class... Overloads>
 PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_ptr_constraints);
 
-}  // namespace poly
+}  // namespace spec
 
 // MyFunction has similar functionality as std::function but supports multiple overloads
 // MyMoveOnlyFunction has similar functionality as std::move_only_function but supports multiple overloads
 template <class... Overloads>
-using MyFunction = pro::proxy<poly::MovableCallable<Overloads...>>;
+using MyFunction = pro::proxy<spec::CopyableCallable<Overloads...>>;
 template <class... Overloads>
-using MyMoveOnlyFunction = pro::proxy<poly::CopyableCallable<Overloads...>>;
+using MyMoveOnlyFunction = pro::proxy<spec::MovableCallable<Overloads...>>;
 
 int main() {
   auto f = [](auto&&... v) {

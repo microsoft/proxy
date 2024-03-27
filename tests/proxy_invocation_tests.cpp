@@ -13,7 +13,7 @@
 
 namespace {
 
-namespace poly {
+namespace spec {
 
 template <class... Os>
 PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
@@ -41,7 +41,7 @@ struct Append {
   }
 };
 
-}  // namespace poly
+}  // namespace spec
 
 template <class F, class D, bool NE, class... Args>
 concept InvocableWithDispatch =
@@ -57,19 +57,19 @@ concept InvocableWithoutDispatch =
 };
 
 // Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, false, double>);
-static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, poly::Call<int(double)>, false, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithoutDispatch<poly::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<poly::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
-static_assert(InvocableWithoutDispatch<poly::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
-static_assert(InvocableWithoutDispatch<poly::Callable<int(double), void(int) noexcept>, true, int>);  // Invoking noexcept overloads
-static_assert(InvocableWithoutDispatch<poly::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
+static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::Call<int(double)>, false, double>);
+static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::Call<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithoutDispatch<spec::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
+static_assert(InvocableWithoutDispatch<spec::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noexcept>, true, int>);  // Invoking noexcept overloads
+static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
 
 // Static assertions for a facade of multiple dispatches
-static_assert(InvocableWithDispatch<poly::Iterable<int>, poly::GetSize, true>);
-static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::ForEach<int>, false, pro::proxy<poly::Callable<void(double&)>>>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<poly::Iterable<int>, poly::Append<int>, false>);  // Wrong dispatch
-static_assert(!InvocableWithoutDispatch<poly::Iterable<int>, false>);  // Invoking without specifying a dispatch
+static_assert(InvocableWithDispatch<spec::Iterable<int>, spec::GetSize, true>);
+static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::ForEach<int>, false, pro::proxy<spec::Callable<void(double&)>>>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::Append<int>, false>);  // Wrong dispatch
+static_assert(!InvocableWithoutDispatch<spec::Iterable<int>, false>);  // Invoking without specifying a dispatch
 
 template <class... Args>
 std::vector<std::type_index> GetTypeIndices()
@@ -89,7 +89,7 @@ TEST(ProxyInvocationTests, TestArgumentForwarding) {
     arg2_received = std::move(v);
     return expected_result;
   };
-  pro::proxy<poly::Callable<int(std::string, std::vector<int>)>> p = &f;
+  pro::proxy<spec::Callable<int(std::string, std::vector<int>)>> p = &f;
   int result = p.invoke(arg1, std::move(arg2));
   ASSERT_TRUE(p.has_value());
   ASSERT_EQ(arg1_received, arg1);
@@ -102,7 +102,7 @@ TEST(ProxyInvocationTests, TestThrow) {
   const char* expected_error_message = "My exception";
   auto f = [&] { throw std::runtime_error{ expected_error_message }; };
   bool exception_thrown = false;
-  pro::proxy<poly::Callable<void()>> p = &f;
+  pro::proxy<spec::Callable<void()>> p = &f;
   try {
     p.invoke();
   } catch (const std::runtime_error& e) {
@@ -115,45 +115,45 @@ TEST(ProxyInvocationTests, TestThrow) {
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
   std::list<int> l = { 1, 2, 3 };
-  pro::proxy<poly::Iterable<int>> p = &l;
-  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
+  pro::proxy<spec::Iterable<int>> p = &l;
+  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<poly::ForEach<int>>(&accumulate_sum);
+  p.invoke<spec::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
-  using SomeCombination = std::tuple<poly::ForEach<int>, std::tuple<poly::GetSize, poly::ForEach<int>>>;
-  PRO_DEF_FACADE(DuplicatedIterable, PRO_MAKE_DISPATCH_PACK(poly::ForEach<int>, SomeCombination, poly::ForEach<int>, poly::GetSize, poly::GetSize));
+  using SomeCombination = std::tuple<spec::ForEach<int>, std::tuple<spec::GetSize, spec::ForEach<int>>>;
+  PRO_DEF_FACADE(DuplicatedIterable, PRO_MAKE_DISPATCH_PACK(spec::ForEach<int>, SomeCombination, spec::ForEach<int>, spec::GetSize, spec::GetSize));
   static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta) ==
-      sizeof(pro::details::facade_traits<poly::Iterable<int>>::meta));
+      sizeof(pro::details::facade_traits<spec::Iterable<int>>::meta));
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<DuplicatedIterable> p = &l;
-  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
+  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<poly::ForEach<int>>(&accumulate_sum);
+  p.invoke<spec::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   std::list<int> l = { 1, 2, 3 };
-  pro::proxy<poly::Container<int>> p = &l;
-  ASSERT_EQ(p.invoke<poly::GetSize>(), 3);
+  pro::proxy<spec::Container<int>> p = &l;
+  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<poly::ForEach<int>>(&accumulate_sum);
+  p.invoke<spec::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 6);
-  p.invoke<poly::Append<int>>(4).invoke<poly::Append<int>>(5).invoke<poly::Append<int>>(6);
-  ASSERT_EQ(p.invoke<poly::GetSize>(), 6);
+  p.invoke<spec::Append<int>>(4).invoke<spec::Append<int>>(5).invoke<spec::Append<int>>(6);
+  ASSERT_EQ(p.invoke<spec::GetSize>(), 6);
   sum = 0;
-  p.invoke<poly::ForEach<int>>(&accumulate_sum);
+  p.invoke<spec::ForEach<int>>(&accumulate_sum);
   ASSERT_EQ(sum, 21);
 }
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
-  PRO_DEF_COMBINED_DISPATCH(OverloadedCall, poly::Call<void(int)>, poly::Call<void(double)>, poly::Call<void(char*)>, poly::Call<void(const char*)>, poly::Call<void(std::string, int)>);
+  PRO_DEF_COMBINED_DISPATCH(OverloadedCall, spec::Call<void(int)>, spec::Call<void(double)>, spec::Call<void(char*)>, spec::Call<void(const char*)>, spec::Call<void(std::string, int)>);
   PRO_DEF_FACADE(OverloadedCallable, OverloadedCall);
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
@@ -174,7 +174,7 @@ TEST(ProxyInvocationTests, TestOverloadResolution) {
 
 TEST(ProxyInvocationTests, TestNoexcept) {
   std::vector<std::type_index> side_effect;
-  auto p = pro::make_proxy<poly::Callable<void(int) noexcept, void(double)>>([&](auto&&... args) noexcept
+  auto p = pro::make_proxy<spec::Callable<void(int) noexcept, void(double)>>([&](auto&&... args) noexcept
     { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
   static_assert(noexcept(p(123)));
   p(123);
@@ -186,7 +186,7 @@ TEST(ProxyInvocationTests, TestNoexcept) {
 }
 
 TEST(ProxyInvocationTests, TestFunctionPointer) {
-  struct TestFacade : poly::Callable<std::vector<std::type_index>()> {};
+  struct TestFacade : spec::Callable<std::vector<std::type_index>()> {};
   pro::proxy<TestFacade> p{ &GetTypeIndices<int, double> };
   auto ret = p();
   ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
@@ -194,7 +194,7 @@ TEST(ProxyInvocationTests, TestFunctionPointer) {
 
 TEST(ProxyInvocationTests, TestCombinationWithIncompleteDispatch) {
   constexpr auto not_implemented = [](auto&&...) { throw std::runtime_error{ "Not implemented!" }; };
-  PRO_DEF_COMBINED_DISPATCH(WeakCall, poly::Call<void()>, decltype(not_implemented));
+  PRO_DEF_COMBINED_DISPATCH(WeakCall, spec::Call<void()>, decltype(not_implemented));
   PRO_DEF_FACADE(WeakCallable, WeakCall);
   {
     int side_effect = 0;
