@@ -169,18 +169,18 @@ static R invoke_dispatch(Args&&... args) {
   }
 }
 
+template <class F, bool NE, class R, class... Args>
+static R dispatcher_default_impl(const char*, Args... args) noexcept(NE) {
+  return invoke_dispatch<F, R>(std::forward<Args>(args)...);
+}
+template <class P, class F, bool NE, class R, class... Args>
+static R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
+  return invoke_dispatch<F, R>(ptr_traits<P>::dereference(
+      *reinterpret_cast<const P*>(erased)), std::forward<Args>(args)...);
+}
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
  private:
-  template <class F>
-  static R dispatcher_default(const char*, Args... args) noexcept(NE) {
-    return invoke_dispatch<F, R>(std::forward<Args>(args)...);
-  }
-  template <class P, class F>
-  static R dispatcher(const char* erased, Args... args) noexcept(NE) {
-    return invoke_dispatch<F, R>(ptr_traits<P>::dereference(
-        *reinterpret_cast<const P*>(erased)), std::forward<Args>(args)...);
-  }
 
  public:
   template <class D>
@@ -189,10 +189,11 @@ struct overload_traits_impl : applicable_traits {
     static constexpr func_ptr_t<NE, R, const char*, Args...> get() {
       if constexpr (invocable_dispatch<
           D, typename ptr_traits<P>::target_type, NE, R, Args...>) {
-        return &dispatcher<P, typename D::template invoker<
-            typename ptr_traits<P>::target_type>>;
+        return &dispatcher_impl<P, typename D::template invoker<
+            typename ptr_traits<P>::target_type>, NE, R, Args...>;
       } else {
-        return &dispatcher_default<typename D::template invoker<void>>;
+        return &dispatcher_default_impl<
+            typename D::template invoker<void>, NE, R, Args...>;
       }
     }
   };
