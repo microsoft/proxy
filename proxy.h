@@ -180,9 +180,6 @@ static R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
 }
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
- private:
-
- public:
   template <class D>
   struct meta_provider {
     template <class P>
