@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <list>
+#include <map>
 #include <ranges>
 #include <string>
 #include <typeindex>
@@ -20,9 +21,10 @@ PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
 template <class... Os>
 PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_ptr_constraints);
 
-void NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
+template <class R>
+R NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
 template <class... Os>
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(WeakCall, std::invoke, NotImplemented, Os...);
+PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(WeakCall, std::invoke, NotImplemented<void>, Os...);
 template <class... Os>
 PRO_DEF_FACADE(WeakCallable, WeakCall<Os...>, pro::copyable_ptr_constraints);
 
@@ -44,6 +46,9 @@ pro::proxy<Container<T>> AppendImpl(C& container, T&& v) {
 }
 template <class T>
 PRO_DEF_FREE_DISPATCH(Append, AppendImpl, pro::proxy<Container<T>>(T));
+
+PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(WeakAt, at, NotImplemented<std::string>, std::string(int));
+PRO_DEF_FACADE(ResourceDictionary, WeakAt);
 
 }  // namespace spec
 
@@ -195,7 +200,25 @@ TEST(ProxyInvocationTests, TestFunctionPointer) {
   ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
 }
 
-TEST(ProxyInvocationTests, TestCombinationWithIncompleteDispatch) {
+TEST(ProxyInvocationTests, TestMemberDispatchDefault) {
+  std::vector<std::string> container1{ "hello", "world", "!"};
+  std::list<std::string> container2{ "hello", "world" };
+  pro::proxy<spec::ResourceDictionary> p = &container1;
+  ASSERT_EQ(p(0), "hello");
+  p = &container2;
+  {
+    bool exception_thrown = false;
+    try {
+      p(0);
+    } catch (const std::runtime_error& e) {
+      exception_thrown = true;
+      ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
+    }
+    ASSERT_TRUE(exception_thrown);
+  }
+}
+
+TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
   {
     int side_effect = 0;
     auto p = pro::make_proxy<spec::WeakCallable<void()>>([&] { side_effect = 1; });
