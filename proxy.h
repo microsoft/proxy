@@ -846,11 +846,11 @@ struct facade_prototype {
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
-        __self.__FUNC(std::forward<__Args>(__args)...),\
+        __self.__FUNC(std::forward<__Args>(__args)...), \
         __DEFFUNC(std::forward<__Args>(__args)...), std::tuple<__VA_ARGS__>)
 #define PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
-        __FUNC(__self, std::forward<__Args>(__args)...),\
+        __FUNC(__self, std::forward<__Args>(__args)...), \
         __DEFFUNC(std::forward<__Args>(__args)...), std::tuple<__VA_ARGS__>)
 #define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
     PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT( \
