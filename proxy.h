@@ -147,10 +147,6 @@ consteval bool is_invoker_well_formed() {
   }
   return false;
 }
-template <class F, bool NE, class R, class... Args>
-constexpr bool invocable_dispatch_impl =
-    std::conditional<NE, std::is_nothrow_invocable_r<R, F, Args...>,
-        std::is_invocable_r<R, F, Args...>>::value;
 template <class D, class T, bool NE, class R, class... Args>
 concept invocable_dispatch = requires { typename D::template invoker<T>; } &&
     is_invoker_well_formed<
