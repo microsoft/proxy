@@ -161,20 +161,19 @@ using func_ptr_t = std::conditional_t<
     NE, R (*)(Args...) noexcept, R (*)(Args...)>;
 
 template <class F, class R, class... Args>
-static R invoke_dispatch(Args&&... args) {
+R invoke_dispatch(Args&&... args) {
   if constexpr (std::is_void_v<R>) {
     F{}(std::forward<Args>(args)...);
   } else {
     return F{}(std::forward<Args>(args)...);
   }
 }
-
 template <class F, bool NE, class R, class... Args>
-static R dispatcher_default_impl(const char*, Args... args) noexcept(NE) {
+R dispatcher_default_impl(const char*, Args... args) noexcept(NE) {
   return invoke_dispatch<F, R>(std::forward<Args>(args)...);
 }
 template <class P, class F, bool NE, class R, class... Args>
-static R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
+R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
   return invoke_dispatch<F, R>(ptr_traits<P>::dereference(
       *reinterpret_cast<const P*>(erased)), std::forward<Args>(args)...);
 }
@@ -814,9 +813,6 @@ struct flat_reduction<std::tuple<Os...>, I>
 template <class O, class I> requires(is_tuple_like_well_formed<I>())
 struct flat_reduction<O, I> : instantiated_t<flat_reduction_impl, I, O> {};
 
-template <class T, template <class> class FT, class FV>
-using invoker_helper = std::conditional_t<std::is_void_v<T>, FV, FT<T>>;
-
 template <class Ds = std::tuple<>, proxiable_ptr_constraints C =
     relocatable_ptr_constraints, class R = void>
 struct facade_prototype {
@@ -849,7 +845,8 @@ struct facade_prototype {
      public: \
       using overload_types = __OVERLOADS; \
       template <class __T> \
-      using invoker = ::pro::details::invoker_helper<__T, __FT, __FV>; \
+      using invoker = std::conditional_t< \
+          std::is_void_v<__T>, __FV, __FT<__T>>; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
