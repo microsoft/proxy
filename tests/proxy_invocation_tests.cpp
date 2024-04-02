@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <list>
+#include <map>
 #include <ranges>
 #include <string>
 #include <typeindex>
@@ -20,6 +21,13 @@ PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
 template <class... Os>
 PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_ptr_constraints);
 
+template <class R>
+R NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
+template <class... Os>
+PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(WeakCall, std::invoke, NotImplemented<void>, Os...);
+template <class... Os>
+PRO_DEF_FACADE(WeakCallable, WeakCall<Os...>, pro::copyable_ptr_constraints);
+
 PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t() noexcept);
 
 template <class T>
@@ -30,16 +38,17 @@ PRO_DEF_FACADE(Iterable, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize));
 template <class T> struct Append;
 template <class T>
 PRO_DEF_FACADE(Container, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize, Append<T>));
-template <class T>
-struct Append {
-  using overload_types = std::tuple<pro::proxy<Container<T>>(T)>;
 
-  template <class U>
-  pro::proxy<Container<T>> operator()(U& self, T&& value) {
-    self.push_back(std::move(value));
-    return &self;
-  }
-};
+template <class C, class T>
+pro::proxy<Container<T>> AppendImpl(C& container, T&& v) {
+  container.push_back(std::move(v));
+  return &container;
+}
+template <class T>
+PRO_DEF_FREE_DISPATCH(Append, AppendImpl, pro::proxy<Container<T>>(T));
+
+PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(WeakAt, at, NotImplemented<std::string>, std::string(int));
+PRO_DEF_FACADE(ResourceDictionary, WeakAt);
 
 }  // namespace spec
 
@@ -153,8 +162,7 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
 }
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
-  PRO_DEF_COMBINED_DISPATCH(OverloadedCall, spec::Call<void(int)>, spec::Call<void(double)>, spec::Call<void(char*)>, spec::Call<void(const char*)>, spec::Call<void(std::string, int)>);
-  PRO_DEF_FACADE(OverloadedCallable, OverloadedCall);
+  PRO_DEF_FACADE(OverloadedCallable, spec::Call<void(int), void(double), void(const char*), void(char*), void(std::string, int)>);
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
       { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
@@ -192,19 +200,34 @@ TEST(ProxyInvocationTests, TestFunctionPointer) {
   ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
 }
 
-TEST(ProxyInvocationTests, TestCombinationWithIncompleteDispatch) {
-  constexpr auto not_implemented = [](auto&&...) { throw std::runtime_error{ "Not implemented!" }; };
-  PRO_DEF_COMBINED_DISPATCH(WeakCall, spec::Call<void()>, decltype(not_implemented));
-  PRO_DEF_FACADE(WeakCallable, WeakCall);
+TEST(ProxyInvocationTests, TestMemberDispatchDefault) {
+  std::vector<std::string> container1{ "hello", "world", "!"};
+  std::list<std::string> container2{ "hello", "world" };
+  pro::proxy<spec::ResourceDictionary> p = &container1;
+  ASSERT_EQ(p(0), "hello");
+  p = &container2;
+  {
+    bool exception_thrown = false;
+    try {
+      p(0);
+    } catch (const std::runtime_error& e) {
+      exception_thrown = true;
+      ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
+    }
+    ASSERT_TRUE(exception_thrown);
+  }
+}
+
+TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
   {
     int side_effect = 0;
-    auto p = pro::make_proxy<WeakCallable>([&] { side_effect = 1; });
+    auto p = pro::make_proxy<spec::WeakCallable<void()>>([&] { side_effect = 1; });
     p();
     ASSERT_EQ(side_effect, 1);
   }
   {
     bool exception_thrown = false;
-    auto p = pro::make_proxy<WeakCallable>(123);
+    auto p = pro::make_proxy<spec::WeakCallable<void()>>(123);
     try {
       p();
     } catch (const std::runtime_error& e) {
