@@ -165,13 +165,12 @@ R invoke_dispatch(Args&&... args) {
   }
 }
 template <class F, bool NE, class R, class... Args>
-R dispatcher_default_impl(const char*, Args... args) noexcept(NE) {
-  return invoke_dispatch<F, R>(std::forward<Args>(args)...);
-}
+R dispatcher_default_impl(const char*, Args... args) noexcept(NE)
+    { return invoke_dispatch<F, R>(std::forward<Args>(args)...); }
 template <class P, class F, bool NE, class R, class... Args>
 R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
-  return invoke_dispatch<F, R>(ptr_traits<P>::dereference(
-      *reinterpret_cast<const P*>(erased)), std::forward<Args>(args)...);
+  return invoke_dispatch<F, R>(ptr_traits<P>::dereference(*std::launder(
+      reinterpret_cast<const P*>(erased))), std::forward<Args>(args)...);
 }
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
@@ -274,7 +273,7 @@ struct copyability_meta_provider {
   static constexpr func_ptr_t<NE, void, char*, const char*> get() {
     return [](char* self, const char* rhs) noexcept(NE) {
       std::construct_at(reinterpret_cast<P*>(self),
-          *reinterpret_cast<const P*>(rhs));
+          *std::launder(reinterpret_cast<const P*>(rhs)));
     };
   }
 };
@@ -283,9 +282,9 @@ struct relocatability_meta_provider {
   template <class P>
   static constexpr func_ptr_t<NE, void, char*, char*> get() {
     return [](char* self, char* rhs) noexcept(NE) {
-      std::construct_at(reinterpret_cast<P*>(self),
-          std::move(*reinterpret_cast<P*>(rhs)));
-      std::destroy_at(reinterpret_cast<P*>(rhs));
+      P* other = std::launder(reinterpret_cast<P*>(rhs));
+      std::construct_at(reinterpret_cast<P*>(self), std::move(*other));
+      std::destroy_at(other);
     };
   }
 };
@@ -294,7 +293,7 @@ struct destructibility_meta_provider {
   template <class P>
   static constexpr func_ptr_t<NE, void, char*> get() {
     return [](char* self) noexcept(NE)
-        { std::destroy_at(reinterpret_cast<P*>(self)); };
+        { std::destroy_at(std::launder(reinterpret_cast<P*>(self))); };
   }
 };
 template <template <bool> class MP, constraint_level C>
@@ -591,16 +590,14 @@ class proxy {
   P& emplace(Args&&... args) noexcept(HasNothrowPolyAssignment<P, Args...>)
       requires(HasPolyAssignment<P, Args...>) {
     reset();
-    initialize<P>(std::forward<Args>(args)...);
-    return *reinterpret_cast<P*>(ptr_);
+    return initialize<P>(std::forward<Args>(args)...);
   }
   template <class P, class U, class... Args>
   P& emplace(std::initializer_list<U> il, Args&&... args)
       noexcept(HasNothrowPolyAssignment<P, std::initializer_list<U>&, Args...>)
       requires(HasPolyAssignment<P, std::initializer_list<U>&, Args...>) {
     reset();
-    initialize<P>(il, std::forward<Args>(args)...);
-    return *reinterpret_cast<P*>(ptr_);
+    return initialize<P>(il, std::forward<Args>(args)...);
   }
   template <class D = DefaultDispatch, class... Args>
   decltype(auto) invoke(Args&&... args) const
@@ -619,9 +616,10 @@ class proxy {
 
  private:
   template <class P, class... Args>
-  void initialize(Args&&... args) {
+  P& initialize(Args&&... args) {
     std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
     meta_ = details::meta_ptr<typename Traits::meta>{std::in_place_type<P>};
+    return *std::launder(reinterpret_cast<P*>(ptr_));
   }
 
   details::meta_ptr<typename Traits::meta> meta_;
