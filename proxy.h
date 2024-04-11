@@ -168,7 +168,7 @@ R invoke_dispatch(Args&&... args) {
 template <class P, class F, class R, class... Args>
 R invocation_dispatcher(const char* self, Args... args)
     noexcept(is_invoker_well_formed<
-        F, ptr_traits<P>::target_type, true, R, Args...>()) {
+        F, typename ptr_traits<P>::target_type, true, R, Args...>()) {
   return invoke_dispatch<F, R>(ptr_traits<P>::dereference(*std::launder(
       reinterpret_cast<const P*>(self))), std::forward<Args>(args)...);
 }
