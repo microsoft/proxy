@@ -11,6 +11,7 @@
 #include <typeinfo>
 #include <vector>
 #include "proxy.h"
+#include "utils.h"
 
 namespace {
 
@@ -49,6 +50,25 @@ PRO_DEF_FREE_DISPATCH(Append, AppendImpl, pro::proxy<Container<T>>(T));
 
 PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(WeakAt, at, NotImplemented<std::string>, std::string(int));
 PRO_DEF_FACADE(ResourceDictionary, WeakAt);
+
+template <class F, class T>
+pro::proxy<F> LockImpl(const std::weak_ptr<T>& p) {
+  auto result = p.lock();
+  if (static_cast<bool>(result)) {
+    return result;
+  }
+  return nullptr;
+}
+template <class F>
+PRO_DEF_FREE_DISPATCH(Lock, LockImpl<F>, pro::proxy<F>());
+template <class F>
+PRO_DEF_FACADE(Weak, Lock<F>, pro::copyable_ptr_constraints);
+template <class F, class T>
+auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
+template <class F>
+PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(GetWeak, GetWeakImpl<F>, std::nullptr_t, pro::proxy<Weak<F>>());
+
+PRO_DEF_FACADE(SharedStringable, PRO_MAKE_DISPATCH_PACK(utils::spec::ToString, GetWeak<SharedStringable>), pro::copyable_ptr_constraints);
 
 }  // namespace spec
 
@@ -236,4 +256,21 @@ TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
     }
     ASSERT_TRUE(exception_thrown);
   }
+}
+
+TEST(ProxyInvocationTests, TestObserverDispatch) {
+  int test_val = 123;
+  pro::proxy<spec::SharedStringable> p{std::make_shared<int>(test_val)};
+  auto weak = p.invoke<spec::GetWeak<spec::SharedStringable>>();
+  ASSERT_TRUE(weak.has_value());
+  {
+    auto locked = weak();
+    ASSERT_TRUE(locked.has_value());
+    ASSERT_EQ(locked.invoke<utils::spec::ToString>(), "123");
+  }
+  p = &test_val;  // The underlying std::shared_ptr will be destroyed
+  ASSERT_TRUE(weak.has_value());
+  ASSERT_FALSE(weak().has_value());
+  ASSERT_FALSE(p.invoke<spec::GetWeak<spec::SharedStringable>>().has_value());
+  ASSERT_EQ(p.invoke<utils::spec::ToString>(), "123");
 }
