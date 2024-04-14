@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
+#include <cstring>
 #include <bit>
 #include <concepts>
 #include <initializer_list>
@@ -164,14 +165,41 @@ R invoke_dispatch(Args&&... args) {
     return F{}(std::forward<Args>(args)...);
   }
 }
-template <class F, bool NE, class R, class... Args>
-R dispatcher_default_impl(const char*, Args... args) noexcept(NE)
-    { return invoke_dispatch<F, R>(std::forward<Args>(args)...); }
-template <class P, class F, bool NE, class R, class... Args>
-R dispatcher_impl(const char* erased, Args... args) noexcept(NE) {
+template <class P, class F, class R, class... Args>
+R invocation_dispatcher(const char* self, Args... args)
+    noexcept(is_invoker_well_formed<
+        F, typename ptr_traits<P>::target_type, true, R, Args...>()) {
   return invoke_dispatch<F, R>(ptr_traits<P>::dereference(*std::launder(
-      reinterpret_cast<const P*>(erased))), std::forward<Args>(args)...);
+      reinterpret_cast<const P*>(self))), std::forward<Args>(args)...);
 }
+template <class F, class R, class... Args>
+R invocation_default_dispatcher(const char*, Args... args)
+    noexcept(is_invoker_well_formed<F, void, true, R, Args...>())
+    { return invoke_dispatch<F, R>(std::forward<Args>(args)...); }
+template <class P>
+void copying_dispatcher(char* self, const char* rhs)
+    noexcept(has_copyability<P>(constraint_level::nothrow)) {
+  std::construct_at(reinterpret_cast<P*>(self),
+      *std::launder(reinterpret_cast<const P*>(rhs)));
+}
+template <std::size_t Len, std::size_t Align>
+void copying_default_dispatcher(char* self, const char* rhs) noexcept {
+  std::memcpy(std::assume_aligned<Align>(self),
+      std::assume_aligned<Align>(rhs), Len);
+}
+template <class P>
+void relocation_dispatcher(char* self, const char* rhs)
+    noexcept(has_relocatability<P>(constraint_level::nothrow)) {
+  P* other = std::launder(reinterpret_cast<P*>(const_cast<char*>(rhs)));
+  std::construct_at(reinterpret_cast<P*>(self), std::move(*other));
+  std::destroy_at(other);
+}
+template <class P>
+void destruction_dispatcher(char* self)
+    noexcept(has_destructibility<P>(constraint_level::nothrow))
+    { std::destroy_at(std::launder(reinterpret_cast<P*>(self))); }
+inline void destruction_default_dispatcher(char*) noexcept {}
+
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
   template <class D>
@@ -180,11 +208,11 @@ struct overload_traits_impl : applicable_traits {
     static constexpr func_ptr_t<NE, R, const char*, Args...> get() {
       if constexpr (invocable_dispatch<
           D, typename ptr_traits<P>::target_type, NE, R, Args...>) {
-        return &dispatcher_impl<P, typename D::template invoker<
-            typename ptr_traits<P>::target_type>, NE, R, Args...>;
+        return &invocation_dispatcher<P, typename D::template invoker<
+            typename ptr_traits<P>::target_type>, R, Args...>;
       } else {
-        return &dispatcher_default_impl<
-            typename D::template invoker<void>, NE, R, Args...>;
+        return &invocation_default_dispatcher<
+            typename D::template invoker<void>, R, Args...>;
       }
     }
   };
@@ -271,29 +299,33 @@ template <bool NE>
 struct copyability_meta_provider {
   template <class P>
   static constexpr func_ptr_t<NE, void, char*, const char*> get() {
-    return [](char* self, const char* rhs) noexcept(NE) {
-      std::construct_at(reinterpret_cast<P*>(self),
-          *std::launder(reinterpret_cast<const P*>(rhs)));
-    };
+    if constexpr (has_copyability<P>(constraint_level::trivial)) {
+      return &copying_default_dispatcher<sizeof(P), alignof(P)>;
+    } else {
+      return &copying_dispatcher<P>;
+    }
   }
 };
 template <bool NE>
 struct relocatability_meta_provider {
   template <class P>
-  static constexpr func_ptr_t<NE, void, char*, char*> get() {
-    return [](char* self, char* rhs) noexcept(NE) {
-      P* other = std::launder(reinterpret_cast<P*>(rhs));
-      std::construct_at(reinterpret_cast<P*>(self), std::move(*other));
-      std::destroy_at(other);
-    };
+  static constexpr func_ptr_t<NE, void, char*, const char*> get() {
+    if constexpr (has_relocatability<P>(constraint_level::trivial)) {
+      return &copying_default_dispatcher<sizeof(P), alignof(P)>;
+    } else {
+      return &relocation_dispatcher<P>;
+    }
   }
 };
 template <bool NE>
 struct destructibility_meta_provider {
   template <class P>
   static constexpr func_ptr_t<NE, void, char*> get() {
-    return [](char* self) noexcept(NE)
-        { std::destroy_at(std::launder(reinterpret_cast<P*>(self))); };
+    if constexpr (has_destructibility<P>(constraint_level::trivial)) {
+      return &destruction_default_dispatcher;
+    } else {
+      return &destruction_dispatcher<P>;
+    }
   }
 };
 template <template <bool> class MP, constraint_level C>
@@ -822,9 +854,8 @@ struct facade_prototype {
 #define ___PRO_DEF_DISPATCH_IMPL(__NAME, __EXPR, __DEFEXPR, __OVERLOADS) \
     struct __NAME { \
      private: \
-      template <class __T> \
       struct __FT { \
-        template <class... __Args> \
+        template <class __T, class... __Args> \
         decltype(auto) operator()(__T& __self, __Args&&... __args) \
             noexcept(noexcept(__EXPR)) requires(requires { __EXPR; }) \
             { return __EXPR; } \
@@ -839,8 +870,7 @@ struct facade_prototype {
      public: \
       using overload_types = __OVERLOADS; \
       template <class __T> \
-      using invoker = std::conditional_t< \
-          std::is_void_v<__T>, __FV, __FT<__T>>; \
+      using invoker = std::conditional_t<std::is_void_v<__T>, __FV, __FT>; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
