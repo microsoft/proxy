@@ -152,6 +152,11 @@ template <class D, class T, bool NE, class R, class... Args>
 concept invocable_dispatch = requires { typename D::template invoker<T>; } &&
     is_invoker_well_formed<
         typename D::template invoker<T>, T, NE, R, Args...>();
+template <class D, class P, bool NE, class R, class... Args>
+concept invocable_dispatch_ptr = invocable_dispatch<
+    D, typename ptr_traits<P>::target_type, NE, R, Args...> ||
+    invocable_dispatch<D, const P, NE, R, Args...> ||
+    invocable_dispatch<D, void, NE, R, Args...>;
 
 template <bool NE, class R, class... Args>
 using func_ptr_t = std::conditional_t<
@@ -166,14 +171,20 @@ R invoke_dispatch(Args&&... args) {
   }
 }
 template <class P, class F, class R, class... Args>
-R invocation_dispatcher(const char* self, Args... args)
+R invocation_dispatcher_ref(const char* self, Args... args)
     noexcept(is_invoker_well_formed<
         F, typename ptr_traits<P>::target_type, true, R, Args...>()) {
   return invoke_dispatch<F, R>(ptr_traits<P>::dereference(*std::launder(
       reinterpret_cast<const P*>(self))), std::forward<Args>(args)...);
 }
+template <class P, class F, class R, class... Args>
+R invocation_dispatcher_ptr(const char* self, Args... args)
+    noexcept(is_invoker_well_formed<F, const P, true, R, Args...>()) {
+  return invoke_dispatch<F, R>(*std::launder(reinterpret_cast<const P*>(self)),
+      std::forward<Args>(args)...);
+}
 template <class F, class R, class... Args>
-R invocation_default_dispatcher(const char*, Args... args)
+R invocation_dispatcher_void(const char*, Args... args)
     noexcept(is_invoker_well_formed<F, void, true, R, Args...>())
     { return invoke_dispatch<F, R>(std::forward<Args>(args)...); }
 template <class P>
@@ -208,19 +219,21 @@ struct overload_traits_impl : applicable_traits {
     static constexpr func_ptr_t<NE, R, const char*, Args...> get() {
       if constexpr (invocable_dispatch<
           D, typename ptr_traits<P>::target_type, NE, R, Args...>) {
-        return &invocation_dispatcher<P, typename D::template invoker<
+        return &invocation_dispatcher_ref<P, typename D::template invoker<
             typename ptr_traits<P>::target_type>, R, Args...>;
+      } else if constexpr (invocable_dispatch<D, const P, NE, R, Args...>) {
+        return &invocation_dispatcher_ptr<
+            P, typename D::template invoker<const P>, R, Args...>;
       } else {
-        return &invocation_default_dispatcher<
+        return &invocation_dispatcher_void<
             typename D::template invoker<void>, R, Args...>;
       }
     }
   };
   struct resolver { func_ptr_t<NE, R, Args...> operator()(Args...); };
   template <class D, class P>
-  static constexpr bool applicable_ptr = invocable_dispatch<
-      D, typename ptr_traits<P>::target_type, NE, R, Args...> ||
-      invocable_dispatch<D, void, NE, R, Args...>;
+  static constexpr bool applicable_ptr =
+      invocable_dispatch_ptr<D, P, NE, R, Args...>;
   static constexpr bool is_noexcept = NE;
 };
 template <class O> struct overload_traits : inapplicable_traits {};
