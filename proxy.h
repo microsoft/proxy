@@ -696,22 +696,28 @@ constexpr proxiable_ptr_constraints trivial_ptr_constraints{
 namespace details {
 
 template <class T>
-class sbo_ptr {
+class inplace_ptr {
  public:
   template <class... Args>
-  sbo_ptr(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+  inplace_ptr(Args&&... args)
+      noexcept(std::is_nothrow_constructible_v<T, Args...>)
       requires(std::is_constructible_v<T, Args...>)
       : value_(std::forward<Args>(args)...) {}
-  sbo_ptr(const sbo_ptr&) noexcept(std::is_nothrow_copy_constructible_v<T>)
-      = default;
-  sbo_ptr(sbo_ptr&&) noexcept(std::is_nothrow_move_constructible_v<T>)
-      = default;
+  inplace_ptr(const inplace_ptr&)
+      noexcept(std::is_nothrow_copy_constructible_v<T>) = default;
+  inplace_ptr(inplace_ptr&&)
+      noexcept(std::is_nothrow_move_constructible_v<T>) = default;
 
   T* operator->() const noexcept { return &value_; }
 
  private:
   mutable T value_;
 };
+template <class F, class T, class... Args>
+proxy<F> make_proxy_inplace_impl(Args&&... args) {
+  return proxy<F>{std::in_place_type<inplace_ptr<T>>,
+        std::forward<Args>(args)...};
+}
 
 template <class T, class Alloc>
 static auto rebind_allocator(const Alloc& alloc) {
@@ -759,7 +765,6 @@ class allocated_ptr {
   Alloc alloc_;
   T* ptr_;
 };
-
 template <class T, class Alloc>
 class compact_ptr {
  public:
@@ -780,35 +785,57 @@ class compact_ptr {
   struct storage {
     template <class... Args>
     explicit storage(const Alloc& alloc, Args&&... args)
-        : alloc(alloc), value(std::forward<Args>(args)...) {}
+        : value(std::forward<Args>(args)...), alloc(alloc) {}
 
-    Alloc alloc;
     T value;
+    Alloc alloc;
   };
 
   storage* ptr_;
 };
-
 template <class F, class T, class Alloc, class... Args>
 proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
-  if constexpr (proxiable<details::sbo_ptr<T>, F>) {
-    return proxy<F>{std::in_place_type<details::sbo_ptr<T>>,
-        std::forward<Args>(args)...};
-  } else if constexpr (proxiable<details::allocated_ptr<T, Alloc>, F>) {
-    return proxy<F>{std::in_place_type<details::allocated_ptr<T, Alloc>>,
+  if constexpr (proxiable<allocated_ptr<T, Alloc>, F>) {
+    return proxy<F>{std::in_place_type<allocated_ptr<T, Alloc>>,
         alloc, std::forward<Args>(args)...};
   } else {
-    return proxy<F>{std::in_place_type<details::compact_ptr<T, Alloc>>,
+    return proxy<F>{std::in_place_type<compact_ptr<T, Alloc>>,
         alloc, std::forward<Args>(args)...};
   }
 }
+
+#if __STDC_HOSTED__
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
-  return allocate_proxy_impl<F, T>(
-      std::allocator<T>{}, std::forward<Args>(args)...);
+  if constexpr (proxiable<inplace_ptr<T>, F>) {
+    return make_proxy_inplace_impl<F, T>(std::forward<Args>(args)...);
+  } else {
+    return allocate_proxy_impl<F, T>(
+        std::allocator<T>{}, std::forward<Args>(args)...);
+  }
 }
+#endif  // __STDC_HOSTED__
 
 }  // namespace details
+
+template <class T, class F>
+concept inplace_proxiable_target = proxiable<details::inplace_ptr<T>, F>;
+
+template <facade F, inplace_proxiable_target<F> T, class... Args>
+proxy<F> make_proxy_inplace(Args&&... args) {
+  return details::make_proxy_inplace_impl<F, T>(std::forward<Args>(args)...);
+}
+template <facade F, inplace_proxiable_target<F> T, class U, class... Args>
+proxy<F> make_proxy_inplace(std::initializer_list<U> il, Args&&... args) {
+  return details::make_proxy_inplace_impl<F, T>(
+      il, std::forward<Args>(args)...);
+}
+template <facade F, class T>
+    requires(inplace_proxiable_target<std::decay_t<T>, F>)
+proxy<F> make_proxy_inplace(T&& value) {
+  return details::make_proxy_inplace_impl<F, std::decay_t<T>>(
+      std::forward<T>(value));
+}
 
 template <facade F, class T, class Alloc, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
@@ -825,6 +852,8 @@ proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
   return details::allocate_proxy_impl<F, std::decay_t<T>>(
       alloc, std::forward<T>(value));
 }
+
+#if __STDC_HOSTED__
 template <facade F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
@@ -835,6 +864,7 @@ template <facade F, class T>
 proxy<F> make_proxy(T&& value) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
+#endif  // __STDC_HOSTED__
 
 // The following types and macros aim to simplify definition of dispatch and
 // facade types prior to C++26
