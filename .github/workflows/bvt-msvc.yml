@@ -6,7 +6,7 @@ on:
         required: false
 
 jobs:
-  bvt-msvc14:
+  bvt-msvc:
     runs-on: windows-2022
     steps:
     - uses: actions/checkout@v3
