@@ -719,6 +719,7 @@ proxy<F> make_proxy_inplace_impl(Args&&... args) {
         std::forward<Args>(args)...};
 }
 
+#if __STDC_HOSTED__
 template <class T, class Alloc>
 static auto rebind_allocator(const Alloc& alloc) {
   return typename std::allocator_traits<Alloc>::template rebind_alloc<T>(alloc);
@@ -804,7 +805,6 @@ proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
   }
 }
 
-#if __STDC_HOSTED__
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
   if constexpr (proxiable<inplace_ptr<T>, F>) {
@@ -837,6 +837,7 @@ proxy<F> make_proxy_inplace(T&& value) {
       std::forward<T>(value));
 }
 
+#if __STDC_HOSTED__
 template <facade F, class T, class Alloc, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
   return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
@@ -853,7 +854,6 @@ proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
       alloc, std::forward<T>(value));
 }
 
-#if __STDC_HOSTED__
 template <facade F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
