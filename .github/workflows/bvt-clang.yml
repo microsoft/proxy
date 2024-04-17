@@ -33,7 +33,7 @@ jobs:
     - name: build and run test with clang 15
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 1
-        sudo update-alternatives --install /usr/bin/gcc g++ /usr/bin/clang++-15 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 1
         cmake . -B build
         cmake --build ./build -j8
         cd ./build

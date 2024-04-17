@@ -27,7 +27,7 @@ jobs:
     - name: build and run test with gcc 11
       run: |
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1
-        sudo update-alternatives --install /usr/bin/gcc g++ /usr/bin/g++-11 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 1
         cmake . -B build
         cmake --build ./build -j8
         cd ./build
