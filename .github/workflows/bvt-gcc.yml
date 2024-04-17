@@ -1,0 +1,58 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
+
+jobs:
+  bvt-gcc:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.branch }}
+
+    - name: install gcc
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-11 g++-11 gcc-12 g++-12 gcc-13 g++-13
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 1
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 1
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 1
+
+    - name: check compiler versions
+      run: |
+        g++-11 --version
+        g++-12 --version
+        g++-13 --version
+
+    - name: build and run test with gcc 11
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/gcc-11
+        sudo update-alternatives --set g++ /usr/bin/g++-11
+        cmake . -B build-gcc-11
+        cmake --build ./build-gcc-11 -j8
+        cd ./build-gcc-11
+        ctest -j8
+
+    - name: build and run test with gcc 12
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/gcc-12
+        sudo update-alternatives --set g++ /usr/bin/g++-12
+        cmake . -B build-gcc-12
+        cmake --build ./build-gcc-12 -j8
+        cd ./build-gcc-12
+        ctest -j8
+
+    - name: build and run test with gcc 13
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/gcc-13
+        sudo update-alternatives --set g++ /usr/bin/g++-13
+        cmake . -B build-gcc-13
+        cmake --build ./build-gcc-13 -j8
+        cd ./build-gcc-13
+        ctest -j8

@@ -1,0 +1,75 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
+
+jobs:
+  bvt-clang:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.branch }}
+
+    - name: install clang
+      run: |
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" -y
+        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" -y
+        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" -y
+        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" -y
+        sudo apt update
+        sudo apt install -y clang-15 clang-16 clang-17 clang-18
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-15 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-15 1
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-16 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-16 1
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-17 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-17 1
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/clang-18 1
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/clang++-18 1
+
+    - name: check compiler versions
+      run: |
+        clang++-15 --version
+        clang++-16 --version
+        clang++-17 --version
+        clang++-18 --version
+
+    - name: build and run test with clang 15
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/clang-15
+        sudo update-alternatives --set g++ /usr/bin/clang++-15
+        cmake . -B build-clang-15
+        cmake --build ./build-clang-15 -j8
+        cd ./build-clang-15
+        ctest -j8
+
+    - name: build and run test with clang 16
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/clang-16
+        sudo update-alternatives --set g++ /usr/bin/clang++-16
+        cmake . -B build-clang-16
+        cmake --build ./build-clang-16 -j8
+        cd ./build-clang-16
+        ctest -j8
+
+    - name: build and run test with clang 17
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/clang-17
+        sudo update-alternatives --set g++ /usr/bin/clang++-17
+        cmake . -B build-clang-17
+        cmake --build ./build-clang-17 -j8
+        cd ./build-clang-17
+        ctest -j8
+
+    - name: build and run test with clang 18
+      run: |
+        sudo update-alternatives --set gcc /usr/bin/clang-18
+        sudo update-alternatives --set g++ /usr/bin/clang++-18
+        cmake . -B build-clang-18
+        cmake --build ./build-clang-18 -j8
+        cd ./build-clang-18
+        ctest -j8
