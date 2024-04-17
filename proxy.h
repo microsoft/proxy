@@ -52,14 +52,16 @@ template <class Expr>
 consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
+template <class T, std::size_t I>
+concept has_tuple_element = requires { typename std::tuple_element_t<I, T>; };
 template <class T>
 consteval bool is_tuple_like_well_formed() {
   if constexpr (requires { { std::tuple_size<T>::value } ->
       std::same_as<const std::size_t&>; }) {
     if constexpr (is_consteval([] { return std::tuple_size<T>::value; })) {
       return []<std::size_t... I>(std::index_sequence<I...>) {
-            return (requires { typename std::tuple_element_t<I, T>; } && ...);
-          }(std::make_index_sequence<std::tuple_size_v<T>>{});
+        return (has_tuple_element<T, I> && ...);
+      }(std::make_index_sequence<std::tuple_size_v<T>>{});
     }
   }
   return false;

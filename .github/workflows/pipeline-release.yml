@@ -37,30 +37,30 @@ jobs:
         git push origin release/${{ github.event.inputs.version }}
         git push origin ${{ github.event.inputs.version }}
 
-  run-bvt-gcc13:
+  run-bvt-gcc:
     needs: prepare-release
-    name: run bvt with g++ 13
-    uses: ./.github/workflows/bvt-gcc13.yml
+    name: run bvt with g++
+    uses: ./.github/workflows/bvt-gcc.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
-  run-bvt-clang15:
+  run-bvt-clang:
     needs: prepare-release
-    name: run bvt with clang 15
-    uses: ./.github/workflows/bvt-clang15.yml
+    name: run bvt with clang
+    uses: ./.github/workflows/bvt-clang.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
-  run-bvt-msvc14:
+  run-bvt-msvc:
     needs: prepare-release
-    name: run bvt with msvc14 (vs2022)
-    uses: ./.github/workflows/bvt-msvc14.yml
+    name: run bvt with msvc
+    uses: ./.github/workflows/bvt-msvc.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
   draft-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc11, run-bvt-clang14, run-bvt-msvc14]
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc]
     steps:
     - uses: actions/checkout@v3
       with:
