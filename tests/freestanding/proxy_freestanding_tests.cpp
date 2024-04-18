@@ -1,4 +1,4 @@
-#include "https://github.com/mingxwa/proxy/raw/user/mingxwa/freestanding/proxy.h"
+#include "proxy.h"
 
 unsigned GetHash(int v) { return static_cast<unsigned>(v + 3) * 31; }
 unsigned GetHash(double v) { return static_cast<unsigned>(v * v + 5) * 87; }
