@@ -196,8 +196,11 @@ void copying_dispatcher(char* self, const char* rhs)
 }
 template <std::size_t Len, std::size_t Align>
 void copying_default_dispatcher(char* self, const char* rhs) noexcept {
-  std::uninitialized_copy_n(
-      std::assume_aligned<Align>(rhs), Len, std::assume_aligned<Align>(self));
+  self = std::assume_aligned<Align>(self);
+  rhs = std::assume_aligned<Align>(rhs);
+
+  // Simulate memcpy, which is not available in freestanding
+  for (std::size_t i = 0u; i < Len; ++i) { self[i] = rhs[i]; }
 }
 template <class P>
 void relocation_dispatcher(char* self, const char* rhs)
