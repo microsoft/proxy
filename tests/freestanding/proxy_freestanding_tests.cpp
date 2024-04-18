@@ -1,4 +1,4 @@
-#include "proxy.h"
+#include "https://github.com/mingxwa/proxy/raw/user/mingxwa/freestanding/proxy.h"
 
 unsigned GetHash(int v) { return static_cast<unsigned>(v + 3) * 31; }
 unsigned GetHash(double v) { return static_cast<unsigned>(v * v + 5) * 87; }
@@ -64,6 +64,34 @@ extern "C" void _start() {
     "mv a1, a0\n"
     "li a7, 93\n"
     "ecall\n"
+  );
+#elif defined(__powerpc64__)
+  asm(
+    "bl main\n"
+    "mr 3, 3\n"
+    "li 0, 1\n"
+    "sc"
+  );
+#elif defined(__i386__)
+  asm(
+    "call main\n"
+    "mov %eax, %ebx\n"
+    "mov $1, %eax\n"
+    "int $0x80"
+  );
+#elif defined(__arm__)
+  asm(
+    "bl main\n"
+    "mov r0, r0\n"
+    "mov r7, #1\n"
+    "swi #0"
+  );
+#elif defined(__powerpc__)
+  asm(
+    "bl main\n"
+    "mr 3, 3\n"
+    "li 0, 1\n"
+    "sc"
   );
 #else
 #error "Unknown architecture"
