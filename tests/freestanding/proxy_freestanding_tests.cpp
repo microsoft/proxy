@@ -65,7 +65,7 @@ extern "C" void _start() {
     "li a7, 93\n"
     "ecall\n"
   );
-#elif defined(__powerpc64__)
+#elif defined(__powerpc64__) || defined(__powerpc__)
   asm(
     "bl main\n"
     "mr 3, 3\n"
@@ -85,13 +85,6 @@ extern "C" void _start() {
     "mov r0, r0\n"
     "mov r7, #1\n"
     "swi #0"
-  );
-#elif defined(__powerpc__)
-  asm(
-    "bl main\n"
-    "mr 3, 3\n"
-    "li 0, 1\n"
-    "sc"
   );
 #else
 #error "Unknown architecture"
