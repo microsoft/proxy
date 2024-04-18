@@ -11,7 +11,7 @@ namespace {
 struct SboObserver {
  public:
   template <class T>
-  constexpr explicit SboObserver(std::in_place_type_t<pro::details::sbo_ptr<T>>)
+  constexpr explicit SboObserver(std::in_place_type_t<pro::details::inplace_ptr<T>>)
       : SboEnabled(true), AllocatorAllocatesForItself(false) {}
   template <class T, class Alloc>
   constexpr explicit SboObserver(std::in_place_type_t<pro::details::allocated_ptr<T, Alloc>>)
@@ -65,15 +65,18 @@ static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotConvertible*, TestMemFn1>)
 struct TestMemFn1_ReturnTypeNotExist { void MemFn1(double) {} };
 static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotExist*, TestMemFn1>);
 
+static_assert(pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestLargeStringable>);
+static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestSmallStringable>);
+
 }  // namespace
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_FromValue) {
+TEST(ProxyCreationTests, TestMakeProxyInplace_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::allocate_proxy<spec::TestLargeStringable>(std::allocator<void>{}, session);
+    auto p = pro::make_proxy_inplace<spec::TestLargeStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 2");
     ASSERT_TRUE(p.reflect().SboEnabled);
@@ -84,11 +87,11 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_FromValue) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_InPlace) {
+TEST(ProxyCreationTests, TestMakeProxyInplace_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::allocate_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
     ASSERT_TRUE(p.reflect().SboEnabled);
@@ -99,11 +102,11 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_InPlace) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_InPlaceInitializerList) {
+TEST(ProxyCreationTests, TestMakeProxyInplace_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::allocate_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, { 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(p.invoke(), "Session 1");
     ASSERT_TRUE(p.reflect().SboEnabled);
@@ -114,11 +117,11 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_InPlaceInitializerList) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_Lifetime_Copy) {
+TEST(ProxyCreationTests, TestMakeProxyInplace_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::allocate_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p1 = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -135,11 +138,11 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_Lifetime_Copy) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_Lifetime_Move) {
+TEST(ProxyCreationTests, TestMakeProxyInplace_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::allocate_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p1 = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
@@ -154,7 +157,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithSBO_Lifetime_Move) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_FromValue) {
+TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   utils::LifetimeTracker::Session session{ &tracker };
@@ -172,7 +175,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_FromValue)
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_InPlace) {
+TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -188,7 +191,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_InPlace) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_InPlaceInitializerList) {
+TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -204,7 +207,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_InPlaceIni
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_Lifetime_Copy) {
+TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -227,7 +230,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_Lifetime_C
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_Lifetime_Move) {
+TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -245,7 +248,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_DirectAllocator_Lifetime_M
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_FromValue) {
+TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   utils::LifetimeTracker::Session session{ &tracker };
@@ -264,7 +267,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_FromValu
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlace) {
+TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -281,7 +284,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlace)
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlaceInitializerList) {
+TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -298,7 +301,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_InPlaceI
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_Lifetime_Copy) {
+TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -322,7 +325,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_Lifetime
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyCreationTests, TestAllocateProxy_WithoutSBO_IndirectAllocator_Lifetime_Move) {
+TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
