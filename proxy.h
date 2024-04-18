@@ -4,7 +4,6 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
-#include <cstring>
 #include <bit>
 #include <concepts>
 #include <initializer_list>
@@ -197,8 +196,8 @@ void copying_dispatcher(char* self, const char* rhs)
 }
 template <std::size_t Len, std::size_t Align>
 void copying_default_dispatcher(char* self, const char* rhs) noexcept {
-  std::memcpy(std::assume_aligned<Align>(self),
-      std::assume_aligned<Align>(rhs), Len);
+  std::uninitialized_copy_n(
+      std::assume_aligned<Align>(rhs), Len, std::assume_aligned<Align>(self));
 }
 template <class P>
 void relocation_dispatcher(char* self, const char* rhs)
