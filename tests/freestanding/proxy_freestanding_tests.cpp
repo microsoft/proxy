@@ -44,10 +44,28 @@ int main() {
 }
 
 extern "C" void _start() {
+#if defined(__x86_64__)
   asm(
     "call main\n"
     "mov %eax, %edi\n"
     "mov $60, %eax\n"
     "syscall"
   );
+#elif defined(__aarch64__)
+  asm(
+    "bl main\n"
+    "mov w0, w0\n"
+    "mov w8, #93\n"
+    "svc #0\n"
+  );
+#elif defined(__riscv)
+  asm(
+    "call main\n"
+    "mv a1, a0\n"
+    "li a7, 93\n"
+    "ecall\n"
+  );
+#else
+#error "Unknown architecture"
+#endif
 }
