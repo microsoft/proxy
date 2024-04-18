@@ -20,3 +20,13 @@ endif()
 
 include(GoogleTest)
 gtest_discover_tests(msft_proxy_tests)
+
+if(NOT MSVC)
+  add_executable(msft_proxy_freestanding_tests freestanding/proxy_freestanding_tests.cpp)
+  target_include_directories(msft_proxy_freestanding_tests PRIVATE .)
+  target_compile_features(msft_proxy_freestanding_tests PRIVATE cxx_std_20)
+  target_compile_options(msft_proxy_freestanding_tests PRIVATE -Wall -nostdlib -fno-exceptions -fno-rtti -ffreestanding -nostartfiles)
+  target_link_options(msft_proxy_freestanding_tests PRIVATE -nostartfiles)
+  target_link_libraries(msft_proxy_freestanding_tests PRIVATE msft_proxy)
+  add_test(NAME msft_proxy_freestanding_tests COMMAND msft_proxy_freestanding_tests)
+endif()
