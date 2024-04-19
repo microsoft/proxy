@@ -18,7 +18,7 @@ PRO_DEF_FACADE(Hashable, GetHash);
 
 }  // namespace spec
 
-extern "C" int main() {
+int main() {
   int i = 123;
   double d = 3.14159;
   const char* s = "lalala";
@@ -41,52 +41,4 @@ extern "C" int main() {
     return 1;
   }
   return 0;
-}
-
-extern "C" void _start() {
-#if defined(__x86_64__)
-  asm(
-    "call main\n"
-    "mov %eax, %edi\n"
-    "mov $60, %eax\n"
-    "syscall"
-  );
-#elif defined(__aarch64__)
-  asm(
-    "bl main\n"
-    "mov w0, w0\n"
-    "mov w8, #93\n"
-    "svc #0\n"
-  );
-#elif defined(__riscv)
-  asm(
-    "call main\n"
-    "mv a1, a0\n"
-    "li a7, 93\n"
-    "ecall\n"
-  );
-#elif defined(__powerpc64__) || defined(__powerpc__)
-  asm(
-    "bl main\n"
-    "mr 3, 3\n"
-    "li 0, 1\n"
-    "sc"
-  );
-#elif defined(__i386__)
-  asm(
-    "call main\n"
-    "mov %eax, %ebx\n"
-    "mov $1, %eax\n"
-    "int $0x80"
-  );
-#elif defined(__arm__)
-  asm(
-    "bl main\n"
-    "mov r0, r0\n"
-    "mov r7, #1\n"
-    "swi #0"
-  );
-#else
-#error "Unknown architecture"
-#endif
 }

@@ -196,9 +196,8 @@ void copying_dispatcher(char* self, const char* rhs)
 }
 template <std::size_t Len, std::size_t Align>
 void copying_default_dispatcher(char* self, const char* rhs) noexcept {
-  self = std::assume_aligned<Align>(self);
-  rhs = std::assume_aligned<Align>(rhs);
-  for (std::size_t i = 0u; i < Len; ++i) { self[i] = rhs[i]; }
+  std::uninitialized_copy_n(
+      std::assume_aligned<Align>(rhs), Len, std::assume_aligned<Align>(self));
 }
 template <class P>
 void relocation_dispatcher(char* self, const char* rhs)
