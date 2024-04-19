@@ -18,7 +18,7 @@ PRO_DEF_FACADE(Hashable, GetHash);
 
 }  // namespace spec
 
-int main() {
+extern "C" int main() {
   int i = 123;
   double d = 3.14159;
   const char* s = "lalala";
