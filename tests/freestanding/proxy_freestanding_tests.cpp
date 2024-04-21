@@ -1,3 +1,7 @@
+#if __STDC_HOSTED__
+#error "This file shall be compiled targeting a freestanding environment."
+#endif  // __STDC_HOSTED__
+
 #include "proxy.h"
 
 unsigned GetHash(int v) { return static_cast<unsigned>(v + 3) * 31; }

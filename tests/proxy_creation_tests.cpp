@@ -67,6 +67,8 @@ static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotExist*, TestMemFn1>);
 
 static_assert(pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestLargeStringable>);
 static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestSmallStringable>);
+static_assert(!noexcept(pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
+static_assert(noexcept(pro::make_proxy_inplace<spec::TestLargeStringable, int>(123)));
 
 }  // namespace
 

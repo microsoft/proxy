@@ -714,11 +714,6 @@ class inplace_ptr {
  private:
   mutable T value_;
 };
-template <class F, class T, class... Args>
-proxy<F> make_proxy_inplace_impl(Args&&... args) {
-  return proxy<F>{std::in_place_type<inplace_ptr<T>>,
-        std::forward<Args>(args)...};
-}
 
 #if __STDC_HOSTED__
 template <class T, class Alloc>
@@ -809,7 +804,8 @@ proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
   if constexpr (proxiable<inplace_ptr<T>, F>) {
-    return make_proxy_inplace_impl<F, T>(std::forward<Args>(args)...);
+    return proxy<F>{std::in_place_type<inplace_ptr<T>>,
+        std::forward<Args>(args)...};
   } else {
     return allocate_proxy_impl<F, T>(
         std::allocator<T>{}, std::forward<Args>(args)...);
@@ -823,19 +819,24 @@ template <class T, class F>
 concept inplace_proxiable_target = proxiable<details::inplace_ptr<T>, F>;
 
 template <facade F, inplace_proxiable_target<F> T, class... Args>
-proxy<F> make_proxy_inplace(Args&&... args) {
-  return details::make_proxy_inplace_impl<F, T>(std::forward<Args>(args)...);
+proxy<F> make_proxy_inplace(Args&&... args)
+    noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+  return proxy<F>{std::in_place_type<details::inplace_ptr<T>>,
+      std::forward<Args>(args)...};
 }
 template <facade F, inplace_proxiable_target<F> T, class U, class... Args>
-proxy<F> make_proxy_inplace(std::initializer_list<U> il, Args&&... args) {
-  return details::make_proxy_inplace_impl<F, T>(
-      il, std::forward<Args>(args)...);
+proxy<F> make_proxy_inplace(std::initializer_list<U> il, Args&&... args)
+    noexcept(std::is_nothrow_constructible_v<
+        T, std::initializer_list<U>&, Args...>) {
+  return proxy<F>{std::in_place_type<details::inplace_ptr<T>>,
+      il, std::forward<Args>(args)...};
 }
 template <facade F, class T>
-    requires(inplace_proxiable_target<std::decay_t<T>, F>)
-proxy<F> make_proxy_inplace(T&& value) {
-  return details::make_proxy_inplace_impl<F, std::decay_t<T>>(
-      std::forward<T>(value));
+proxy<F> make_proxy_inplace(T&& value)
+    noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
+    requires(inplace_proxiable_target<std::decay_t<T>, F>) {
+  return proxy<F>{std::in_place_type<details::inplace_ptr<std::decay_t<T>>>,
+      std::forward<T>(value)};
 }
 
 #if __STDC_HOSTED__
