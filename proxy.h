@@ -800,7 +800,6 @@ proxy<F> allocate_proxy_impl(const Alloc& alloc, Args&&... args) {
         alloc, std::forward<Args>(args)...};
   }
 }
-
 template <class F, class T, class... Args>
 proxy<F> make_proxy_impl(Args&&... args) {
   if constexpr (proxiable<inplace_ptr<T>, F>) {
@@ -855,7 +854,6 @@ proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
   return details::allocate_proxy_impl<F, std::decay_t<T>>(
       alloc, std::forward<T>(value));
 }
-
 template <facade F, class T, class... Args>
 proxy<F> make_proxy(Args&&... args)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
