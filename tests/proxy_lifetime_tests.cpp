@@ -8,6 +8,7 @@
 namespace {
 
 PRO_DEF_FACADE(TestFacade, utils::spec::ToString, pro::copyable_ptr_constraints);
+PRO_DEF_FACADE(TestTrivialFacade, utils::spec::ToString, pro::trivial_ptr_constraints);
 
 }  // namespace
 
@@ -186,6 +187,24 @@ TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue_Trivial) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    utils::LifetimeTracker::Session session{ &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestTrivialFacade> p1 = &session;
+    ASSERT_TRUE(p1.has_value());
+    auto p2 = std::move(p1);
+    ASSERT_FALSE(p1.has_value());
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(p2.invoke(), "Session 1");
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 

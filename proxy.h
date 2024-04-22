@@ -524,7 +524,7 @@ class proxy {
     if (rhs.meta_.has_value()) {
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
-        memcpy(ptr_, rhs.ptr_, F::constraints.max_size);
+        std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
       } else {
         rhs.meta_->Traits::relocatability_meta::dispatcher(ptr_, rhs.ptr_);
       }
