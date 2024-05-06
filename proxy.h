@@ -24,6 +24,8 @@ struct proxiable_ptr_constraints {
   constraint_level destructibility;
 };
 
+template <class F> class proxy;
+
 namespace details {
 
 struct applicable_traits { static constexpr bool applicable = true; };
@@ -359,6 +361,17 @@ template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
+template <class... Ds> struct composite_base : Ds... {};
+template <class P>
+struct base_helper {
+  template <class O, class I> struct reduction : std::type_identity<O> {};
+  template <class... Ds, class I>
+      requires(requires { typename I::template base<P>; } &&
+          std::is_nothrow_default_constructible_v<typename I::template base<P>>)
+  struct reduction<composite_base<Ds...>, I> : std::type_identity<
+      composite_base<Ds..., typename I::template base<P>>> {};
+};
+
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (is_consteval([] { return F::constraints; })) {
@@ -395,6 +408,8 @@ struct facade_traits_impl<F, Ds...>
       composite_meta<>, copyability_meta, relocatability_meta,
       destructibility_meta, typename dispatch_traits<Ds>::meta...,
       typename F::reflection_type>;
+  using base = recursive_reduction_t<base_helper<proxy<F>>::template reduction,
+      composite_base<>, Ds...>;
 
   template <class D>
   static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
@@ -454,7 +469,7 @@ concept proxiable = facade<F> && details::ptr_traits<P>::applicable &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <class F>
-class proxy {
+class proxy : public details::facade_traits<F>::base {
   using Traits = details::facade_traits<F>;
   static_assert(Traits::applicable);
   using DefaultDispatch = typename Traits::default_dispatch;
@@ -894,26 +909,34 @@ struct facade_prototype {
 
 }  // namespace pro
 
+#define ___PRO_DIRECT_FUNC_IMPL(__EXPR) \
+    noexcept(noexcept(__EXPR)) requires(requires { __EXPR; }) { return __EXPR; }
 #define ___PRO_DEF_DISPATCH_IMPL(__NAME, __EXPR, __DEFEXPR, __OVERLOADS) \
     struct __NAME { \
      private: \
+      using __D = __NAME; \
       struct __FT { \
         template <class __T, class... __Args> \
         decltype(auto) operator()(__T& __self, __Args&&... __args) \
-            noexcept(noexcept(__EXPR)) requires(requires { __EXPR; }) \
-            { return __EXPR; } \
+            ___PRO_DIRECT_FUNC_IMPL(__EXPR) \
       }; \
       struct __FV { \
         template <class... __Args> \
         decltype(auto) operator()(__Args&&... __args) \
-            noexcept(noexcept(__DEFEXPR)) requires(requires { __DEFEXPR; }) \
-            { return __DEFEXPR; } \
+            ___PRO_DIRECT_FUNC_IMPL(__DEFEXPR) \
       }; \
     \
      public: \
       using overload_types = __OVERLOADS; \
       template <class __T> \
       using invoker = std::conditional_t<std::is_void_v<__T>, __FV, __FT>; \
+      template <class __P> \
+      struct base { \
+        template <class... __Args> \
+        decltype(auto) __NAME(__Args&&... __args) const \
+          ___PRO_DIRECT_FUNC_IMPL(static_cast<const __P*>(this) \
+              ->template invoke<__D>(std::forward<__Args>(__args)...)) \
+      }; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \

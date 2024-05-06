@@ -48,8 +48,8 @@ class Rectangle {
 std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
   std::stringstream result;
   result << "shape = ";
-  p.invoke<spec::Draw>(result);
-  result << ", area = " << p.invoke<spec::Area>();
+  p.Draw(result);
+  result << ", area = " << p.Area();
   return std::move(result).str();
 }
 
