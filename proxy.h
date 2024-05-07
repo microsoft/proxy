@@ -33,11 +33,11 @@ struct inapplicable_traits { static constexpr bool applicable = false; };
 
 template <template <class, class> class R, class O, class... Is>
 struct recursive_reduction : std::type_identity<O> {};
-template <template <class, class> class R, class O, class I, class... Is>
-struct recursive_reduction<R, O, I, Is...>
-    : recursive_reduction<R, typename R<O, I>::type, Is...> {};
 template <template <class, class> class R, class O, class... Is>
 using recursive_reduction_t = typename recursive_reduction<R, O, Is...>::type;
+template <template <class, class> class R, class O, class I, class... Is>
+struct recursive_reduction<R, O, I, Is...>
+    { using type = recursive_reduction_t<R, typename R<O, I>::type, Is...>; };
 
 template <template <class> class T, class... Is>
 struct first_applicable {};
@@ -362,16 +362,16 @@ struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
 template <class... As> struct composite_accessor : As... {};
-template <class P>
+template <class T>
 struct accessor_helper {
   template <class O, class I> struct reduction : std::type_identity<O> {};
   template <class... As, class I>
-      requires(requires { typename I::template accessor<P>; } &&
+      requires(requires { typename I::template accessor<T>; } &&
           std::is_nothrow_default_constructible_v<
-              typename I::template accessor<P>>)
-  struct reduction<composite_accessor<As...>, I> {
-    using type = composite_accessor<As..., typename I::template accessor<P>>;
-  };
+              typename I::template accessor<T>>)
+  struct reduction<composite_accessor<As...>, I>
+      : std::type_identity<composite_accessor<
+            As..., typename I::template accessor<T>>> {};
 };
 
 template <class F>
@@ -410,7 +410,7 @@ struct facade_traits_impl<F, Ds...>
       composite_meta<>, copyability_meta, relocatability_meta,
       destructibility_meta, typename dispatch_traits<Ds>::meta...,
       typename F::reflection_type>;
-  using accessor = recursive_reduction_t<accessor_helper<proxy<F>>
+  using base = recursive_reduction_t<accessor_helper<proxy<F>>
       ::template reduction, composite_accessor<>, Ds...>;
 
   template <class D>
@@ -471,7 +471,7 @@ concept proxiable = facade<F> && details::ptr_traits<P>::applicable &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <class F>
-class proxy : public details::facade_traits<F>::accessor {
+class proxy : public details::facade_traits<F>::base {
   using Traits = details::facade_traits<F>;
   static_assert(Traits::applicable);
   using DefaultDispatch = typename Traits::default_dispatch;
