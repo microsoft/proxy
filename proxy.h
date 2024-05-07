@@ -361,15 +361,16 @@ template <class... Ms, class I> requires(!std::is_void_v<I>)
 struct facade_meta_reduction<composite_meta<Ms...>, I>
     : std::type_identity<composite_meta<Ms..., I>> {};
 
-template <class... Ds> struct composite_base : Ds... {};
+template <class... As> struct composite_accessor : As... {};
 template <class P>
-struct base_helper {
+struct accessor_helper {
   template <class O, class I> struct reduction : std::type_identity<O> {};
-  template <class... Ds, class I>
-      requires(requires { typename I::template base<P>; } &&
-          std::is_nothrow_default_constructible_v<typename I::template base<P>>)
-  struct reduction<composite_base<Ds...>, I> : std::type_identity<
-      composite_base<Ds..., typename I::template base<P>>> {};
+  template <class... As, class I>
+      requires(requires { typename I::template accessor<P>; } &&
+          std::is_nothrow_default_constructible_v<
+              typename I::template accessor<P>>)
+  struct reduction<composite_accessor<As...>, I> : std::type_identity<
+      composite_accessor<As..., typename I::template accessor<P>>> {};
 };
 
 template <class F>
@@ -408,8 +409,8 @@ struct facade_traits_impl<F, Ds...>
       composite_meta<>, copyability_meta, relocatability_meta,
       destructibility_meta, typename dispatch_traits<Ds>::meta...,
       typename F::reflection_type>;
-  using base = recursive_reduction_t<base_helper<proxy<F>>::template reduction,
-      composite_base<>, Ds...>;
+  using accessor = recursive_reduction_t<accessor_helper<proxy<F>>
+      ::template reduction, composite_accessor<>, Ds...>;
 
   template <class D>
   static constexpr bool has_dispatch = (std::is_same_v<D, Ds> || ...);
@@ -469,7 +470,7 @@ concept proxiable = facade<F> && details::ptr_traits<P>::applicable &&
     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <class F>
-class proxy : public details::facade_traits<F>::base {
+class proxy : public details::facade_traits<F>::accessor {
   using Traits = details::facade_traits<F>;
   static_assert(Traits::applicable);
   using DefaultDispatch = typename Traits::default_dispatch;
@@ -886,6 +887,9 @@ proxy<F> make_proxy(T&& value) {
 namespace details {
 
 template <class... Args> void invalid_call(Args&&...) = delete;
+template <class T, class...> struct dependent : std::type_identity<T> {};
+template <class T, class... U>
+using dependent_t = typename dependent<T, U...>::type;
 
 template <class O, class I> struct flat_reduction : std::type_identity<O> {};
 template <class O, class... Is>
@@ -931,11 +935,12 @@ struct facade_prototype {
       template <class __T> \
       using invoker = std::conditional_t<std::is_void_v<__T>, __FV, __FT>; \
       template <class __P> \
-      struct base { \
+      struct accessor { \
         template <class... __Args> \
         decltype(auto) __NAME(__Args&&... __args) const \
-          ___PRO_DIRECT_FUNC_IMPL(static_cast<const __P*>(this) \
-              ->template invoke<__D>(std::forward<__Args>(__args)...)) \
+          ___PRO_DIRECT_FUNC_IMPL((static_cast<::pro::details::dependent_t< \
+              const __P*, __Args...>>(this)->template invoke<__D>( \
+              std::forward<__Args>(__args)...))) \
       }; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
