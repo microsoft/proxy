@@ -369,8 +369,9 @@ struct accessor_helper {
       requires(requires { typename I::template accessor<P>; } &&
           std::is_nothrow_default_constructible_v<
               typename I::template accessor<P>>)
-  struct reduction<composite_accessor<As...>, I> : std::type_identity<
-      composite_accessor<As..., typename I::template accessor<P>>> {};
+  struct reduction<composite_accessor<As...>, I> {
+    using type = composite_accessor<As..., typename I::template accessor<P>>;
+  };
 };
 
 template <class F>
