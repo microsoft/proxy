@@ -181,16 +181,16 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   ASSERT_EQ(sum, 21);
 }
 
-TEST(ProxyInvocationTests, TestBase) {
+TEST(ProxyInvocationTests, TestAccessor) {
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<spec::Container<int>> p = &l;
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
+  ASSERT_EQ(p.GetSize(), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
   p.ForEach(&accumulate_sum);
   ASSERT_EQ(sum, 6);
   p.Append(4).Append(5).Append(6);
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 6);
+  ASSERT_EQ(p.GetSize(), 6);
   sum = 0;
   p.ForEach(&accumulate_sum);
   ASSERT_EQ(sum, 21);

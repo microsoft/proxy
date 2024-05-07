@@ -919,7 +919,7 @@ struct facade_prototype {
 #define ___PRO_DEF_DISPATCH_IMPL(__NAME, __EXPR, __DEFEXPR, __OVERLOADS) \
     struct __NAME { \
      private: \
-      using __D = __NAME; \
+      using __Name = __NAME; \
       struct __FT { \
         template <class __T, class... __Args> \
         decltype(auto) operator()(__T& __self, __Args&&... __args) \
@@ -939,9 +939,9 @@ struct facade_prototype {
       struct accessor { \
         template <class... __Args> \
         decltype(auto) __NAME(__Args&&... __args) const \
-          ___PRO_DIRECT_FUNC_IMPL((static_cast<::pro::details::dependent_t< \
-              const __P*, __Args...>>(this)->template invoke<__D>( \
-              std::forward<__Args>(__args)...))) \
+            ___PRO_DIRECT_FUNC_IMPL((static_cast<::pro::details::dependent_t< \
+                const __P*, __Args...>>(this)->template invoke<__Name>( \
+                std::forward<__Args>(__args)...))) \
       }; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
