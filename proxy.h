@@ -364,14 +364,13 @@ struct facade_meta_reduction<composite_meta<Ms...>, I>
 template <class... As> struct composite_accessor : As... {};
 template <class T>
 struct accessor_helper {
+  template <class D> using accessor = typename D::template accessor<T>;
   template <class O, class I> struct reduction : std::type_identity<O> {};
   template <class... As, class I>
-      requires(requires { typename I::template accessor<T>; } &&
-          std::is_nothrow_default_constructible_v<
-              typename I::template accessor<T>>)
+      requires(requires { typename accessor<I>; } &&
+          std::is_nothrow_default_constructible_v<accessor<I>>)
   struct reduction<composite_accessor<As...>, I>
-      : std::type_identity<composite_accessor<
-            As..., typename I::template accessor<T>>> {};
+      : std::type_identity<composite_accessor<As..., accessor<I>>> {};
 };
 
 template <class F>
