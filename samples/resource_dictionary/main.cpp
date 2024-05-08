@@ -13,7 +13,7 @@ PRO_DEF_FACADE(Dictionary, at);
 }  // namespace spec
 
 void demo_print(pro::proxy<spec::Dictionary> dictionary) {
-  std::cout << dictionary(1) << std::endl;
+  std::cout << dictionary.at(1) << std::endl;
 }
 
 int main() {
