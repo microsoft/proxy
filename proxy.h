@@ -933,31 +933,31 @@ struct facade_prototype {
      public: \
       using overload_types = __OVERLOADS; \
       template <class __T> \
-      using invoker = std::conditional_t<std::is_void_v<__T>, __FV, __FT>; \
+      using invoker = ::std::conditional_t<::std::is_void_v<__T>, __FV, __FT>; \
       template <class __P> \
       struct accessor { \
         template <class... __Args> \
         decltype(auto) __NAME(__Args&&... __args) const \
             ___PRO_DIRECT_FUNC_IMPL((static_cast<::pro::details::dependent_t< \
                 const __P*, __Args...>>(this)->template invoke<__Name>( \
-                std::forward<__Args>(__args)...))) \
+                ::std::forward<__Args>(__args)...))) \
       }; \
     }
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
-        __self.__FUNC(std::forward<__Args>(__args)...), \
-        __DEFFUNC(std::forward<__Args>(__args)...), std::tuple<__VA_ARGS__>)
+        __self.__FUNC(::std::forward<__Args>(__args)...), \
+        __DEFFUNC(::std::forward<__Args>(__args)...), ::std::tuple<__VA_ARGS__>)
 #define PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
-        __FUNC(__self, std::forward<__Args>(__args)...), \
-        __DEFFUNC(std::forward<__Args>(__args)...), std::tuple<__VA_ARGS__>)
+        __FUNC(__self, ::std::forward<__Args>(__args)...), \
+        __DEFFUNC(::std::forward<__Args>(__args)...), ::std::tuple<__VA_ARGS__>)
 #define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
     PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT( \
         __NAME, __NAME, ::pro::details::invalid_call, __VA_ARGS__)
 #define PRO_DEF_FREE_DISPATCH(__NAME, __FUNC, ...) \
     PRO_DEF_FREE_DISPATCH_WITH_DEFAULT( \
         __NAME, __FUNC, ::pro::details::invalid_call, __VA_ARGS__)
-#define PRO_MAKE_DISPATCH_PACK(...) std::tuple<__VA_ARGS__>
+#define PRO_MAKE_DISPATCH_PACK(...) ::std::tuple<__VA_ARGS__>
 #define PRO_DEF_FACADE(__NAME, ...) \
     struct __NAME : ::pro::details::facade_prototype<__VA_ARGS__> {}
 

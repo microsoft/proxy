@@ -29,19 +29,19 @@ extern "C" int main() {
   std::tuple<int, double> t{11, 22};
   pro::proxy<spec::Hashable> p;
   p = &i;
-  if (p() != GetHash(i)) {
+  if (p.GetHash() != GetHash(i)) {
     return 1;
   }
   p = &d;
-  if (p() != GetHash(d)) {
+  if (p.GetHash() != GetHash(d)) {
     return 1;
   }
   p = pro::make_proxy_inplace<spec::Hashable>(s);
-  if (p() != GetHash(s)) {
+  if (p.GetHash() != GetHash(s)) {
     return 1;
   }
   p = &t;
-  if (p() != GetDefaultHash()) {
+  if (p.GetHash() != GetDefaultHash()) {
     return 1;
   }
   return 0;
