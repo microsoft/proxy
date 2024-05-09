@@ -48,8 +48,8 @@ class Rectangle {
 std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
   std::stringstream result;
   result << "shape = ";
-  p.Draw(result);
-  result << ", area = " << p.Area();
+  p.Draw(result);  // Polymorphic call
+  result << ", area = " << p.Area();  // Polymorphic call
   return std::move(result).str();
 }
 
@@ -62,7 +62,7 @@ pro::proxy<spec::Drawable> CreateRectangleAsDrawable(int width, int height) {
 }
 ```
 
-Here is another demo showing how to define overloads in a dispatch. Note that `.invoke<>` can be ommitted when only 1 dispatch is defined in a facade:
+Here is another demo showing how to define overloads in a dispatch: just to add any number of signatures in the definition of a dispatch.
 
 ```cpp
 // Specifications of abstraction
@@ -75,11 +75,11 @@ PRO_DEF_FACADE(Logger, Log);
 
 // Client - Consumer
 void MyVerboseFunction(pro::proxy<spec::Logger> logger) {
-  logger("hello");
+  logger.Log("hello");
   try {
     throw std::runtime_error{"runtime error!"};
   } catch (const std::exception& e) {
-    logger("world", e);
+    logger.Log("world", e);
   }
 }
 
@@ -101,7 +101,7 @@ int main() {
 }
 ```
 
-By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.
+By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.  Note that `.Call` can be omitted when only 1 dispatch is defined in a facade:
 
 ```cpp
 // Specifications of abstraction
@@ -139,7 +139,7 @@ int main() {
 }
 ```
 
-Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/voEacxT76)).
+Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/4cK8PPTE1)).
 
 ## Minimum requirements for compilers
 
