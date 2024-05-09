@@ -23,10 +23,10 @@ PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
 class Rectangle {
  public:
+  explicit Rectangle(double width, double height) : width_(width), height_(height) {}
+  Rectangle(const Rectangle&) = default;
   void Draw(std::ostream& out) const
       { out << "{Rectangle: width = " << width_ << ", height = " << height_ << "}"; }
-  void SetWidth(double width) { width_ = width; }
-  void SetHeight(double height) { height_ = height; }
   double Area() const noexcept { return width_ * height_; }
 
  private:
@@ -36,8 +36,9 @@ class Rectangle {
 
 class Circle {
  public:
+  explicit Circle(double radius) : radius_(radius) {}
+  Circle(const Circle&) = default;
   void Draw(std::ostream& out) const { out << "{Circle: radius = " << radius_ << "}"; }
-  void SetRadius(double radius) { radius_ = radius; }
   double Area() const noexcept { return std::numbers::pi * radius_ * radius_; }
 
  private:
@@ -88,18 +89,11 @@ pro::proxy<spec::Drawable> MakeDrawableFromCommand(const std::string& s) {
       if (parsed.size() == 3u) {
         static std::pmr::unsynchronized_pool_resource rectangle_memory_pool;
         std::pmr::polymorphic_allocator<> alloc{&rectangle_memory_pool};
-        auto deleter = [alloc](Rectangle* ptr) mutable
-            { alloc.delete_object<Rectangle>(ptr); };
-        Rectangle* instance = alloc.new_object<Rectangle>();
-        std::unique_ptr<Rectangle, decltype(deleter)> p{instance, deleter};
-        p->SetWidth(std::stod(parsed[1u]));
-        p->SetHeight(std::stod(parsed[2u]));
-        return p;
+        return pro::allocate_proxy<spec::Drawable, Rectangle>(alloc, std::stod(parsed[1u]), std::stod(parsed[2u]));
       }
     } else if (parsed[0u] == "Circle") {
       if (parsed.size() == 2u) {
-        Circle circle;
-        circle.SetRadius(std::stod(parsed[1u]));
+        Circle circle{std::stod(parsed[1u])};
         return pro::make_proxy<spec::Drawable>(circle);
       }
     } else if (parsed[0u] == "Point") {
