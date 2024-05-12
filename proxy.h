@@ -915,7 +915,7 @@ struct facade_prototype {
 
 #define ___PRO_DIRECT_FUNC_IMPL(__EXPR) \
     noexcept(noexcept(__EXPR)) requires(requires { __EXPR; }) { return __EXPR; }
-#define ___PRO_DEF_DISPATCH_IMPL(__NAME, __EXPR, __DEFEXPR, __OVERLOADS) \
+#define ___PRO_DEF_DISPATCH_IMPL(__NAME, __EXPR, __DEFEXPR, ...) \
     struct __NAME { \
      private: \
       using __Name = __NAME; \
@@ -931,7 +931,7 @@ struct facade_prototype {
       }; \
     \
      public: \
-      using overload_types = __OVERLOADS; \
+      using overload_types = ::std::tuple<__VA_ARGS__>; \
       template <class __T> \
       using invoker = ::std::conditional_t<::std::is_void_v<__T>, __FV, __FT>; \
       template <class __P> \
@@ -946,11 +946,11 @@ struct facade_prototype {
 #define PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
         __self.__FUNC(::std::forward<__Args>(__args)...), \
-        __DEFFUNC(::std::forward<__Args>(__args)...), ::std::tuple<__VA_ARGS__>)
+        __DEFFUNC(::std::forward<__Args>(__args)...), __VA_ARGS__)
 #define PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC, ...) \
     ___PRO_DEF_DISPATCH_IMPL(__NAME, \
         __FUNC(__self, ::std::forward<__Args>(__args)...), \
-        __DEFFUNC(::std::forward<__Args>(__args)...), ::std::tuple<__VA_ARGS__>)
+        __DEFFUNC(::std::forward<__Args>(__args)...), __VA_ARGS__)
 #define PRO_DEF_MEMBER_DISPATCH(__NAME, ...) \
     PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT( \
         __NAME, __NAME, ::pro::details::invalid_call, __VA_ARGS__)
