@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
-#include <format>
 #include <iomanip>
 #include <memory>
 #include <memory_resource>
@@ -116,10 +115,10 @@ class StreamLogger {
   StreamLogger(const StreamLogger&) = default;
 
   void Log(const char* s) {
-    *out_ << std::format("[INFO] {}\n", s);
+    *out_ << "[INFO] " << s << "\n";
   }
   void Log(const char* s, const std::exception& e) {
-    *out_ << std::format("[ERROR] {} (exception info: {})\n", s, e.what());
+    *out_ << "[ERROR] " << s << " (exception info: "  << e.what() << ")\n";
   }
 
  private:
