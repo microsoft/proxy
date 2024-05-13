@@ -19,6 +19,9 @@ PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
 PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
 PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
 
+PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
+PRO_DEF_FACADE(Logger, Log);
+
 }  // namespace spec
 
 class Rectangle {
@@ -106,6 +109,22 @@ pro::proxy<spec::Drawable> MakeDrawableFromCommand(const std::string& s) {
   throw std::runtime_error{"Invalid command"};
 }
 
+class StreamLogger {
+ public:
+  explicit StreamLogger(std::ostream& out) : out_(&out) {}
+  StreamLogger(const StreamLogger&) = default;
+
+  void Log(const char* s) {
+    *out_ << "[INFO] " << s << "\n";
+  }
+  void Log(const char* s, const std::exception& e) {
+    *out_ << "[ERROR] " << s << " (exception info: "  << e.what() << ")\n";
+  }
+
+ private:
+  std::ostream* out_;
+};
+
 }  // namespace
 
 TEST(ProxyIntegrationTests, TestDrawable) {
@@ -126,4 +145,18 @@ TEST(ProxyIntegrationTests, TestDrawable) {
   } catch (const std::runtime_error& e) {
     ASSERT_STREQ(e.what(), "Invalid command");
   }
+}
+
+TEST(ProxyIntegrationTests, TestLogger) {
+  std::ostringstream out;
+  auto logger = pro::make_proxy<spec::Logger, StreamLogger>(out);
+  logger.Log("hello");
+  try {
+    throw std::runtime_error{"runtime error!"};
+  } catch (const std::exception& e) {
+    logger.Log("world", e);
+  }
+  auto content = std::move(out).str();
+  ASSERT_EQ(content, "[INFO] hello\n\
+[ERROR] world (exception info: runtime error!)\n");
 }
