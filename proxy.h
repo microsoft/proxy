@@ -174,52 +174,53 @@ R invoke_dispatch(Args&&... args) {
   }
 }
 template <class P, class F, class R, class... Args>
-R invocation_dispatcher_ref(const char* self, Args... args)
+R invocation_dispatcher_ref(const std::byte* self, Args... args)
     noexcept(is_invoker_well_formed<
         F, typename ptr_traits<P>::target_type, true, R, Args...>()) {
   return invoke_dispatch<F, R>(ptr_traits<P>::dereference(*std::launder(
       reinterpret_cast<const P*>(self))), std::forward<Args>(args)...);
 }
 template <class P, class F, class R, class... Args>
-R invocation_dispatcher_ptr(const char* self, Args... args)
+R invocation_dispatcher_ptr(const std::byte* self, Args... args)
     noexcept(is_invoker_well_formed<F, const P, true, R, Args...>()) {
   return invoke_dispatch<F, R>(*std::launder(reinterpret_cast<const P*>(self)),
       std::forward<Args>(args)...);
 }
 template <class F, class R, class... Args>
-R invocation_dispatcher_void(const char*, Args... args)
+R invocation_dispatcher_void(const std::byte*, Args... args)
     noexcept(is_invoker_well_formed<F, void, true, R, Args...>())
     { return invoke_dispatch<F, R>(std::forward<Args>(args)...); }
 template <class P>
-void copying_dispatcher(char* self, const char* rhs)
+void copying_dispatcher(std::byte* self, const std::byte* rhs)
     noexcept(has_copyability<P>(constraint_level::nothrow)) {
   std::construct_at(reinterpret_cast<P*>(self),
       *std::launder(reinterpret_cast<const P*>(rhs)));
 }
 template <std::size_t Len, std::size_t Align>
-void copying_default_dispatcher(char* self, const char* rhs) noexcept {
+void copying_default_dispatcher(std::byte* self, const std::byte* rhs)
+    noexcept {
   std::uninitialized_copy_n(
       std::assume_aligned<Align>(rhs), Len, std::assume_aligned<Align>(self));
 }
 template <class P>
-void relocation_dispatcher(char* self, const char* rhs)
+void relocation_dispatcher(std::byte* self, const std::byte* rhs)
     noexcept(has_relocatability<P>(constraint_level::nothrow)) {
-  P* other = std::launder(reinterpret_cast<P*>(const_cast<char*>(rhs)));
+  P* other = std::launder(reinterpret_cast<P*>(const_cast<std::byte*>(rhs)));
   std::construct_at(reinterpret_cast<P*>(self), std::move(*other));
   std::destroy_at(other);
 }
 template <class P>
-void destruction_dispatcher(char* self)
+void destruction_dispatcher(std::byte* self)
     noexcept(has_destructibility<P>(constraint_level::nothrow))
     { std::destroy_at(std::launder(reinterpret_cast<P*>(self))); }
-inline void destruction_default_dispatcher(char*) noexcept {}
+inline void destruction_default_dispatcher(std::byte*) noexcept {}
 
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
   template <class D>
   struct meta_provider {
     template <class P>
-    static constexpr func_ptr_t<NE, R, const char*, Args...> get() {
+    static constexpr func_ptr_t<NE, R, const std::byte*, Args...> get() {
       if constexpr (invocable_dispatch<
           D, typename ptr_traits<P>::target_type, NE, R, Args...>) {
         return &invocation_dispatcher_ref<P, typename D::template invoker<
@@ -314,7 +315,7 @@ struct dispatch_traits<D> : instantiated_t<
 template <bool NE>
 struct copyability_meta_provider {
   template <class P>
-  static constexpr func_ptr_t<NE, void, char*, const char*> get() {
+  static constexpr func_ptr_t<NE, void, std::byte*, const std::byte*> get() {
     if constexpr (has_copyability<P>(constraint_level::trivial)) {
       return &copying_default_dispatcher<sizeof(P), alignof(P)>;
     } else {
@@ -325,7 +326,7 @@ struct copyability_meta_provider {
 template <bool NE>
 struct relocatability_meta_provider {
   template <class P>
-  static constexpr func_ptr_t<NE, void, char*, const char*> get() {
+  static constexpr func_ptr_t<NE, void, std::byte*, const std::byte*> get() {
     if constexpr (has_relocatability<P>(constraint_level::trivial)) {
       return &copying_default_dispatcher<sizeof(P), alignof(P)>;
     } else {
@@ -336,7 +337,7 @@ struct relocatability_meta_provider {
 template <bool NE>
 struct destructibility_meta_provider {
   template <class P>
-  static constexpr func_ptr_t<NE, void, char*> get() {
+  static constexpr func_ptr_t<NE, void, std::byte*> get() {
     if constexpr (has_destructibility<P>(constraint_level::trivial)) {
       return &destruction_default_dispatcher;
     } else {
@@ -685,7 +686,7 @@ class proxy : public details::facade_traits<F>::base {
   }
 
   details::meta_ptr<typename Traits::meta> meta_;
-  alignas(F::constraints.max_align) char ptr_[F::constraints.max_size];
+  alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
 
 constexpr proxiable_ptr_constraints relocatable_ptr_constraints{
