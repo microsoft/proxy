@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
+#include <cstddef>
 #include <bit>
 #include <concepts>
 #include <initializer_list>
