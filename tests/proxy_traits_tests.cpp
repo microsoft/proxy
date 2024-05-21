@@ -174,7 +174,7 @@ struct FacadeWithTupleLikeDispatches {
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
   using reflection_type = void;
 };
-static_assert(pro::facade<FacadeWithTupleLikeDispatches>);
+static_assert(pro::details::facade_traits<FacadeWithTupleLikeDispatches>::applicable);
 
 struct BadFacade_MissingDispatchTypes {
 #ifdef __clang__
@@ -187,7 +187,7 @@ struct BadFacade_MissingDispatchTypes {
 #endif  // __clang__
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_MissingDispatchTypes>);
+static_assert(!pro::details::facade_traits<BadFacade_MissingDispatchTypes>::applicable);
 
 struct BadFacade_BadDispatchTypes {
   using dispatch_types = int;
@@ -201,20 +201,20 @@ struct BadFacade_BadDispatchTypes {
 #endif  // __clang__
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadDispatchTypes>);
+static_assert(!pro::details::facade_traits<BadFacade_BadDispatchTypes>::applicable);
 
 struct BadFacade_MissingConstraints {
   using dispatch_types = std::tuple<>;
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_MissingConstraints>);
+static_assert(!pro::details::facade_traits<BadFacade_MissingConstraints>::applicable);
 
 struct BadFacade_BadConstraints_UnexpectedType {
   using dispatch_types = std::tuple<>;
   static constexpr auto constraints = 0;
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadConstraints_UnexpectedType>);
+static_assert(!pro::details::facade_traits<BadFacade_BadConstraints_UnexpectedType>::applicable);
 
 struct BadFacade_BadConstraints_BadAlignment {
   using dispatch_types = std::tuple<>;
@@ -227,7 +227,7 @@ struct BadFacade_BadConstraints_BadAlignment {
   };
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadConstraints_BadAlignment>);
+static_assert(!pro::details::facade_traits<BadFacade_BadConstraints_BadAlignment>::applicable);
 
 struct BadFacade_BadConstraints_BadSize {
   using dispatch_types = std::tuple<>;
@@ -240,26 +240,26 @@ struct BadFacade_BadConstraints_BadSize {
   };
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
+static_assert(!pro::details::facade_traits<BadFacade_BadConstraints_BadSize>::applicable);
 
 struct BadFacade_BadConstraints_NotConstant {
   using dispatch_types = std::tuple<>;
   static inline const auto constraints = pro::relocatable_ptr_constraints;
   using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
+static_assert(!pro::details::facade_traits<BadFacade_BadConstraints_NotConstant>::applicable);
 
 struct BadFacade_MissingReflectionType {
   using dispatch_types = std::tuple<>;
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
 };
-static_assert(!pro::facade<BadFacade_MissingReflectionType>);
+static_assert(!pro::details::facade_traits<BadFacade_MissingReflectionType>::applicable);
 
 struct BadFacade_BadReflectionType {
   using dispatch_types = std::tuple<>;
   static constexpr auto constraints = pro::relocatable_ptr_constraints;
   using reflection_type = std::unique_ptr<int>;  // Probably constexpr, unknown until the evaluation of proxiablility
 };
-static_assert(pro::facade<BadFacade_BadReflectionType>);
+static_assert(pro::details::facade_traits<BadFacade_BadReflectionType>::applicable);
 
 }  // namespace
