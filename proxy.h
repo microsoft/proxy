@@ -40,7 +40,7 @@ template <template <class, class> class R, class O, class... Is>
 using recursive_reduction_t = typename recursive_reduction<R, O, Is...>::type;
 template <template <class, class> class R, class O, class I, class... Is>
 struct recursive_reduction<R, O, I, Is...>
-    : std::type_identity<recursive_reduction_t<R, R<O, I>, Is...>> {};
+    { using type = recursive_reduction_t<R, R<O, I>, Is...>; };
 
 template <template <class> class T, class... Is> struct first_applicable {};
 template <template <class> class T, class I, class... Is>
@@ -405,8 +405,9 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   using conv_accessor = composite_accessor<
       F, typename conv_traits<Cs>::dispatch_type...>;
   template <class D, class... Args>
-  using matched_overload = conv_traits<first_applicable_t<dispatch_match_helper<
-      D>::template traits, Cs...>>::template matched_overload<Args...>;
+  using matched_overload = typename conv_traits<
+      first_applicable_t<dispatch_match_helper<D>::template traits, Cs...>>
+      ::template matched_overload<Args...>;
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
