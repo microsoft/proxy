@@ -17,39 +17,93 @@ namespace {
 
 namespace spec {
 
-template <class... Os>
-PRO_DEF_FREE_DISPATCH(Call, std::invoke, Os...);
-template <class... Os>
-PRO_DEF_FACADE(Callable, Call<Os...>, pro::copyable_ptr_constraints);
+struct Call {
+  template <class T, class... Args>
+  decltype(auto) operator()(T& v, Args&&... args)
+      noexcept(std::is_nothrow_invocable_v<T&, Args...>)
+      requires(std::is_invocable_v<T&, Args...>)
+      { return std::invoke(v, std::forward<Args>(args)...); }
 
-template <class R>
-R NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
-template <class... Os>
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(WeakCall, std::invoke, NotImplemented<void>, Os...);
-template <class... Os>
-PRO_DEF_FACADE(WeakCallable, WeakCall<Os...>, pro::copyable_ptr_constraints);
+  template <class P>
+  struct accessor {
+    template <class... Args>
+    decltype(auto) operator()(Args&&... args) const
+        noexcept(noexcept(static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...)))
+        requires(requires { static_cast<const P&>(pro::details::dependent<Args...>(*this)).template invoke<Call>(std::forward<Args>(args)...); })
+        { return static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...); }
+  };
+};
 
-PRO_DEF_FREE_DISPATCH(GetSize, std::ranges::size, std::size_t() noexcept);
+template <class... Os>
+struct Callable : pro::facade_builder
+    ::support_copyability<pro::constraint_level::nontrivial>
+    ::add_convention<Call, Os...>
+    ::build {};
+
+struct Wildcard {
+  template <class T>
+  operator T() const noexcept { std::terminate(); }
+};
+
+Wildcard NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
+
+struct WeakCall {
+  template <class T, class... Args>
+  decltype(auto) operator()(T& v, Args&&... args)
+      noexcept(std::is_nothrow_invocable_v<T&, Args...>)
+      requires(std::is_invocable_v<T&, Args...>)
+      { return std::invoke(v, std::forward<Args>(args)...); }
+
+  template <class... Args>
+  Wildcard operator()(std::nullptr_t, Args&&...) { NotImplemented(); return {}; }
+
+  template <class P>
+  struct accessor {
+    template <class... Args>
+    decltype(auto) operator()(Args&&... args) const
+        noexcept(noexcept(static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...)))
+        requires(requires { static_cast<const P&>(pro::details::dependent<Args...>(*this)).template invoke<WeakCall>(std::forward<Args>(args)...); })
+        { return static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...); }
+  };
+};
+
+template <class... Os>
+struct WeakCallable : pro::facade_builder
+    ::support_copyability<pro::constraint_level::nontrivial>
+    ::add_convention<WeakCall, Os...>
+    ::build {};
+
+PRO_DEF_FREE_DISPATCH(FreeSize, Size, std::ranges::size);
+PRO_DEF_FREE_DISPATCH(FreeForEach, ForEach, std::ranges::for_each);
 
 template <class T>
-PRO_DEF_FREE_DISPATCH(ForEach, std::ranges::for_each, void(pro::proxy<Callable<void(T&)>>));
-template <class T>
-PRO_DEF_FACADE(Iterable, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize));
+struct Iterable : pro::facade_builder
+    ::add_convention<FreeForEach, void(pro::proxy<Callable<void(T&)>>)>
+    ::template add_convention<FreeSize, std::size_t() noexcept>
+    ::build {};
 
-template <class T> struct Append;
 template <class T>
-PRO_DEF_FACADE(Container, PRO_MAKE_DISPATCH_PACK(ForEach<T>, GetSize, Append<T>));
+struct Container;
 
 template <class C, class T>
 pro::proxy<Container<T>> AppendImpl(C& container, T&& v) {
   container.push_back(std::move(v));
   return &container;
 }
-template <class T>
-PRO_DEF_FREE_DISPATCH(Append, AppendImpl, pro::proxy<Container<T>>(T));
 
-PRO_DEF_MEMBER_DISPATCH_WITH_DEFAULT(WeakAt, at, NotImplemented<std::string>, std::string(int));
-PRO_DEF_FACADE(ResourceDictionary, WeakAt);
+PRO_DEF_FREE_DISPATCH(FreeAppend, Append, AppendImpl);
+
+template <class T>
+struct Container : pro::facade_builder
+    ::add_facade<Iterable<T>>
+    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T)>
+    ::build {};
+
+PRO_DEF_MEM_DISPATCH_WITH_DEFAULT(MemAtWeak, at, NotImplemented);
+
+struct ResourceDictionary : pro::facade_builder
+    ::add_convention<MemAtWeak, std::string(int)>
+    ::build {};
 
 template <class F, class T>
 pro::proxy<F> LockImpl(const std::weak_ptr<T>& p) {
@@ -60,15 +114,24 @@ pro::proxy<F> LockImpl(const std::weak_ptr<T>& p) {
   return nullptr;
 }
 template <class F>
-PRO_DEF_FREE_DISPATCH(Lock, LockImpl<F>, pro::proxy<F>());
+PRO_DEF_FREE_DISPATCH(FreeLock, Lock, LockImpl<F>);
+
 template <class F>
-PRO_DEF_FACADE(Weak, Lock<F>, pro::copyable_ptr_constraints);
+struct Weak : pro::facade_builder
+    ::support_copyability<pro::constraint_level::nontrivial>
+    ::add_convention<FreeLock<F>, pro::proxy<F>()>
+    ::build {};
+
 template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
-template <class F>
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(GetWeak, GetWeakImpl<F>, std::nullptr_t, pro::proxy<Weak<F>>());
 
-PRO_DEF_FACADE(SharedStringable, PRO_MAKE_DISPATCH_PACK(utils::spec::ToString, GetWeak<SharedStringable>), pro::copyable_ptr_constraints);
+template <class F>
+PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(FreeGetWeak, GetWeak, GetWeakImpl<F>, std::nullptr_t);
+
+struct SharedStringable : pro::facade_builder
+    ::add_facade<utils::spec::Stringable>
+    ::add_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>()>
+    ::build {};
 
 }  // namespace spec
 
@@ -86,8 +149,8 @@ concept InvocableWithoutDispatch =
 };
 
 // Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::Call<int(double)>, false, double>);
-static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::Call<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::Call, false, double>);
+static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::Call, false, std::nullptr_t>);  // Wrong arguments
 static_assert(!InvocableWithoutDispatch<spec::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
 static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
 static_assert(InvocableWithoutDispatch<spec::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
@@ -95,9 +158,9 @@ static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noe
 static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
 
 // Static assertions for a facade of multiple dispatches
-static_assert(InvocableWithDispatch<spec::Iterable<int>, spec::GetSize, true>);
-static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::ForEach<int>, false, pro::proxy<spec::Callable<void(double&)>>>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::Append<int>, false>);  // Wrong dispatch
+static_assert(InvocableWithDispatch<spec::Iterable<int>, spec::FreeSize, true>);
+static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::FreeForEach, false, pro::proxy<spec::Callable<void(double&)>>>);  // Wrong arguments
+static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::FreeAppend, false>);  // Wrong dispatch
 static_assert(!InvocableWithoutDispatch<spec::Iterable<int>, false>);  // Invoking without specifying a dispatch
 
 template <class... Args>
@@ -119,7 +182,7 @@ TEST(ProxyInvocationTests, TestArgumentForwarding) {
     return expected_result;
   };
   pro::proxy<spec::Callable<int(std::string, std::vector<int>)>> p = &f;
-  int result = p.invoke(arg1, std::move(arg2));
+  int result = p(arg1, std::move(arg2));
   ASSERT_TRUE(p.has_value());
   ASSERT_EQ(arg1_received, arg1);
   ASSERT_TRUE(arg2.empty());
@@ -133,7 +196,7 @@ TEST(ProxyInvocationTests, TestThrow) {
   bool exception_thrown = false;
   pro::proxy<spec::Callable<void()>> p = &f;
   try {
-    p.invoke();
+    p();
   } catch (const std::runtime_error& e) {
     exception_thrown = true;
     ASSERT_STREQ(e.what(), expected_error_message);
@@ -145,59 +208,49 @@ TEST(ProxyInvocationTests, TestThrow) {
 TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<spec::Iterable<int>> p = &l;
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
+  ASSERT_EQ(Size(p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<spec::ForEach<int>>(&accumulate_sum);
+  ForEach(p, &accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
-  using SomeCombination = std::tuple<spec::ForEach<int>, std::tuple<spec::GetSize, spec::ForEach<int>>>;
-  PRO_DEF_FACADE(DuplicatedIterable, PRO_MAKE_DISPATCH_PACK(spec::ForEach<int>, SomeCombination, spec::ForEach<int>, spec::GetSize, spec::GetSize));
+  struct DuplicatedIterable : pro::facade_builder
+      ::add_convention<spec::FreeForEach, void(pro::proxy<spec::Callable<void(int&)>>)>
+      ::add_convention<spec::FreeSize, std::size_t()>
+      ::add_convention<spec::FreeForEach, void(pro::proxy<spec::Callable<void(int&)>>)>
+      ::build {};
   static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta) ==
       sizeof(pro::details::facade_traits<spec::Iterable<int>>::meta));
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<DuplicatedIterable> p = &l;
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
+  ASSERT_EQ(Size(p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<spec::ForEach<int>>(&accumulate_sum);
+  ForEach(p, &accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<spec::Container<int>> p = &l;
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 3);
+  ASSERT_EQ(Size(p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  p.invoke<spec::ForEach<int>>(&accumulate_sum);
+  ForEach(p, &accumulate_sum);
   ASSERT_EQ(sum, 6);
-  p.invoke<spec::Append<int>>(4).invoke<spec::Append<int>>(5).invoke<spec::Append<int>>(6);
-  ASSERT_EQ(p.invoke<spec::GetSize>(), 6);
+  Append(Append(Append(p, 4), 5), 6);
+  ASSERT_EQ(Size(p), 6);
   sum = 0;
-  p.invoke<spec::ForEach<int>>(&accumulate_sum);
-  ASSERT_EQ(sum, 21);
-}
-
-TEST(ProxyInvocationTests, TestAccessor) {
-  std::list<int> l = { 1, 2, 3 };
-  pro::proxy<spec::Container<int>> p = &l;
-  ASSERT_EQ(p.GetSize(), 3);
-  int sum = 0;
-  auto accumulate_sum = [&](int x) { sum += x; };
-  p.ForEach(&accumulate_sum);
-  ASSERT_EQ(sum, 6);
-  p.Append(4).Append(5).Append(6);
-  ASSERT_EQ(p.GetSize(), 6);
-  sum = 0;
-  p.ForEach(&accumulate_sum);
+  ForEach(p, &accumulate_sum);
   ASSERT_EQ(sum, 21);
 }
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
-  PRO_DEF_FACADE(OverloadedCallable, spec::Call<void(int), void(double), void(const char*), void(char*), void(std::string, int)>);
+  struct OverloadedCallable : pro::facade_builder
+      ::add_convention<spec::Call, void(int), void(double), void(const char*), void(char*), void(std::string, int)>
+      ::build {};
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
       { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
@@ -239,12 +292,12 @@ TEST(ProxyInvocationTests, TestMemberDispatchDefault) {
   std::vector<std::string> container1{ "hello", "world", "!"};
   std::list<std::string> container2{ "hello", "world" };
   pro::proxy<spec::ResourceDictionary> p = &container1;
-  ASSERT_EQ(p(0), "hello");
+  ASSERT_EQ(p.at(0), "hello");
   p = &container2;
   {
     bool exception_thrown = false;
     try {
-      p(0);
+      p.at(0);
     } catch (const std::runtime_error& e) {
       exception_thrown = true;
       ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
@@ -276,16 +329,17 @@ TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
 TEST(ProxyInvocationTests, TestObserverDispatch) {
   int test_val = 123;
   pro::proxy<spec::SharedStringable> p{std::make_shared<int>(test_val)};
-  auto weak = p.invoke<spec::GetWeak<spec::SharedStringable>>();
+  auto weak = GetWeak(p);
   ASSERT_TRUE(weak.has_value());
   {
-    auto locked = weak();
+    auto locked = Lock(weak);
     ASSERT_TRUE(locked.has_value());
-    ASSERT_EQ(locked.invoke<utils::spec::ToString>(), "123");
+    ASSERT_EQ(ToString(locked), "123");
   }
   p = &test_val;  // The underlying std::shared_ptr will be destroyed
   ASSERT_TRUE(weak.has_value());
-  ASSERT_FALSE(weak().has_value());
-  ASSERT_FALSE(p.invoke<spec::GetWeak<spec::SharedStringable>>().has_value());
-  ASSERT_EQ(p.invoke<utils::spec::ToString>(), "123");
+  ASSERT_FALSE(Lock(weak).has_value());
+  ASSERT_FALSE(GetWeak(p).has_value());
+  ASSERT_EQ(ToString(p), "123");
 }
+

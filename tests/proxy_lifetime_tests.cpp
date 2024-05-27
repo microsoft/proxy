@@ -7,8 +7,17 @@
 
 namespace {
 
-PRO_DEF_FACADE(TestFacade, utils::spec::ToString, pro::copyable_ptr_constraints);
-PRO_DEF_FACADE(TestTrivialFacade, utils::spec::ToString, pro::trivial_ptr_constraints);
+struct TestFacade : pro::facade_builder
+    ::add_facade<utils::spec::Stringable>
+    ::support_copyability<pro::constraint_level::nontrivial>
+    ::build {};
+
+struct TestTrivialFacade : pro::facade_builder
+    ::add_facade<utils::spec::Stringable>
+    ::support_copyability<pro::constraint_level::trivial>
+    ::support_relocatability<pro::constraint_level::trivial>
+    ::support_destructibility<pro::constraint_level::trivial>
+    ::build {};
 
 }  // namespace
 
@@ -28,7 +37,7 @@ TEST(ProxyLifetimeTests, TestPolyConstrction_FromValue) {
   {
     pro::proxy<TestFacade> p = utils::LifetimeTracker::Session(&tracker);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p), "Session 2");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -65,7 +74,7 @@ TEST(ProxyLifetimeTests, TestPolyConstrction_InPlace) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p), "Session 1");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -97,7 +106,7 @@ TEST(ProxyLifetimeTests, TestPolyConstrction_InPlaceInitializerList) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, { 1, 2, 3 }, &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p), "Session 1");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -131,9 +140,9 @@ TEST(ProxyLifetimeTests, TestCopyConstrction_FromValue) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p1), "Session 1");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p2), "Session 2");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -158,7 +167,7 @@ TEST(ProxyLifetimeTests, TestCopyConstrction_FromValue_Exception) {
     }
     ASSERT_TRUE(exception_thrown);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p1), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -181,7 +190,7 @@ TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue) {
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p2), "Session 2");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
@@ -201,7 +210,7 @@ TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue_Trivial) {
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.invoke(), "Session 1");
+    ASSERT_EQ(ToString(p2), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -243,7 +252,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_ToValue) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p = utils::LifetimeTracker::Session{ &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 3");
+    ASSERT_EQ(ToString(p), "Session 3");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
@@ -272,7 +281,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_ToValue_Exception) {
     }
     ASSERT_TRUE(exception_thrown);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
@@ -287,7 +296,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_FromValue_ToNull) {
     pro::proxy<TestFacade> p;
     p = utils::LifetimeTracker::Session{ &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p), "Session 2");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -328,7 +337,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_InPlace_ToValue) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p.emplace<utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p), "Session 2");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
@@ -366,7 +375,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_InPlace_ToNull) {
     pro::proxy<TestFacade> p;
     p.emplace<utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p), "Session 1");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -402,7 +411,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_InPlaceInitializerList_ToValue) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p.emplace<utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p), "Session 2");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
@@ -440,7 +449,7 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_InPlaceInitializerList_ToNull) {
     pro::proxy<TestFacade> p;
     p.emplace<utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p), "Session 1");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kInitializerListConstruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
@@ -478,9 +487,9 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToValue) {
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
     p1 = p2;
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 4");
+    ASSERT_EQ(ToString(p1), "Session 4");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p2), "Session 2");
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kCopyConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(4, utils::LifetimeOperationType::kMoveConstruction);
@@ -510,9 +519,9 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToValue_Exception) {
     }
     ASSERT_TRUE(exception_thrown);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p1), "Session 1");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p2), "Session 2");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
@@ -535,7 +544,7 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToSelf) {
 #pragma clang diagnostic pop
 #endif  // __clang__
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 3");
+    ASSERT_EQ(ToString(p), "Session 3");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
@@ -555,9 +564,9 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToNull) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p1 = p2;
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 3");
+    ASSERT_EQ(ToString(p1), "Session 3");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p2), "Session 1");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
@@ -586,7 +595,7 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToNull_Exception) {
     ASSERT_TRUE(exception_thrown);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 1");
+    ASSERT_EQ(ToString(p2), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -638,7 +647,7 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToValue) {
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
     p1 = std::move(p2);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 3");
+    ASSERT_EQ(ToString(p1), "Session 3");
     ASSERT_FALSE(p2.has_value());
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
@@ -684,7 +693,7 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToNull) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p1 = std::move(p2);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p1), "Session 2");
     ASSERT_FALSE(p2.has_value());
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
@@ -740,7 +749,7 @@ TEST(ProxyLifetimeTests, TestHasValue) {
   ASSERT_FALSE(p1.has_value());
   p1 = &foo;
   ASSERT_TRUE(p1.has_value());
-  ASSERT_EQ(p1.ToString(), "123");
+  ASSERT_EQ(ToString(p1), "123");
 }
 
 TEST(ProxyLifetimeTests, TestReset_FromValue) {
@@ -773,9 +782,9 @@ TEST(ProxyLifetimeTests, TestSwap_Value_Value) {
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
     swap(p1, p2);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 4");
+    ASSERT_EQ(ToString(p1), "Session 4");
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 5");
+    ASSERT_EQ(ToString(p2), "Session 5");
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(4, utils::LifetimeOperationType::kMoveConstruction);
@@ -797,7 +806,7 @@ TEST(ProxyLifetimeTests, TestSwap_Value_Self) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     swap(p, p);
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(p.ToString(), "Session 3");
+    ASSERT_EQ(ToString(p), "Session 3");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
@@ -818,7 +827,7 @@ TEST(ProxyLifetimeTests, TestSwap_Value_Null) {
     swap(p1, p2);
     ASSERT_FALSE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
-    ASSERT_EQ(p2.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p2), "Session 2");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
   }
@@ -835,7 +844,7 @@ TEST(ProxyLifetimeTests, TestSwap_Null_Value) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     swap(p1, p2);
     ASSERT_TRUE(p1.has_value());
-    ASSERT_EQ(p1.ToString(), "Session 2");
+    ASSERT_EQ(ToString(p1), "Session 2");
     ASSERT_FALSE(p2.has_value());
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
