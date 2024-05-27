@@ -7,8 +7,10 @@
 
 namespace spec {
 
-PRO_DEF_MEMBER_DISPATCH(at, std::string(int));
-PRO_DEF_FACADE(Dictionary, at);
+PRO_DEF_MEM_DISPATCH(MemAt, at);
+struct Dictionary : pro::facade_builder
+    ::add_convention<MemAt, std::string(int)>
+    ::build {};
 
 }  // namespace spec
 
