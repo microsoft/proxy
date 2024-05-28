@@ -36,7 +36,7 @@ struct Call {
 
 template <class... Os>
 struct Callable : pro::facade_builder
-    ::support_copyability<pro::constraint_level::nontrivial>
+    ::support_copy<pro::constraint_level::nontrivial>
     ::add_convention<Call, Os...>
     ::build {};
 
@@ -69,7 +69,7 @@ struct WeakCall {
 
 template <class... Os>
 struct WeakCallable : pro::facade_builder
-    ::support_copyability<pro::constraint_level::nontrivial>
+    ::support_copy<pro::constraint_level::nontrivial>
     ::add_convention<WeakCall, Os...>
     ::build {};
 
@@ -118,7 +118,7 @@ PRO_DEF_FREE_DISPATCH(FreeLock, Lock, LockImpl<F>);
 
 template <class F>
 struct Weak : pro::facade_builder
-    ::support_copyability<pro::constraint_level::nontrivial>
+    ::support_copy<pro::constraint_level::nontrivial>
     ::add_convention<FreeLock<F>, pro::proxy<F>()>
     ::build {};
 

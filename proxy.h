@@ -1015,12 +1015,12 @@ struct facade_builder_impl {
   using restrict_layout = facade_builder_impl<
       Cs, Rs, make_restricted_layout(C, PtrSize, PtrAlign)>;
   template <constraint_level CL>
-  using support_copyability = facade_builder_impl<Cs, Rs, make_copyable(C, CL)>;
+  using support_copy = facade_builder_impl<Cs, Rs, make_copyable(C, CL)>;
   template <constraint_level CL>
-  using support_relocatability = facade_builder_impl<
+  using support_relocation = facade_builder_impl<
       Cs, Rs, make_relocatable(C, CL)>;
   template <constraint_level CL>
-  using support_destructibility = facade_builder_impl<
+  using support_destruction = facade_builder_impl<
       Cs, Rs, make_destructible(C, CL)>;
   using build = facade_impl<Cs, Rs, normalize(C)>;
 };

@@ -9,14 +9,14 @@ namespace {
 
 struct TestFacade : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::support_copyability<pro::constraint_level::nontrivial>
+    ::support_copy<pro::constraint_level::nontrivial>
     ::build {};
 
 struct TestTrivialFacade : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::support_copyability<pro::constraint_level::trivial>
-    ::support_relocatability<pro::constraint_level::trivial>
-    ::support_destructibility<pro::constraint_level::trivial>
+    ::support_copy<pro::constraint_level::trivial>
+    ::support_relocation<pro::constraint_level::trivial>
+    ::support_destruction<pro::constraint_level::trivial>
     ::build {};
 
 }  // namespace

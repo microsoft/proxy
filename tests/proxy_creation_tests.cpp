@@ -28,7 +28,7 @@ namespace spec {
 
 struct TestLargeStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::support_copyability<pro::constraint_level::nontrivial>
+    ::support_copy<pro::constraint_level::nontrivial>
     ::add_reflection<SboObserver>
     ::build {};
 
