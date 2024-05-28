@@ -884,10 +884,7 @@ proxy<F> make_proxy(T&& value) {
 namespace details {
 
 template <class... Args> void invalid_call(Args&&...) = delete;
-template <class T, class...> struct dependent_traits : std::type_identity<T> {};
-template <class... T>
-auto dependent(auto& value) noexcept
-    -> typename dependent_traits<decltype(value), T...>::type { return value; }
+template <class T, class...> struct lazy_eval_traits : std::type_identity<T> {};
 
 constexpr std::size_t invalid_size = static_cast<std::size_t>(-1);
 constexpr constraint_level invalid_cl = static_cast<constraint_level>(-1);
@@ -1030,6 +1027,12 @@ struct facade_builder_impl {
 
 }  // namespace details
 
+template <class U, class... T>
+using lazy_eval_t = typename details::lazy_eval_traits<U, T...>::type;
+template <class... T>
+auto lazy_eval(auto& value) noexcept -> lazy_eval_t<decltype(value), T...>
+    { return value; }
+
 using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
     proxiable_ptr_constraints{
         .max_size = details::invalid_size,
@@ -1057,8 +1060,8 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
       struct accessor { \
         template <class... __Args> \
         decltype(auto) __FUNC(__Args&&... __args) const \
-            ___PRO_DIRECT_FUNC_IMPL((static_cast<const __P&>( \
-                ::pro::details::dependent<__Args...>(*this)) \
+            ___PRO_DIRECT_FUNC_IMPL((static_cast< \
+                ::pro::lazy_eval_t<const __P&, __Args...>>(*this) \
                 .template invoke<__name>(::std::forward<__Args>(__args)...))) \
       }; \
     }
@@ -1077,9 +1080,8 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
       struct accessor { \
         template <class... __Args> \
         friend decltype(auto) __FNAME(const __P& __self, __Args&&... __args) \
-            ___PRO_DIRECT_FUNC_IMPL((::pro::details::dependent<__Args...>( \
-                __self).template invoke<__name>( \
-                    ::std::forward<__Args>(__args)...))) \
+            ___PRO_DIRECT_FUNC_IMPL((::pro::lazy_eval<__Args...>(__self) \
+                .template invoke<__name>(::std::forward<__Args>(__args)...))) \
       }; \
     }
 #define PRO_DEF_MEM_DISPATCH(__NAME, __FUNC) \

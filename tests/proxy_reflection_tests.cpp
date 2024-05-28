@@ -10,7 +10,7 @@ namespace {
 
 template <class F, class R>
 concept ReflectionApplicable = requires(pro::proxy<F> p) {
-  { p.reflect<R>() };
+  { p.template reflect<R>() };
 };
 
 class RttiReflection {

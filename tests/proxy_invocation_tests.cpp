@@ -29,7 +29,7 @@ struct Call {
     template <class... Args>
     decltype(auto) operator()(Args&&... args) const
         noexcept(noexcept(static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...)))
-        requires(requires { static_cast<const P&>(pro::details::dependent<Args...>(*this)).template invoke<Call>(std::forward<Args>(args)...); })
+        requires(requires { static_cast<pro::lazy_eval_t<const P&, Args...>>(*this).template invoke<Call>(std::forward<Args>(args)...); })
         { return static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...); }
   };
 };
@@ -62,7 +62,7 @@ struct WeakCall {
     template <class... Args>
     decltype(auto) operator()(Args&&... args) const
         noexcept(noexcept(static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...)))
-        requires(requires { static_cast<const P&>(pro::details::dependent<Args...>(*this)).template invoke<WeakCall>(std::forward<Args>(args)...); })
+        requires(requires { static_cast<pro::lazy_eval_t<const P&, Args...>>(*this).template invoke<WeakCall>(std::forward<Args>(args)...); })
         { return static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...); }
   };
 };

@@ -286,6 +286,10 @@ static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
 
 struct BadFacade_MissingReflectionTypes {
   using convention_types = std::tuple<>;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
   static constexpr auto constraints = pro::proxiable_ptr_constraints{
       .max_size = 2 * sizeof(void*),
       .max_align = alignof(void*),
@@ -293,6 +297,9 @@ struct BadFacade_MissingReflectionTypes {
       .relocatability = pro::constraint_level::nothrow,
       .destructibility = pro::constraint_level::nothrow,
   };
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
 };
 static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
 
