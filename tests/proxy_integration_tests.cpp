@@ -15,12 +15,19 @@ namespace {
 
 namespace spec {
 
-PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream&));
-PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
-PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
+PRO_DEF_MEM_DISPATCH(MemDraw, Draw);
+PRO_DEF_MEM_DISPATCH(MemArea, Area);
 
-PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
-PRO_DEF_FACADE(Logger, Log);
+struct Drawable : pro::facade_builder
+    ::add_convention<MemDraw, void(std::ostream&)>
+    ::add_convention<MemArea, double() noexcept>
+    ::build {};
+
+PRO_DEF_MEM_DISPATCH(MemLog, Log);
+
+struct Logger : pro::facade_builder
+    ::add_convention<MemLog, void(const char*), void(const char*, const std::exception&)>
+    ::build {};
 
 }  // namespace spec
 

@@ -17,8 +17,10 @@ unsigned GetDefaultHash() { return -1; }
 
 namespace spec {
 
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(GetHash, ::GetHash, ::GetDefaultHash, unsigned());
-PRO_DEF_FACADE(Hashable, GetHash);
+PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(FreeGetHash, GetHash, ::GetHash, ::GetDefaultHash);
+struct Hashable : pro::facade_builder
+    ::add_convention<FreeGetHash, unsigned()>
+    ::build {};
 
 }  // namespace spec
 
@@ -29,19 +31,19 @@ extern "C" int main() {
   std::tuple<int, double> t{11, 22};
   pro::proxy<spec::Hashable> p;
   p = &i;
-  if (p.GetHash() != GetHash(i)) {
+  if (GetHash(p) != GetHash(i)) {
     return 1;
   }
   p = &d;
-  if (p.GetHash() != GetHash(d)) {
+  if (GetHash(p) != GetHash(d)) {
     return 1;
   }
   p = pro::make_proxy_inplace<spec::Hashable>(s);
-  if (p.GetHash() != GetHash(s)) {
+  if (GetHash(p) != GetHash(s)) {
     return 1;
   }
   p = &t;
-  if (p.GetHash() != GetDefaultHash()) {
+  if (GetHash(p) != GetDefaultHash()) {
     return 1;
   }
   return 0;

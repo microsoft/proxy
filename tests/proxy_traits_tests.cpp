@@ -27,14 +27,14 @@ using MockCopyableSmallPtr = MockPtr<true, true, false, sizeof(void*), alignof(v
 using MockTrivialPtr = MockPtr<true, true, true, sizeof(void*), alignof(void*)>;
 using MockFunctionPtr = void(*)();
 
-PRO_DEF_FACADE(DefaultFacade);
+struct DefaultFacade : pro::facade_builder::build {};
 static_assert(DefaultFacade::constraints.copyability == pro::constraint_level::none);
 static_assert(DefaultFacade::constraints.relocatability == pro::constraint_level::nothrow);
 static_assert(DefaultFacade::constraints.destructibility == pro::constraint_level::nothrow);
 static_assert(DefaultFacade::constraints.max_size >= 2 * sizeof(void*));
 static_assert(DefaultFacade::constraints.max_align >= sizeof(void*));
-static_assert(std::is_same_v<DefaultFacade::dispatch_types, std::tuple<>>);
-static_assert(std::is_same_v<DefaultFacade::reflection_type, void>);
+static_assert(std::is_same_v<DefaultFacade::convention_types, std::tuple<>>);
+static_assert(std::is_same_v<DefaultFacade::reflection_types, std::tuple<>>);
 static_assert(std::is_nothrow_default_constructible_v<pro::proxy<DefaultFacade>>);
 static_assert(!std::is_trivially_default_constructible_v<pro::proxy<DefaultFacade>>);
 static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, std::nullptr_t>);
@@ -46,35 +46,36 @@ static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, std::in
 static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, std::in_place_type_t<MockFunctionPtr>, MockFunctionPtr>);
 static_assert(sizeof(pro::proxy<DefaultFacade>) == 4 * sizeof(void*));  // VTABLE should be embeded
 
-PRO_DEF_FACADE(RelocatableFacade);
-static_assert(!std::is_copy_constructible_v<pro::proxy<RelocatableFacade>>);
-static_assert(!std::is_copy_assignable_v<pro::proxy<RelocatableFacade>>);
-static_assert(std::is_nothrow_move_constructible_v<pro::proxy<RelocatableFacade>>);
-static_assert(!std::is_trivially_move_constructible_v<pro::proxy<RelocatableFacade>>);
-static_assert(std::is_nothrow_move_assignable_v<pro::proxy<RelocatableFacade>>);
-static_assert(!std::is_trivially_move_assignable_v<pro::proxy<RelocatableFacade>>);
-static_assert(std::is_nothrow_destructible_v<pro::proxy<RelocatableFacade>>);
-static_assert(!std::is_trivially_destructible_v<pro::proxy<RelocatableFacade>>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockMovablePtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockMovablePtr>);
-static_assert(pro::proxiable<MockMovablePtr, RelocatableFacade>);
-static_assert(pro::proxiable<MockCopyablePtr, RelocatableFacade>);
-static_assert(pro::proxiable<MockCopyableSmallPtr, RelocatableFacade>);
-static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacade>);
-static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacade>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockMovablePtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockMovablePtr>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockCopyablePtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockCopyablePtr>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockCopyableSmallPtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockCopyableSmallPtr>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockTrivialPtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockTrivialPtr>);
-static_assert(std::is_nothrow_constructible_v<pro::proxy<RelocatableFacade>, MockFunctionPtr>);
-static_assert(std::is_nothrow_assignable_v<pro::proxy<RelocatableFacade>, MockFunctionPtr>);
-static_assert(sizeof(pro::proxy<RelocatableFacade>) == 4 * sizeof(void*));  // VTABLE should be embeded
+static_assert(!std::is_copy_constructible_v<pro::proxy<DefaultFacade>>);
+static_assert(!std::is_copy_assignable_v<pro::proxy<DefaultFacade>>);
+static_assert(std::is_nothrow_move_constructible_v<pro::proxy<DefaultFacade>>);
+static_assert(!std::is_trivially_move_constructible_v<pro::proxy<DefaultFacade>>);
+static_assert(std::is_nothrow_move_assignable_v<pro::proxy<DefaultFacade>>);
+static_assert(!std::is_trivially_move_assignable_v<pro::proxy<DefaultFacade>>);
+static_assert(std::is_nothrow_destructible_v<pro::proxy<DefaultFacade>>);
+static_assert(!std::is_trivially_destructible_v<pro::proxy<DefaultFacade>>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockMovablePtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockMovablePtr>);
+static_assert(pro::proxiable<MockMovablePtr, DefaultFacade>);
+static_assert(pro::proxiable<MockCopyablePtr, DefaultFacade>);
+static_assert(pro::proxiable<MockCopyableSmallPtr, DefaultFacade>);
+static_assert(pro::proxiable<MockTrivialPtr, DefaultFacade>);
+static_assert(pro::proxiable<MockFunctionPtr, DefaultFacade>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockMovablePtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockMovablePtr>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockCopyablePtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockCopyablePtr>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockCopyableSmallPtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockCopyableSmallPtr>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockTrivialPtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockTrivialPtr>);
+static_assert(std::is_nothrow_constructible_v<pro::proxy<DefaultFacade>, MockFunctionPtr>);
+static_assert(std::is_nothrow_assignable_v<pro::proxy<DefaultFacade>, MockFunctionPtr>);
+static_assert(sizeof(pro::proxy<DefaultFacade>) == 4 * sizeof(void*));  // VTABLE should be embeded
 
-PRO_DEF_FACADE(CopyableFacade, PRO_MAKE_DISPATCH_PACK(), pro::copyable_ptr_constraints);
+struct CopyableFacade : pro::facade_builder
+    ::support_copy<pro::constraint_level::nontrivial>
+    ::build {};
 static_assert(std::is_copy_constructible_v<pro::proxy<CopyableFacade>>);
 static_assert(!std::is_nothrow_copy_constructible_v<pro::proxy<CopyableFacade>>);
 static_assert(std::is_copy_assignable_v<pro::proxy<CopyableFacade>>);
@@ -102,13 +103,10 @@ static_assert(std::is_nothrow_constructible_v<pro::proxy<CopyableFacade>, MockFu
 static_assert(std::is_nothrow_assignable_v<pro::proxy<CopyableFacade>, MockFunctionPtr>);
 static_assert(sizeof(pro::proxy<CopyableFacade>) == 3 * sizeof(void*));  // VTABLE should not be embeded
 
-PRO_DEF_FACADE(CopyableSmallFacade, PRO_MAKE_DISPATCH_PACK(), pro::proxiable_ptr_constraints{
-    .max_size = sizeof(void*),
-    .max_align = alignof(void*),
-    .copyability = pro::constraint_level::nontrivial,
-    .relocatability = pro::constraint_level::nothrow,
-    .destructibility = pro::constraint_level::nothrow,
-  });
+struct CopyableSmallFacade : pro::facade_builder
+    ::restrict_layout<sizeof(void*), alignof(void*)>
+    ::support_copy<pro::constraint_level::nontrivial>
+    ::build {};
 static_assert(!pro::proxiable<MockMovablePtr, CopyableSmallFacade>);
 static_assert(!pro::proxiable<MockCopyablePtr, CopyableSmallFacade>);
 static_assert(pro::proxiable<MockCopyableSmallPtr, CopyableSmallFacade>);
@@ -126,7 +124,12 @@ static_assert(std::is_constructible_v<pro::proxy<CopyableSmallFacade>, MockFunct
 static_assert(std::is_assignable_v<pro::proxy<CopyableSmallFacade>, MockFunctionPtr>);
 static_assert(sizeof(pro::proxy<CopyableSmallFacade>) == 2 * sizeof(void*));  // VTABLE should not be embeded
 
-PRO_DEF_FACADE(TrivialFacade, PRO_MAKE_DISPATCH_PACK(), pro::trivial_ptr_constraints);
+struct TrivialFacade : pro::facade_builder
+    ::restrict_layout<sizeof(void*), alignof(void*)>
+    ::support_copy<pro::constraint_level::trivial>
+    ::support_relocation<pro::constraint_level::trivial>
+    ::support_destruction<pro::constraint_level::trivial>
+    ::build {};
 static_assert(std::is_trivially_copy_constructible_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_trivially_copy_assignable_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_nothrow_move_constructible_v<pro::proxy<TrivialFacade>>);
@@ -155,7 +158,9 @@ struct ReflectionOfSmallPtr {
   template <class P> requires(sizeof(P) <= sizeof(void*))
   constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
 };
-PRO_DEF_FACADE(RelocatableFacadeWithReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, ReflectionOfSmallPtr);
+struct RelocatableFacadeWithReflection : pro::facade_builder
+    ::add_reflection<ReflectionOfSmallPtr>
+    ::build {};
 static_assert(!pro::proxiable<MockMovablePtr, RelocatableFacadeWithReflection>);
 static_assert(!pro::proxiable<MockCopyablePtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockCopyableSmallPtr, RelocatableFacadeWithReflection>);
@@ -166,58 +171,83 @@ struct RuntimeReflection {
   template <class P>
   explicit RuntimeReflection(std::in_place_type_t<P>) { throw std::runtime_error{"Not supported"}; }
 };
-PRO_DEF_FACADE(FacadeWithRuntimeReflection, PRO_MAKE_DISPATCH_PACK(), pro::relocatable_ptr_constraints, RuntimeReflection);
+struct FacadeWithRuntimeReflection : pro::facade_builder
+    ::add_reflection<RuntimeReflection>
+    ::build {};
 static_assert(!pro::proxiable<MockTrivialPtr, FacadeWithRuntimeReflection>);
 
-struct FacadeWithTupleLikeDispatches {
-  using dispatch_types = std::array<utils::spec::ToString, 1>;
-  static constexpr auto constraints = pro::relocatable_ptr_constraints;
-  using reflection_type = void;
+struct FacadeWithTupleLikeConventions {
+  struct ToStringConvention {
+    using dispatch_type = utils::spec::FreeToString;
+    using overload_types = std::tuple<std::string()>;
+  };
+  using convention_types = std::array<ToStringConvention, 1>;
+  using reflection_types = std::tuple<>;
+  static constexpr auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
 };
-static_assert(pro::facade<FacadeWithTupleLikeDispatches>);
+static_assert(pro::facade<FacadeWithTupleLikeConventions>);
 
-struct BadFacade_MissingDispatchTypes {
+struct BadFacade_MissingConventionTypes {
+  using reflection_types = std::tuple<>;
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif  // __clang__
-  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+  static constexpr auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif  // __clang__
-  using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_MissingDispatchTypes>);
+static_assert(!pro::facade<BadFacade_MissingConventionTypes>);
 
-struct BadFacade_BadDispatchTypes {
-  using dispatch_types = int;
+struct BadFacade_BadConventionTypes {
+  using convention_types = int;
+  using reflection_types = std::tuple<>;
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif  // __clang__
-  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+  static constexpr auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif  // __clang__
-  using reflection_type = void;
 };
-static_assert(!pro::facade<BadFacade_BadDispatchTypes>);
+static_assert(!pro::facade<BadFacade_BadConventionTypes>);
 
 struct BadFacade_MissingConstraints {
-  using dispatch_types = std::tuple<>;
-  using reflection_type = void;
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<>;
 };
 static_assert(!pro::facade<BadFacade_MissingConstraints>);
 
 struct BadFacade_BadConstraints_UnexpectedType {
-  using dispatch_types = std::tuple<>;
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<>;
   static constexpr auto constraints = 0;
-  using reflection_type = void;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_UnexpectedType>);
 
 struct BadFacade_BadConstraints_BadAlignment {
-  using dispatch_types = std::tuple<>;
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<>;
   static constexpr pro::proxiable_ptr_constraints constraints{
       .max_size = 6u,
       .max_align = 6u, // Should be a power of 2
@@ -225,12 +255,12 @@ struct BadFacade_BadConstraints_BadAlignment {
       .relocatability = pro::constraint_level::nothrow,
       .destructibility = pro::constraint_level::nothrow,
   };
-  using reflection_type = void;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_BadAlignment>);
 
 struct BadFacade_BadConstraints_BadSize {
-  using dispatch_types = std::tuple<>;
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<>;
   static constexpr pro::proxiable_ptr_constraints constraints{
       .max_size = 6u, // Should be a multiple of max_alignment
       .max_align = 4u,
@@ -238,27 +268,51 @@ struct BadFacade_BadConstraints_BadSize {
       .relocatability = pro::constraint_level::nothrow,
       .destructibility = pro::constraint_level::nothrow,
   };
-  using reflection_type = void;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
 
 struct BadFacade_BadConstraints_NotConstant {
-  using dispatch_types = std::tuple<>;
-  static inline const auto constraints = pro::relocatable_ptr_constraints;
-  using reflection_type = void;
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<>;
+  static inline const auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
 
-struct BadFacade_MissingReflectionType {
-  using dispatch_types = std::tuple<>;
-  static constexpr auto constraints = pro::relocatable_ptr_constraints;
+struct BadFacade_MissingReflectionTypes {
+  using convention_types = std::tuple<>;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
+#endif  // __clang__
+  static constexpr auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif  // __clang__
 };
-static_assert(!pro::facade<BadFacade_MissingReflectionType>);
+static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
 
 struct BadFacade_BadReflectionType {
-  using dispatch_types = std::tuple<>;
-  static constexpr auto constraints = pro::relocatable_ptr_constraints;
-  using reflection_type = std::unique_ptr<int>;  // Probably constexpr, unknown until the evaluation of proxiablility
+  using convention_types = std::tuple<>;
+  using reflection_types = std::tuple<std::unique_ptr<int>>;  // Probably constexpr, unknown until the evaluation of proxiablility
+  static constexpr auto constraints = pro::proxiable_ptr_constraints{
+      .max_size = 2 * sizeof(void*),
+      .max_align = alignof(void*),
+      .copyability = pro::constraint_level::none,
+      .relocatability = pro::constraint_level::nothrow,
+      .destructibility = pro::constraint_level::nothrow,
+  };
 };
 static_assert(pro::facade<BadFacade_BadReflectionType>);
 
