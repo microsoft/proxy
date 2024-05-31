@@ -17,27 +17,12 @@ namespace {
 
 namespace spec {
 
-struct Call {
-  template <class T, class... Args>
-  decltype(auto) operator()(T& v, Args&&... args)
-      noexcept(std::is_nothrow_invocable_v<T&, Args...>)
-      requires(std::is_invocable_v<T&, Args...>)
-      { return std::invoke(v, std::forward<Args>(args)...); }
-
-  template <class P>
-  struct accessor {
-    template <class... Args>
-    decltype(auto) operator()(Args&&... args) const
-        noexcept(noexcept(static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...)))
-        requires(requires { static_cast<pro::lazy_eval_t<const P&, Args...>>(*this).template invoke<Call>(std::forward<Args>(args)...); })
-        { return static_cast<const P&>(*this).template invoke<Call>(std::forward<Args>(args)...); }
-  };
-};
+PRO_DEF_OPERATOR_DISPATCH(OpCall, "()");
 
 template <class... Os>
 struct Callable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_convention<Call, Os...>
+    ::add_convention<OpCall, Os...>
     ::build {};
 
 struct Wildcard {
@@ -47,30 +32,11 @@ struct Wildcard {
 
 Wildcard NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
 
-struct WeakCall {
-  template <class T, class... Args>
-  decltype(auto) operator()(T& v, Args&&... args)
-      noexcept(std::is_nothrow_invocable_v<T&, Args...>)
-      requires(std::is_invocable_v<T&, Args...>)
-      { return std::invoke(v, std::forward<Args>(args)...); }
-
-  template <class... Args>
-  Wildcard operator()(std::nullptr_t, Args&&...) { NotImplemented(); return {}; }
-
-  template <class P>
-  struct accessor {
-    template <class... Args>
-    decltype(auto) operator()(Args&&... args) const
-        noexcept(noexcept(static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...)))
-        requires(requires { static_cast<pro::lazy_eval_t<const P&, Args...>>(*this).template invoke<WeakCall>(std::forward<Args>(args)...); })
-        { return static_cast<const P&>(*this).template invoke<WeakCall>(std::forward<Args>(args)...); }
-  };
-};
-
+PRO_DEF_OPERATOR_DISPATCH_WITH_DEFAULT(WeakOpCall, "()", NotImplemented);
 template <class... Os>
 struct WeakCallable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_convention<WeakCall, Os...>
+    ::add_convention<WeakOpCall, Os...>
     ::build {};
 
 PRO_DEF_FREE_DISPATCH(FreeSize, Size, std::ranges::size);
@@ -138,8 +104,8 @@ struct SharedStringable : pro::facade_builder
 template <class F, class D, bool NE, class... Args>
 concept InvocableWithDispatch =
     requires(const pro::proxy<F> p, Args... args) {
-      { p.template invoke<D>(std::forward<Args>(args)...) };
-      typename std::enable_if_t<NE == noexcept(p.template invoke<D>(std::forward<Args>(args)...))>;
+      { pro::proxy_invoke<D>(p, std::forward<Args>(args)...) };
+      typename std::enable_if_t<NE == noexcept(pro::proxy_invoke<D>(p, std::forward<Args>(args)...))>;
     };
 template <class F, bool NE, class... Args>
 concept InvocableWithoutDispatch =
@@ -149,8 +115,8 @@ concept InvocableWithoutDispatch =
 };
 
 // Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::Call, false, double>);
-static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::Call, false, std::nullptr_t>);  // Wrong arguments
+static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::OpCall, false, double>);
+static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::OpCall, false, std::nullptr_t>);  // Wrong arguments
 static_assert(!InvocableWithoutDispatch<spec::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
 static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
 static_assert(InvocableWithoutDispatch<spec::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
@@ -249,7 +215,7 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
   struct OverloadedCallable : pro::facade_builder
-      ::add_convention<spec::Call, void(int), void(double), void(const char*), void(char*), void(std::string, int)>
+      ::add_convention<spec::OpCall, void(int), void(double), void(const char*), void(char*), void(std::string, int)>
       ::build {};
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)

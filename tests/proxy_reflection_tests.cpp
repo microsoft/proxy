@@ -10,7 +10,7 @@ namespace {
 
 template <class F, class R>
 concept ReflectionApplicable = requires(pro::proxy<F> p) {
-  { p.template reflect<R>() };
+  { pro::proxy_reflect<R>(p) };
 };
 
 class RttiReflection {
@@ -60,29 +60,29 @@ static_assert(ReflectionApplicable<TestTraitsFacade, TraitsReflection>);
 TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
-  ASSERT_EQ(p.reflect<RttiReflection>().GetName(), typeid(int*).name());
+  ASSERT_EQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(int*).name());
 }
 
 TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
-  ASSERT_EQ(p.reflect<RttiReflection>().GetName(), typeid(std::unique_ptr<double>).name());
+  ASSERT_EQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(std::unique_ptr<double>).name());
 }
 
 TEST(ProxyReflectionTests, TestTraits_RawPtr) {
   int foo = 123;
   pro::proxy<TestTraitsFacade> p = &foo;
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_default_constructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_copy_constructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_nothrow_move_constructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_nothrow_destructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_trivial_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_default_constructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_copy_constructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_nothrow_move_constructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_nothrow_destructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_trivial_, true);
 }
 
 TEST(ProxyReflectionTests, TestTraits_FancyPtr) {
   pro::proxy<TestTraitsFacade> p = std::make_unique<double>(1.23);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_default_constructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_copy_constructible_, false);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_nothrow_move_constructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_nothrow_destructible_, true);
-  ASSERT_EQ(p.reflect<TraitsReflection>().is_trivial_, false);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_default_constructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_copy_constructible_, false);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_nothrow_move_constructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_nothrow_destructible_, true);
+  ASSERT_EQ(pro::proxy_reflect<TraitsReflection>(p).is_trivial_, false);
 }
