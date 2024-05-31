@@ -2,7 +2,14 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4834)  // False alarm from MSVC: warning C4834: discarding return value of function with [[nodiscard]] attribute
+#endif  // _MSC_VER
 #include "proxy.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif  // _MSC_VER
 
 namespace {
 
@@ -526,13 +533,6 @@ TEST(ProxyDispatchTests, TestPreOpRightShift) {
 TEST(ProxyDispatchTests, TestPreOpComma) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpComma, int(int val)>::build {};
   CommaTester v{3};
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4834)  // False alarm from MSVC: warning C4834: discarding return value of function with [[nodiscard]] attribute
-#endif  // _MSC_VER
   pro::proxy<TestFacade> p = &v;
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif  // _MSC_VER
   ASSERT_EQ((7, p), 21);
 }
