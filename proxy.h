@@ -1410,6 +1410,21 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
       __VA_ARGS__ \
     };
 
+#define ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T, ...) \
+    struct __NAME { \
+      __T operator()(auto& __self) \
+          ___PRO_DIRECT_FUNC_IMPL(static_cast<__T>(__self)) \
+      template <class __P> \
+      struct accessor { \
+        template <class __Barrier = void> \
+        explicit operator __T() const \
+            ___PRO_DIRECT_FUNC_IMPL(::pro::proxy_invoke<__NAME>( \
+                static_cast<::pro::details::lazy_eval_t<const __P&, \
+                    __Barrier>>(*this))) \
+      }; \
+      __VA_ARGS__ \
+    }
+
 #define PRO_DEF_OPERATOR_DISPATCH(__NAME, __SIGN) \
     ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, none)
 
@@ -1430,6 +1445,13 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
 #define PRO_DEF_POST_OPERATOR_DISPATCH_WITH_DEFAULT(__NAME, __SIGN, __DEFFUNC) \
     ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
         __NAME, __SIGN, right, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+
+#define PRO_DEF_CONVERTION_DISPATCH(__NAME, __T) \
+    ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T)
+
+#define PRO_DEF_CONVERTION_DISPATCH_WITH_DEFAULT(__NAME, __T, __DEFFUNC) \
+    ___PRO_DEF_CONVERTION_DISPATCH_IMPL( \
+        __NAME, __T, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
 
 }  // namespace pro
 
