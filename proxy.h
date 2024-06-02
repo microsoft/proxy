@@ -9,7 +9,6 @@
 #include <concepts>
 #include <initializer_list>
 #include <memory>
-#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -1101,65 +1100,24 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
 
 namespace details {
 
-enum class sign_type {
-  none, plus, minus, asterisk, slash, percent, increment, decrement,
-  equal_to, not_equal_to, greater_than, less_than, greater_than_or_equal_to,
-  less_than_or_equal_to, spaceship, logical_not, logical_and, logical_or,
-  tilde, ampersand, pipe, caret, left_shift, right_shift, plus_assignment,
-  minus_assignment, multiplication_assignment, division_assignment,
-  bitwise_and_assignment, bitwise_or_assignment, bitwise_xor_assignment,
-  left_shift_assignment, right_shift_assignment, comma, arrow, parentheses,
-  brackets,
+template <std::size_t N>
+struct sign {
+  consteval sign(const char (&str)[N])
+      { for (std::size_t i = 0; i < N; ++i) { value[i] = str[i]; } }
+
+  char value[N];
 };
+template <std::size_t N>
+sign(const char (&str)[N]) -> sign<N>;
 
 enum class sign_pos_type { none, left, right };
 
-consteval sign_type parse_sign(std::string_view str) {
-  if (str == "+") { return sign_type::plus; }
-  if (str == "-") { return sign_type::minus; }
-  if (str == "*") { return sign_type::asterisk; }
-  if (str == "/") { return sign_type::slash; }
-  if (str == "%") { return sign_type::percent; }
-  if (str == "++") { return sign_type::increment; }
-  if (str == "--") { return sign_type::decrement; }
-  if (str == "==") { return sign_type::equal_to; }
-  if (str == "!=") { return sign_type::not_equal_to; }
-  if (str == ">") { return sign_type::greater_than; }
-  if (str == "<") { return sign_type::less_than; }
-  if (str == ">=") { return sign_type::greater_than_or_equal_to; }
-  if (str == "<=") { return sign_type::less_than_or_equal_to; }
-  if (str == "<=>") { return sign_type::spaceship; }
-  if (str == "!") { return sign_type::logical_not; }
-  if (str == "&&") { return sign_type::logical_and; }
-  if (str == "||") { return sign_type::logical_or; }
-  if (str == "~") { return sign_type::tilde; }
-  if (str == "&") { return sign_type::ampersand; }
-  if (str == "|") { return sign_type::pipe; }
-  if (str == "^") { return sign_type::caret; }
-  if (str == "<<") { return sign_type::left_shift; }
-  if (str == ">>") { return sign_type::right_shift; }
-  if (str == "+=") { return sign_type::plus_assignment; }
-  if (str == "-=") { return sign_type::minus_assignment; }
-  if (str == "*=") { return sign_type::multiplication_assignment; }
-  if (str == "/=") { return sign_type::division_assignment; }
-  if (str == "&=") { return sign_type::bitwise_and_assignment; }
-  if (str == "|=") { return sign_type::bitwise_or_assignment; }
-  if (str == "^=") { return sign_type::bitwise_xor_assignment; }
-  if (str == "<<=") { return sign_type::left_shift_assignment; }
-  if (str == ">>=") { return sign_type::right_shift_assignment; }
-  if (str == ",") { return sign_type::comma; }
-  if (str == "->") { return sign_type::arrow; }
-  if (str == "()") { return sign_type::parentheses; }
-  if (str == "[]") { return sign_type::brackets; }
-  return sign_type::none;
-}
-
-template <sign_type SIGN, sign_pos_type POS>
+template <sign SIGN, sign_pos_type POS>
 struct op_dispatch_traits_impl : inapplicable_traits {};
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::left> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
         : applicable_traits { \
       struct base { \
         decltype(auto) operator()(auto& self) \
@@ -1174,9 +1132,9 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::left> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
         : applicable_traits { \
       struct base { \
         template <class Arg> \
@@ -1192,9 +1150,9 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::left> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
         : applicable_traits { \
       struct base { \
         decltype(auto) operator()(auto& self) \
@@ -1216,9 +1174,9 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::right> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
         : applicable_traits { \
       struct base { \
         decltype(auto) operator()(auto& self) \
@@ -1233,9 +1191,9 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::right> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
         : applicable_traits { \
       struct base { \
         template <class Arg> \
@@ -1251,9 +1209,9 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(SIGN, ...) \
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<sign_type::SIGN, sign_pos_type::right> \
+    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
         : applicable_traits { \
       struct base { \
         template <class Arg> \
@@ -1270,49 +1228,49 @@ struct op_dispatch_traits_impl : inapplicable_traits {};
       }; \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(SIGN, ...) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(SIGN, __VA_ARGS__) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(SIGN, __VA_ARGS__)
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(...) \
+    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(__VA_ARGS__) \
+    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(__VA_ARGS__)
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(SIGN, ...) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(SIGN, __VA_ARGS__) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(SIGN, __VA_ARGS__)
+#define ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(...) \
+    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(__VA_ARGS__) \
+    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(__VA_ARGS__)
 
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(plus, +)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(minus, -)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(asterisk, *)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(slash, /)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(percent, %)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(increment, ++)
-___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(increment, ++)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(decrement, --)
-___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(decrement, --)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(equal_to, ==)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(not_equal_to, !=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(greater_than, >)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(less_than, <)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(greater_than_or_equal_to, >=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(less_than_or_equal_to, <=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(spaceship, <=>)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(logical_not, !)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(logical_and, &&)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(logical_or, ||)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(tilde, ~)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(ampersand, &)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(pipe, |)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(caret, ^)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(left_shift, <<)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(right_shift, >>)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(plus_assignment, +=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(minus_assignment, -=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(multiplication_assignment, *=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(division_assignment, /=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(bitwise_and_assignment, &=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(bitwise_or_assignment, |=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(bitwise_xor_assignment, ^=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(left_shift_assignment, <<=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(right_shift_assignment, >>=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(comma, ,)
+___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(+)
+___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(-)
+___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(*)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(/)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(%)
+___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(++)
+___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(++)
+___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(--)
+___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(--)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(==)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(!=)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>=)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<=)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<=>)
+___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(!)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(&&)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(||)
+___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(~)
+___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(&)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(|)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(^)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<<)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>>)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(+=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(-=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(*=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(/=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(&=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(|=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(^=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(<<=)
+___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(>>=)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(,)
 
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL
@@ -1324,7 +1282,7 @@ ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(comma, ,)
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL
 
 template <>
-struct op_dispatch_traits_impl<sign_type::arrow, sign_pos_type::right>
+struct op_dispatch_traits_impl<"->", sign_pos_type::right>
     : applicable_traits {
   struct base
       { auto operator()(auto& self) noexcept { return std::addressof(self); } };
@@ -1337,7 +1295,7 @@ struct op_dispatch_traits_impl<sign_type::arrow, sign_pos_type::right>
   };
 };
 template <>
-struct op_dispatch_traits_impl<sign_type::parentheses, sign_pos_type::right>
+struct op_dispatch_traits_impl<"()", sign_pos_type::right>
     : applicable_traits {
   struct base {
     template <class... Args>
@@ -1353,7 +1311,7 @@ struct op_dispatch_traits_impl<sign_type::parentheses, sign_pos_type::right>
   };
 };
 template <>
-struct op_dispatch_traits_impl<sign_type::brackets, sign_pos_type::right>
+struct op_dispatch_traits_impl<"[]", sign_pos_type::right>
     : applicable_traits {
   struct base {
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
@@ -1375,38 +1333,35 @@ struct op_dispatch_traits_impl<sign_type::brackets, sign_pos_type::right>
   };
 };
 
-template <sign_type SIGN, sign_pos_type POS>
+template <sign SIGN, sign_pos_type POS>
 struct op_dispatch_traits : op_dispatch_traits_impl<SIGN, POS>
     { static_assert(op_dispatch_traits::applicable, "Unexpected operator"); };
-template <sign_type SIGN>
+template <sign SIGN>
     requires(op_dispatch_traits_impl<SIGN, sign_pos_type::right>::applicable)
 struct op_dispatch_traits<SIGN, sign_pos_type::none>
     : op_dispatch_traits_impl<SIGN, sign_pos_type::right> {};
-template <sign_type SIGN>
+template <sign SIGN>
     requires(!op_dispatch_traits_impl<SIGN, sign_pos_type::right>::applicable &&
         op_dispatch_traits_impl<SIGN, sign_pos_type::left>::applicable)
 struct op_dispatch_traits<SIGN, sign_pos_type::none>
     : op_dispatch_traits_impl<SIGN, sign_pos_type::left> {};
 
-template <sign_type SIGN, sign_pos_type POS>
+template <sign SIGN, sign_pos_type POS>
 using op_dispatch_base = typename op_dispatch_traits<SIGN, POS>::base;
-template <sign_type SIGN, sign_pos_type POS, class D, class P>
+template <sign SIGN, sign_pos_type POS, class D, class P>
 using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
     ::template accessor<D, P>;
 
 }  // namespace details
 
-#define ___PRO_MAKE_SIGN_PARAMS(__SIGN, __POS) \
-    ::pro::details::parse_sign(__SIGN), ::pro::details::sign_pos_type::__POS
-
 #define ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, __POS, ...) \
     struct __NAME : ::pro::details::op_dispatch_base< \
-        ___PRO_MAKE_SIGN_PARAMS(__SIGN, __POS)> { \
+        __SIGN, ::pro::details::sign_pos_type::__POS> { \
       using ::pro::details::op_dispatch_base< \
-          ___PRO_MAKE_SIGN_PARAMS(__SIGN, __POS)>::operator(); \
+          __SIGN, ::pro::details::sign_pos_type::__POS>::operator(); \
       template <class __P> \
       using accessor = ::pro::details::op_dispatch_accessor< \
-          ___PRO_MAKE_SIGN_PARAMS(__SIGN, __POS), __NAME, __P>; \
+          __SIGN, ::pro::details::sign_pos_type::__POS, __NAME, __P>; \
       __VA_ARGS__ \
     };
 
