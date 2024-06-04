@@ -22,13 +22,13 @@ The majority of the library is defined in namespace `pro`. Some macros are provi
 
 ```cpp
 // Specifications of abstraction
-namespace spec {
+PRO_DEF_MEM_DISPATCH(MemDraw, Draw);
+PRO_DEF_MEM_DISPATCH(MemArea, Area);
 
-PRO_DEF_MEMBER_DISPATCH(Draw, void(std::ostream& out));
-PRO_DEF_MEMBER_DISPATCH(Area, double() noexcept);
-PRO_DEF_FACADE(Drawable, PRO_MAKE_DISPATCH_PACK(Draw, Area));
-
-}  // namespace spec
+struct Drawable : pro::facade_builder
+    ::add_convention<MemDraw, void(std::ostream& output)>
+    ::add_convention<MemArea, double() noexcept>
+    ::build {};
 
 // Implementation
 class Rectangle {
@@ -45,7 +45,7 @@ class Rectangle {
 };
 
 // Client - Consumer
-std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
+std::string PrintDrawableToString(pro::proxy<Drawable> p) {
   std::stringstream result;
   result << "shape = ";
   p.Draw(result);  // Polymorphic call
@@ -54,11 +54,11 @@ std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
 }
 
 // Client - Producer
-pro::proxy<spec::Drawable> CreateRectangleAsDrawable(int width, int height) {
+pro::proxy<Drawable> CreateRectangleAsDrawable(int width, int height) {
   Rectangle rect;
   rect.SetWidth(width);
   rect.SetHeight(height);
-  return pro::make_proxy<spec::Drawable>(rect);
+  return pro::make_proxy<Drawable>(rect);
 }
 ```
 
@@ -66,15 +66,16 @@ Here is another demo showing how to define overloads in a dispatch: just to add 
 
 ```cpp
 // Specifications of abstraction
-namespace spec {
+PRO_DEF_MEM_DISPATCH(MemLog, Log);
 
-PRO_DEF_MEMBER_DISPATCH(Log, void(const char*), void(const char*, const std::exception&));
-PRO_DEF_FACADE(Logger, Log);
-
-}  // namespace spec
+struct Logger : pro::facade_builder
+    ::add_convention<MemLog,
+        void(const char* message),
+        void(const char* message, const std::exception& ex)>
+    ::build {};
 
 // Client - Consumer
-void MyVerboseFunction(pro::proxy<spec::Logger> logger) {
+void MyVerboseFunction(pro::proxy<Logger> logger) {
   logger.Log("hello");
   try {
     throw std::runtime_error{"runtime error!"};
@@ -101,27 +102,29 @@ int main() {
 }
 ```
 
-By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEMBER_DISPATCH`, free function is also supported with another macro `PRO_DEF_FREE_DISPATCH`. The following example uses `PRO_DEF_FREE_DISPATCH` and `std::invoke` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads.  Note that `.Call` can be omitted when only 1 dispatch is defined in a facade:
+By design, the body of a dispatch could be any code. While member function is one useful pattern supported by macro `PRO_DEF_MEM_DISPATCH`, free function and operators are also supported with macros `PRO_DEF_FREE_DISPATCH` and `PRO_DEF_OPERATOR_DISPATCH`. The following example uses `PRO_DEF_OPERATOR_DISPATCH` to implement similar function wrapper as `std::function` and `std::move_only_function` and supports multiple overloads:
 
 ```cpp
 // Specifications of abstraction
-namespace spec {
+PRO_DEF_OPERATOR_DISPATCH(OpCall, "()");
 
 template <class... Overloads>
-PRO_DEF_FREE_DISPATCH(Call, std::invoke, Overloads...);
-template <class... Overloads>
-PRO_DEF_FACADE(MovableCallable, Call<Overloads...>);
-template <class... Overloads>
-PRO_DEF_FACADE(CopyableCallable, Call<Overloads...>, pro::copyable_ptr_constraints);
+struct MovableCallable : pro::facade_builder
+    ::add_convention<OpCall, Overloads...>
+    ::build {};
 
-}  // namespace spec
+template <class... Overloads>
+struct CopyableCallable : pro::facade_builder
+    ::support_copy<pro::constraint_level::nontrivial>
+    ::add_facade<MovableCallable<Overloads...>>  // Facade inheritance
+    ::build {};
 
 // MyFunction has similar functionality as std::function but supports multiple overloads
 // MyMoveOnlyFunction has similar functionality as std::move_only_function but supports multiple overloads
 template <class... Overloads>
-using MyFunction = pro::proxy<spec::CopyableCallable<Overloads...>>;
+using MyFunction = pro::proxy<CopyableCallable<Overloads...>>;
 template <class... Overloads>
-using MyMoveOnlyFunction = pro::proxy<spec::MovableCallable<Overloads...>>;
+using MyMoveOnlyFunction = pro::proxy<MovableCallable<Overloads...>>;
 
 int main() {
   auto f = [](auto&&... v) {
@@ -139,7 +142,7 @@ int main() {
 }
 ```
 
-Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/4cK8PPTE1)).
+Please find more details and discussions in the spec. The complete version of the "drawable" demo could be found in [tests/proxy_integration_tests.cpp](tests/proxy_integration_tests.cpp) (also available on [Compiler Explorer](https://godbolt.org/z/zro9dd3Eo)).
 
 ## Minimum requirements for compilers
 
