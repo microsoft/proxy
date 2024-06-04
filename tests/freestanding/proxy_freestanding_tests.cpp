@@ -17,7 +17,7 @@ unsigned GetDefaultHash() { return -1; }
 
 namespace spec {
 
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(FreeGetHash, GetHash, ::GetHash, ::GetDefaultHash);
+PRO_DEF_FREE_DISPATCH(FreeGetHash, ::GetHash, GetHash, ::GetDefaultHash);
 struct Hashable : pro::facade_builder
     ::add_convention<FreeGetHash, unsigned()>
     ::build {};

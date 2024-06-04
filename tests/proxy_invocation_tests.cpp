@@ -20,9 +20,14 @@ namespace spec {
 PRO_DEF_OPERATOR_DISPATCH(OpCall, "()");
 
 template <class... Os>
+struct MovableCallable : pro::facade_builder
+    ::add_convention<OpCall, Os...>
+    ::build {};
+
+template <class... Os>
 struct Callable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_convention<OpCall, Os...>
+    ::add_facade<MovableCallable<Os...>>
     ::build {};
 
 struct Wildcard {
@@ -32,15 +37,15 @@ struct Wildcard {
 
 Wildcard NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
 
-PRO_DEF_OPERATOR_DISPATCH_WITH_DEFAULT(WeakOpCall, "()", NotImplemented);
+PRO_DEF_OPERATOR_DISPATCH(WeakOpCall, "()", NotImplemented);
 template <class... Os>
 struct WeakCallable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
     ::add_convention<WeakOpCall, Os...>
     ::build {};
 
-PRO_DEF_FREE_DISPATCH(FreeSize, Size, std::ranges::size);
-PRO_DEF_FREE_DISPATCH(FreeForEach, ForEach, std::ranges::for_each);
+PRO_DEF_FREE_DISPATCH(FreeSize, std::ranges::size, Size);
+PRO_DEF_FREE_DISPATCH(FreeForEach, std::ranges::for_each, ForEach);
 
 template <class T>
 struct Iterable : pro::facade_builder
@@ -57,7 +62,7 @@ pro::proxy<Container<T>> AppendImpl(C& container, T&& v) {
   return &container;
 }
 
-PRO_DEF_FREE_DISPATCH(FreeAppend, Append, AppendImpl);
+PRO_DEF_FREE_DISPATCH(FreeAppend, AppendImpl, Append);
 
 template <class T>
 struct Container : pro::facade_builder
@@ -65,7 +70,7 @@ struct Container : pro::facade_builder
     ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T)>
     ::build {};
 
-PRO_DEF_MEM_DISPATCH_WITH_DEFAULT(MemAtWeak, at, NotImplemented);
+PRO_DEF_MEM_DISPATCH(MemAtWeak, at, at, NotImplemented);
 
 struct ResourceDictionary : pro::facade_builder
     ::add_convention<MemAtWeak, std::string(int)>
@@ -80,7 +85,7 @@ pro::proxy<F> LockImpl(const std::weak_ptr<T>& p) {
   return nullptr;
 }
 template <class F>
-PRO_DEF_FREE_DISPATCH(FreeLock, Lock, LockImpl<F>);
+PRO_DEF_FREE_DISPATCH(FreeLock, LockImpl<F>, Lock);
 
 template <class F>
 struct Weak : pro::facade_builder
@@ -92,7 +97,7 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(FreeGetWeak, GetWeak, GetWeakImpl<F>, std::nullptr_t);
+PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>

@@ -83,7 +83,7 @@ class LifetimeTracker {
 namespace spec {
 
 using std::to_string;
-PRO_DEF_FREE_DISPATCH(FreeToString, ToString, to_string);
+PRO_DEF_FREE_DISPATCH(FreeToString, to_string, ToString);
 
 struct Stringable : pro::facade_builder
     ::add_convention<FreeToString, std::string()>
