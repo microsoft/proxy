@@ -1040,6 +1040,13 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
         .relocatability = details::invalid_cl,
         .destructibility = details::invalid_cl}>;
 
+#define ___PRO_EXPAND_IMPL(__X) __X
+#define ___PRO_EXPAND_MACRO_IMPL(__MACRO, __1, __2, __3, __4, __NAME, ...) \
+    __MACRO ## _ ## __NAME
+#define ___PRO_EXPAND_MACRO(__MACRO, ...) \
+    ___PRO_EXPAND_IMPL(___PRO_EXPAND_MACRO_IMPL( \
+        __MACRO, __VA_ARGS__, 4, 3, 2)(__VA_ARGS__))
+
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
     { return __VA_ARGS__; }
@@ -1049,7 +1056,7 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
     decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
         ___PRO_DIRECT_FUNC_IMPL(__DEFFUNC(::std::forward<__Args>(__args)...))
 
-#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, ...) \
+#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, ...) \
     struct __NAME { \
       using __name = __NAME; \
       template <class... __Args> \
@@ -1059,15 +1066,24 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
       template <class __P> \
       struct accessor { \
         template <class... __Args> \
-        decltype(auto) __FUNC(__Args&&... __args) const \
+        decltype(auto) __FNAME(__Args&&... __args) const \
             ___PRO_DIRECT_FUNC_IMPL(::pro::proxy_invoke<__name>( \
                 static_cast<::pro::details::lazy_eval_t<const __P&, \
                     __Args...>>(*this), ::std::forward<__Args>(__args)...)) \
       }; \
       __VA_ARGS__ \
     }
+#define ___PRO_DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO_DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define ___PRO_DEF_MEM_DISPATCH_4(__NAME, __FUNC, __FNAME, __DEFFUNC) \
+    ___PRO_DEF_MEM_DISPATCH_IMPL( \
+        __NAME, __FUNC, __FNAME, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+#define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
-#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FNAME, __FUNC, ...) \
+#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, ...) \
     struct __NAME { \
       using __name = __NAME; \
       template <class... __Args> \
@@ -1083,20 +1099,15 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
       }; \
       __VA_ARGS__ \
     }
-
-#define PRO_DEF_MEM_DISPATCH(__NAME, __FUNC) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC)
-
-#define PRO_DEF_MEM_DISPATCH_WITH_DEFAULT(__NAME, __FUNC, __DEFFUNC) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL( \
-        __NAME, __FUNC, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-
-#define PRO_DEF_FREE_DISPATCH(__NAME, __FNAME, __FUNC) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FNAME, __FUNC)
-
-#define PRO_DEF_FREE_DISPATCH_WITH_DEFAULT(__NAME, __FNAME, __FUNC, __DEFFUNC) \
+#define ___PRO_DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO_DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define ___PRO_DEF_FREE_DISPATCH_4(__NAME, __FUNC, __FNAME, __DEFFUNC) \
     ___PRO_DEF_FREE_DISPATCH_IMPL( \
-        __NAME, __FNAME, __FUNC, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+        __NAME, __FUNC, __FNAME, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+#define PRO_DEF_FREE_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
 
 namespace details {
 
@@ -1354,7 +1365,7 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
 
 }  // namespace details
 
-#define ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, __POS, ...) \
+#define ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __POS, __SIGN, ...) \
     struct __NAME : ::pro::details::op_dispatch_base< \
         __SIGN, ::pro::details::sign_pos_type::__POS> { \
       using ::pro::details::op_dispatch_base< \
@@ -1364,6 +1375,18 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
           __SIGN, ::pro::details::sign_pos_type::__POS, __NAME, __P>; \
       __VA_ARGS__ \
     };
+#define ___PRO_DEF_OPERATOR_DISPATCH_3(__NAME, __POS, __SIGN) \
+    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __POS, __SIGN)
+#define ___PRO_DEF_OPERATOR_DISPATCH_4(__NAME, __POS, __SIGN, __DEFFUNC) \
+    ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
+        __NAME, __POS, __SIGN, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+#define PRO_DEF_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, none, __VA_ARGS__)
+#define PRO_DEF_PREFIX_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, left, __VA_ARGS__)
+#define PRO_DEF_POSTFIX_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO( \
+        ___PRO_DEF_OPERATOR_DISPATCH, __NAME, right, __VA_ARGS__)
 
 #define ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T, ...) \
     struct __NAME { \
@@ -1379,36 +1402,13 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
       }; \
       __VA_ARGS__ \
     }
-
-#define PRO_DEF_OPERATOR_DISPATCH(__NAME, __SIGN) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, none)
-
-#define PRO_DEF_OPERATOR_DISPATCH_WITH_DEFAULT(__NAME, __SIGN, __DEFFUNC) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
-        __NAME, __SIGN, none, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-
-#define PRO_DEF_PREFIX_OPERATOR_DISPATCH(__NAME, __SIGN) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, left)
-
-#define PRO_DEF_PREFIX_OPERATOR_DISPATCH_WITH_DEFAULT( \
-    __NAME, __SIGN, __DEFFUNC) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
-        __NAME, __SIGN, left, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-
-#define PRO_DEF_POSTFIX_OPERATOR_DISPATCH(__NAME, __SIGN) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __SIGN, right)
-
-#define PRO_DEF_POSTFIX_OPERATOR_DISPATCH_WITH_DEFAULT( \
-    __NAME, __SIGN, __DEFFUNC) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
-        __NAME, __SIGN, right, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-
-#define PRO_DEF_CONVERTION_DISPATCH(__NAME, __T) \
+#define ___PRO_DEF_CONVERTION_DISPATCH_2(__NAME, __T) \
     ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T)
-
-#define PRO_DEF_CONVERTION_DISPATCH_WITH_DEFAULT(__NAME, __T, __DEFFUNC) \
+#define ___PRO_DEF_CONVERTION_DISPATCH_3(__NAME, __T, __DEFFUNC) \
     ___PRO_DEF_CONVERTION_DISPATCH_IMPL( \
         __NAME, __T, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+#define PRO_DEF_CONVERTION_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_CONVERTION_DISPATCH, __NAME, __VA_ARGS__)
 
 }  // namespace pro
 
