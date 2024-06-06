@@ -383,9 +383,12 @@ using composite_accessor = recursive_reduction_t<accessor_helper<proxy<F>>
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
-  if constexpr (is_consteval([] { return F::constraints; })) {
-    return std::has_single_bit(F::constraints.max_align) &&
-        F::constraints.max_size % F::constraints.max_align == 0u;
+  if constexpr (requires {
+      { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>; }) {
+    if constexpr (is_consteval([] { return F::constraints; })) {
+      return std::has_single_bit(F::constraints.max_align) &&
+          F::constraints.max_size % F::constraints.max_align == 0u;
+    }
   }
   return false;
 }
@@ -437,7 +440,6 @@ template <class F>
         requires {
           typename F::convention_types;
           typename F::reflection_types;
-          { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>;
         } && is_tuple_like_well_formed<typename F::convention_types>() &&
         is_tuple_like_well_formed<typename F::reflection_types>() &&
         is_facade_constraints_well_formed<F>() &&
