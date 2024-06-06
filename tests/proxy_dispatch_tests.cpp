@@ -2,14 +2,15 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
-#ifdef _MSC_VER
+#include <vector>
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push)
 #pragma warning(disable: 4834)  // False alarm from MSVC: warning C4834: discarding return value of function with [[nodiscard]] attribute
-#endif  // _MSC_VER
+#endif  // defined(_MSC_VER) && !defined(__clang__)
 #include "proxy.h"
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
-#endif  // _MSC_VER
+#endif  // defined(_MSC_VER) && !defined(__clang__)
 
 namespace {
 
@@ -46,6 +47,7 @@ PRO_DEF_OPERATOR_DISPATCH(OpBitwiseXorAssignment, "^=");
 PRO_DEF_OPERATOR_DISPATCH(OpLeftShiftAssignment, "<<=");
 PRO_DEF_OPERATOR_DISPATCH(OpRightShiftAssignment, ">>=");
 PRO_DEF_OPERATOR_DISPATCH(OpComma, ",");
+PRO_DEF_OPERATOR_DISPATCH(OpPtrToMem, "->*");
 PRO_DEF_OPERATOR_DISPATCH(OpArrow, "->");
 PRO_DEF_OPERATOR_DISPATCH(OpParentheses, "()");
 PRO_DEF_OPERATOR_DISPATCH(OpBrackets, "[]");
@@ -72,6 +74,7 @@ PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpCaret, "^");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpLeftShift, "<<");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpRightShift, ">>");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpComma, ",");
+PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpPtrToMem, "->*");
 
 PRO_DEF_CONVERTION_DISPATCH(ConvertToInt, int);
 
@@ -79,12 +82,20 @@ struct CommaTester {
 public:
   explicit CommaTester(int v) : value_(v) {}
   int operator,(int v) { return value_ + v; }
-  friend int operator,(int v, CommaTester c) { return v * c.value_; }
+  friend int operator,(int v, CommaTester self) { return v * self.value_; }
 
 private:
   int value_;
 };
 
+struct PtrToMemTester {
+public:
+  explicit PtrToMemTester(int v) : value_(v) {}
+  friend int operator->*(int v, PtrToMemTester self) { return v * self.value_; }
+
+private:
+  int value_;
+};
 }  // namespace
 
 TEST(ProxyDispatchTests, TestOpPlus) {
@@ -340,6 +351,28 @@ TEST(ProxyDispatchTests, TestOpComma) {
   ASSERT_EQ((p, 6), 9);
 }
 
+TEST(ProxyDispatchTests, TestOpPtrToMem) {
+  struct Base1 { int a; int b; int c; };
+  struct Base2 { double x; };
+  struct Derived1 : Base1 { int x; };
+  struct Derived2 : Base2, Base1 { int d; };
+  struct TestFacade : pro::facade_builder::add_convention<OpPtrToMem, int&(int Base1::* ptm)>::build {};
+  Derived1 v1{};
+  Derived2 v2{};
+  pro::proxy<TestFacade> p1 = &v1, p2 = &v2;
+  std::vector<int Base1::*> fields{&Base1::a, &Base1::b, &Base1::c};
+  for (int i = 0; i < std::ssize(fields); ++i) {
+    p1->*fields[i] = i + 1;
+    p2->*fields[i] = i + 1;
+  }
+  ASSERT_EQ(v1.a, 1);
+  ASSERT_EQ(v1.b, 2);
+  ASSERT_EQ(v1.c, 3);
+  ASSERT_EQ(v2.a, 1);
+  ASSERT_EQ(v2.b, 2);
+  ASSERT_EQ(v2.c, 3);
+}
+
 TEST(ProxyDispatchTests, TestOpArrow) {
   struct TestFacade : pro::facade_builder::add_convention<OpArrow, const void*()>::build {};
   int v = 12;
@@ -537,6 +570,13 @@ TEST(ProxyDispatchTests, TestPreOpComma) {
   CommaTester v{3};
   pro::proxy<TestFacade> p = &v;
   ASSERT_EQ((7, p), 21);
+}
+
+TEST(ProxyDispatchTests, TestPreOpPtrToMem) {
+  struct TestFacade : pro::facade_builder::add_convention<PreOpPtrToMem, int(int val)>::build {};
+  PtrToMemTester v{3};
+  pro::proxy<TestFacade> p = &v;
+  ASSERT_EQ(2->*p, 6);
 }
 
 TEST(ProxyDispatchTests, TestConvertion) {

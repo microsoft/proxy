@@ -204,10 +204,11 @@ inline void destruction_default_dispatcher(std::byte*) noexcept {}
 
 template <bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
+  using dispatcher_type = func_ptr_t<NE, R, const std::byte*, Args...>;
   template <class D>
   struct meta_provider {
     template <class P>
-    static constexpr func_ptr_t<NE, R, const std::byte*, Args...> get() {
+    static constexpr dispatcher_type get() {
       if constexpr (invocable_dispatch<
           D, NE, R, typename ptr_traits<P>::target_type&, Args...>) {
         return &invocation_dispatcher_ref<P, D, R, Args...>;
@@ -223,6 +224,8 @@ struct overload_traits_impl : applicable_traits {
   static constexpr bool applicable_ptr =
       invocable_dispatch_ptr<D, P, NE, R, Args...>;
   static constexpr bool is_noexcept = NE;
+  template <class... Args2>
+  static constexpr bool matches = std::is_invocable_v<resolver, Args2...>;
 };
 template <class O> struct overload_traits : inapplicable_traits {};
 template <class R, class... Args>
@@ -492,11 +495,8 @@ struct meta_ptr<M> : M {
 
 template <class F>
 struct proxy_helper {
-  template <class M>
-  static const M& get_meta(const proxy<F>& p) noexcept
-      { return *static_cast<const M*>(p.meta_.operator->()); }
-  static inline const std::byte* get_ptr(const proxy<F>& p) noexcept
-      { return p.ptr_; }
+  static inline const auto& get_meta(const proxy<F>& p) noexcept
+      { return *p.meta_.operator->(); }
 };
 template <class F, class D, class... Args>
 using proxy_overload = typename facade_traits<
@@ -516,6 +516,7 @@ class proxy : public details::facade_traits<F>::base {
   friend struct details::proxy_helper<F>;
   using Traits = details::facade_traits<F>;
   static_assert(Traits::applicable);
+  using Meta = typename Traits::meta;
 
   template <class P, class... Args>
   static constexpr bool HasNothrowPolyConstructor = std::conditional_t<
@@ -558,6 +559,46 @@ class proxy : public details::facade_traits<F>::base {
   static constexpr bool HasMoveAssignment = HasMoveConstructor && HasDestructor;
 
  public:
+  template <class O>
+  class dispatch_ptr {
+    using OverloadTraits = details::overload_traits<O>;
+    using DispatcherType = typename OverloadTraits::dispatcher_type;
+
+   public:
+    constexpr dispatch_ptr() noexcept = default;
+    constexpr dispatch_ptr(const dispatch_ptr&) noexcept = default;
+    dispatch_ptr& operator=(const dispatch_ptr&) noexcept = default;
+
+#if defined(_MSC_VER) && !defined(__clang__)
+    template <class D>
+    constexpr explicit dispatch_ptr(std::in_place_type_t<D>) noexcept
+        : offset_(offsetof(Meta, template dispatcher_meta<typename
+              OverloadTraits::template meta_provider<D>>::dispatcher)) {}
+    DispatcherType get_dispatcher(const Meta& meta) const noexcept {
+      return *reinterpret_cast<const DispatcherType*>(
+          reinterpret_cast<const std::byte*>(&meta) + offset_);
+    }
+
+   private:
+    std::size_t offset_;
+#else
+    template <class D>
+    constexpr explicit dispatch_ptr(std::in_place_type_t<D>) noexcept
+        : ptr_(&details::dispatcher_meta<typename OverloadTraits
+              ::template meta_provider<D>>::dispatcher) {}
+    DispatcherType get_dispatcher(const Meta& meta) const noexcept
+        { return meta.*ptr_; }
+
+   private:
+    DispatcherType Meta::* ptr_;
+#endif  // defined(_MSC_VER) && !defined(__clang__)
+  };
+  template <class D, class... Args>
+  static auto consteval get_dispatch_ptr()
+      requires(requires { typename details::proxy_overload<F, D, Args...>; }) {
+    return dispatch_ptr<details::proxy_overload<F, D, Args...>>{
+        std::in_place_type<D>};
+  }
   proxy() noexcept = default;
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy& rhs) noexcept(HasNothrowCopyConstructor)
@@ -694,15 +735,25 @@ class proxy : public details::facade_traits<F>::base {
     return initialize<P>(il, std::forward<Args>(args)...);
   }
 
+  template <class O>
+  friend auto operator->*(const proxy& p, dispatch_ptr<O> ptd) noexcept {
+    return [&p, ptd]<class... Args>(Args&&... args)
+        noexcept(details::overload_traits<O>::is_noexcept) -> decltype(auto)
+        requires(details::overload_traits<O>::template matches<Args...>) {
+      return ptd.get_dispatcher(*p.meta_.operator->())(
+          p.ptr_, std::forward<Args>(args)...);
+    };
+  }
+
  private:
   template <class P, class... Args>
   P& initialize(Args&&... args) {
     std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    meta_ = details::meta_ptr<typename Traits::meta>{std::in_place_type<P>};
+    meta_ = details::meta_ptr<Meta>{std::in_place_type<P>};
     return *std::launder(reinterpret_cast<P*>(ptr_));
   }
 
-  details::meta_ptr<typename Traits::meta> meta_;
+  details::meta_ptr<Meta> meta_;
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
 
@@ -711,18 +762,14 @@ decltype(auto) proxy_invoke(const proxy<F>& p, Args&&... args)
     noexcept(details::overload_traits<details::proxy_overload<F, D, Args...>>
         ::is_noexcept)
     requires(requires { typename details::proxy_overload<F, D, Args...>; }) {
-  return details::proxy_helper<F>
-      ::template get_meta<details::dispatcher_meta<
-          typename details::overload_traits<details::proxy_overload<
-              F, D, Args...>>::template meta_provider<D>>>(p)
-      .dispatcher(details::proxy_helper<F>::get_ptr(p),
-          std::forward<Args>(args)...);
+  constexpr auto ptd = proxy<F>::template get_dispatch_ptr<D, Args...>();
+  return (p->*ptd)(std::forward<Args>(args)...);
 }
 
 template <class R, class F>
 const R& proxy_reflect(const proxy<F>& p) noexcept
     requires(details::facade_traits<F>::template has_refl<R>)
-    { return details::proxy_helper<F>::template get_meta<R>(p); }
+    { return details::proxy_helper<F>::get_meta(p); }
 
 namespace details {
 
@@ -1282,6 +1329,7 @@ ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(^=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(<<=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(>>=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(,)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(->*)
 
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL
