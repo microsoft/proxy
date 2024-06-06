@@ -2,14 +2,14 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push)
 #pragma warning(disable: 4834)  // False alarm from MSVC: warning C4834: discarding return value of function with [[nodiscard]] attribute
-#endif  // _MSC_VER
+#endif  // defined(_MSC_VER) && !defined(__clang__)
 #include "proxy.h"
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
-#endif  // _MSC_VER
+#endif  // defined(_MSC_VER) && !defined(__clang__)
 
 namespace {
 

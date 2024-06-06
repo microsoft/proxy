@@ -314,3 +314,13 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   ASSERT_EQ(ToString(p), "123");
 }
 
+TEST(ProxyInvocationTests, TestPtrToMember) {
+  using Runnable = pro::proxy<spec::Callable<void()>>;
+  constexpr auto OpCallPtr = Runnable::get_dispatch_ptr<spec::OpCall>();
+  static_assert(std::is_same_v<decltype(OpCallPtr), const Runnable::dispatch_ptr<void()>>);
+  int side_effects = 0;
+  auto f = [&] { side_effects = 1; };
+  Runnable p = &f;
+  (p->*OpCallPtr)();
+  ASSERT_EQ(side_effects, 1);
+}
