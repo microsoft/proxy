@@ -572,9 +572,9 @@ class proxy : public details::facade_traits<F>::base {
     constexpr dispatch_ptr(const dispatch_ptr&) noexcept = default;
     dispatch_ptr& operator=(const dispatch_ptr&) noexcept = default;
 
+#if defined(_MSC_VER) && !defined(__clang__)
     template <class D>
     constexpr explicit dispatch_ptr(std::in_place_type_t<D>) noexcept
-#if defined(_MSC_VER) && !defined(__clang__)
         : offset_(offsetof(Meta, template dispatcher_meta<typename
               OverloadTraits::template meta_provider<D>>::dispatcher)) {}
     DispatcherType get_dispatcher(const Meta& meta) const noexcept {
@@ -585,6 +585,8 @@ class proxy : public details::facade_traits<F>::base {
    private:
     std::size_t offset_;
 #else
+    template <class D>
+    constexpr explicit dispatch_ptr(std::in_place_type_t<D>) noexcept
         : ptr_(&details::dispatcher_meta<typename OverloadTraits
               ::template meta_provider<D>>::dispatcher) {}
     DispatcherType get_dispatcher(const Meta& meta) const noexcept
@@ -736,11 +738,11 @@ class proxy : public details::facade_traits<F>::base {
     return initialize<P>(il, std::forward<Args>(args)...);
   }
   template <class O>
-  auto operator->*(dispatch_ptr<O> dp) const noexcept {
-    return [this, dp]<class... Args>(Args&&... args)
+  auto operator->*(dispatch_ptr<O> ptd) const noexcept {
+    return [this, ptd]<class... Args>(Args&&... args)
         noexcept(details::overload_traits<O>::is_noexcept) -> decltype(auto)
         requires(details::overload_traits<O>::template matches<Args...>) {
-      return dp.get_dispatcher(*meta_.operator->())(
+      return ptd.get_dispatcher(*meta_.operator->())(
           ptr_, std::forward<Args>(args)...);
     };
   }
