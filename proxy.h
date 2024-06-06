@@ -412,8 +412,8 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   using conv_accessor = composite_accessor<
       F, typename conv_traits<Cs>::dispatch_type...>;
   template <class D, class... Args>
-  using matched_overload = typename conv_traits<first_applicable_t<
-      dispatch_match_helper<D>::template traits, Cs...>>
+  using matched_overload = typename conv_traits<
+      first_applicable_t<dispatch_match_helper<D>::template traits, Cs...>>
       ::template matched_overload<Args...>;
 
   template <class P>
