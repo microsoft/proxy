@@ -495,11 +495,8 @@ struct meta_ptr<M> : M {
 
 template <class F>
 struct proxy_helper {
-  template <class M>
-  static const M& get_meta(const proxy<F>& p) noexcept
-      { return *static_cast<const M*>(p.meta_.operator->()); }
-  static inline const std::byte* get_ptr(const proxy<F>& p) noexcept
-      { return p.ptr_; }
+  static inline const auto& get_meta(const proxy<F>& p) noexcept
+      { return *p.meta_.operator->(); }
 };
 template <class F, class D, class... Args>
 using proxy_overload = typename facade_traits<
@@ -737,13 +734,14 @@ class proxy : public details::facade_traits<F>::base {
     reset();
     return initialize<P>(il, std::forward<Args>(args)...);
   }
+
   template <class O>
-  auto operator->*(dispatch_ptr<O> ptd) const noexcept {
-    return [this, ptd]<class... Args>(Args&&... args)
+  friend auto operator->*(const proxy& p, dispatch_ptr<O> ptd) noexcept {
+    return [&p, ptd]<class... Args>(Args&&... args)
         noexcept(details::overload_traits<O>::is_noexcept) -> decltype(auto)
         requires(details::overload_traits<O>::template matches<Args...>) {
-      return ptd.get_dispatcher(*meta_.operator->())(
-          ptr_, std::forward<Args>(args)...);
+      return ptd.get_dispatcher(*p.meta_.operator->())(
+          p.ptr_, std::forward<Args>(args)...);
     };
   }
 
@@ -771,7 +769,7 @@ decltype(auto) proxy_invoke(const proxy<F>& p, Args&&... args)
 template <class R, class F>
 const R& proxy_reflect(const proxy<F>& p) noexcept
     requires(details::facade_traits<F>::template has_refl<R>)
-    { return details::proxy_helper<F>::template get_meta<R>(p); }
+    { return details::proxy_helper<F>::get_meta(p); }
 
 namespace details {
 
@@ -1331,6 +1329,7 @@ ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(^=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(<<=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(>>=)
 ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(,)
+___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(->*)
 
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL
 #undef ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL
