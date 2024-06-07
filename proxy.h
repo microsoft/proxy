@@ -1438,7 +1438,7 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
     ___PRO_EXPAND_MACRO( \
         ___PRO_DEF_OPERATOR_DISPATCH, __NAME, right, __VA_ARGS__)
 
-#define ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T, ...) \
+#define ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __T, ...) \
     struct __NAME { \
       __T operator()(auto& __self) \
           ___PRO_DIRECT_FUNC_IMPL(static_cast<__T>(__self)) \
@@ -1452,13 +1452,13 @@ using op_dispatch_accessor = typename op_dispatch_traits<SIGN, POS>
       }; \
       __VA_ARGS__ \
     }
-#define ___PRO_DEF_CONVERTION_DISPATCH_2(__NAME, __T) \
-    ___PRO_DEF_CONVERTION_DISPATCH_IMPL(__NAME, __T)
-#define ___PRO_DEF_CONVERTION_DISPATCH_3(__NAME, __T, __DEFFUNC) \
-    ___PRO_DEF_CONVERTION_DISPATCH_IMPL( \
+#define ___PRO_DEF_CONVERSION_DISPATCH_2(__NAME, __T) \
+    ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __T)
+#define ___PRO_DEF_CONVERSION_DISPATCH_3(__NAME, __T, __DEFFUNC) \
+    ___PRO_DEF_CONVERSION_DISPATCH_IMPL( \
         __NAME, __T, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-#define PRO_DEF_CONVERTION_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_CONVERTION_DISPATCH, __NAME, __VA_ARGS__)
+#define PRO_DEF_CONVERSION_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_CONVERSION_DISPATCH, __NAME, __VA_ARGS__)
 
 }  // namespace pro
 

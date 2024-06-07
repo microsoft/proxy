@@ -76,7 +76,7 @@ PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpRightShift, ">>");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpComma, ",");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpPtrToMem, "->*");
 
-PRO_DEF_CONVERTION_DISPATCH(ConvertToInt, int);
+PRO_DEF_CONVERSION_DISPATCH(ConvertToInt, int);
 
 struct CommaTester {
 public:
@@ -579,7 +579,7 @@ TEST(ProxyDispatchTests, TestPreOpPtrToMem) {
   ASSERT_EQ(2->*p, 6);
 }
 
-TEST(ProxyDispatchTests, TestConvertion) {
+TEST(ProxyDispatchTests, TestConversion) {
   struct TestFacade : pro::facade_builder::add_convention<ConvertToInt, int()>::build {};
   double v = 12.3;
   pro::proxy<TestFacade> p = &v;
