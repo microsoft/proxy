@@ -609,8 +609,6 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   template <class P>
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs>::template applicable_ptr<P> && ...);
-  static constexpr bool conv_has_indirection =
-      (!Cs::dispatch_type::is_direct || ...);
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl : inapplicable_traits {};
@@ -628,7 +626,6 @@ struct facade_refl_traits_impl<F, Rs...> : applicable_traits {
   template <class P>
   static constexpr bool refl_applicable_ptr =
       (is_reflection_type_well_formed<Rs, P>() && ...);
-  static constexpr bool refl_has_indirection = (!Rs::is_direct || ...);
 };
 template <class F> struct facade_traits : inapplicable_traits {};
 template <class F>
@@ -664,8 +661,8 @@ struct facade_traits<F>
       typename facade_traits::indirect_refl_accessor>;
 
   static constexpr bool applicable = true;
-  static constexpr bool has_indirection = facade_traits::conv_has_indirection ||
-      facade_traits::refl_has_indirection;
+  static constexpr bool has_indirection =
+      !std::is_same_v<indirect_accessor, composite_accessor_impl<>>;
 };
 
 using ptr_prototype = void*[2];
