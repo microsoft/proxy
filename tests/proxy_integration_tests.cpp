@@ -64,8 +64,8 @@ class Point {
 std::string PrintDrawableToString(pro::proxy<spec::Drawable> p) {
   std::stringstream result;
   result << std::fixed << std::setprecision(5) << "shape = ";
-  p.Draw(result);
-  result << ", area = " << p.Area();
+  p->Draw(result);
+  result << ", area = " << p->Area();
   return std::move(result).str();
 }
 
@@ -157,11 +157,11 @@ TEST(ProxyIntegrationTests, TestDrawable) {
 TEST(ProxyIntegrationTests, TestLogger) {
   std::ostringstream out;
   auto logger = pro::make_proxy<spec::Logger, StreamLogger>(out);
-  logger.Log("hello");
+  logger->Log("hello");
   try {
     throw std::runtime_error{"runtime error!"};
   } catch (const std::exception& e) {
-    logger.Log("world", e);
+    logger->Log("world", e);
   }
   auto content = std::move(out).str();
   ASSERT_EQ(content, "[INFO] hello\n\

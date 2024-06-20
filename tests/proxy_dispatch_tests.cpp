@@ -47,8 +47,7 @@ PRO_DEF_OPERATOR_DISPATCH(OpBitwiseXorAssignment, "^=");
 PRO_DEF_OPERATOR_DISPATCH(OpLeftShiftAssignment, "<<=");
 PRO_DEF_OPERATOR_DISPATCH(OpRightShiftAssignment, ">>=");
 PRO_DEF_OPERATOR_DISPATCH(OpComma, ",");
-PRO_DEF_OPERATOR_DISPATCH(OpPtrToMem, "->*");
-PRO_DEF_OPERATOR_DISPATCH(OpArrow, "->");
+PRO_DEF_DIRECT_OPERATOR_DISPATCH(OpPtrToMem, "->*");
 PRO_DEF_OPERATOR_DISPATCH(OpParentheses, "()");
 PRO_DEF_OPERATOR_DISPATCH(OpBrackets, "[]");
 
@@ -77,6 +76,8 @@ PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpComma, ",");
 PRO_DEF_PREFIX_OPERATOR_DISPATCH(PreOpPtrToMem, "->*");
 
 PRO_DEF_CONVERSION_DISPATCH(ConvertToInt, int);
+template <class F>
+PRO_DEF_DIRECT_CONVERSION_DISPATCH(ConvertToBase, pro::proxy<F>);
 
 struct CommaTester {
 public:
@@ -102,42 +103,42 @@ TEST(ProxyDispatchTests, TestOpPlus) {
   struct TestFacade : pro::facade_builder::add_convention<OpPlus, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p + 2, 14);
+  ASSERT_EQ(*p + 2, 14);
 }
 
 TEST(ProxyDispatchTests, TestOpMinus) {
   struct TestFacade : pro::facade_builder::add_convention<OpMinus, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p - 2, 10);
+  ASSERT_EQ(*p - 2, 10);
 }
 
 TEST(ProxyDispatchTests, TestOpAsterisk) {
   struct TestFacade : pro::facade_builder::add_convention<OpAsterisk, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p * 2, 24);
+  ASSERT_EQ(*p * 2, 24);
 }
 
 TEST(ProxyDispatchTests, TestOpSlash) {
   struct TestFacade : pro::facade_builder::add_convention<OpSlash, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p / 2, 6);
+  ASSERT_EQ(*p / 2, 6);
 }
 
 TEST(ProxyDispatchTests, TestOpPercent) {
   struct TestFacade : pro::facade_builder::add_convention<OpPercent, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p % 5, 2);
+  ASSERT_EQ(*p % 5, 2);
 }
 
 TEST(ProxyDispatchTests, TestOpIncrement) {
   struct TestFacade : pro::facade_builder::add_convention<OpIncrement, int()>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p++, 12);
+  ASSERT_EQ((*p)++, 12);
   ASSERT_EQ(v, 13);
 }
 
@@ -145,7 +146,7 @@ TEST(ProxyDispatchTests, TestOpDecrement) {
   struct TestFacade : pro::facade_builder::add_convention<OpDecrement, int()>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p--, 12);
+  ASSERT_EQ((*p)--, 12);
   ASSERT_EQ(v, 11);
 }
 
@@ -153,202 +154,202 @@ TEST(ProxyDispatchTests, TestOpEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<OpEqualTo, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p == 12, true);
-  ASSERT_EQ(p == 11, false);
+  ASSERT_EQ(*p == 12, true);
+  ASSERT_EQ(*p == 11, false);
 }
 
 TEST(ProxyDispatchTests, TestOpNotEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<OpNotEqualTo, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p != 12, false);
-  ASSERT_EQ(p != 11, true);
+  ASSERT_EQ(*p != 12, false);
+  ASSERT_EQ(*p != 11, true);
 }
 
 TEST(ProxyDispatchTests, TestOpGreaterThan) {
   struct TestFacade : pro::facade_builder::add_convention<OpGreaterThan, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p > 2, true);
-  ASSERT_EQ(p > 20, false);
+  ASSERT_EQ(*p > 2, true);
+  ASSERT_EQ(*p > 20, false);
 }
 
 TEST(ProxyDispatchTests, TestOpLessThan) {
   struct TestFacade : pro::facade_builder::add_convention<OpLessThan, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p < 2, false);
-  ASSERT_EQ(p < 20, true);
+  ASSERT_EQ(*p < 2, false);
+  ASSERT_EQ(*p < 20, true);
 }
 
 TEST(ProxyDispatchTests, TestOpGreaterThanOrEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<OpGreaterThanOrEqualTo, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p >= 20, false);
-  ASSERT_EQ(p >= 12, true);
+  ASSERT_EQ(*p >= 20, false);
+  ASSERT_EQ(*p >= 12, true);
 }
 
 TEST(ProxyDispatchTests, TestOpLessThanOrEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<OpLessThanOrEqualTo, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p <= 2, false);
-  ASSERT_EQ(p <= 12, true);
+  ASSERT_EQ(*p <= 2, false);
+  ASSERT_EQ(*p <= 12, true);
 }
 
 TEST(ProxyDispatchTests, TestOpSpaceship) {
   struct TestFacade : pro::facade_builder::add_convention<OpSpaceship, std::strong_ordering(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p <=> 2, std::strong_ordering::greater);
-  ASSERT_EQ(p <=> 12, std::strong_ordering::equal);
-  ASSERT_EQ(p <=> 20, std::strong_ordering::less);
+  ASSERT_EQ(*p <=> 2, std::strong_ordering::greater);
+  ASSERT_EQ(*p <=> 12, std::strong_ordering::equal);
+  ASSERT_EQ(*p <=> 20, std::strong_ordering::less);
 }
 
 TEST(ProxyDispatchTests, TestOpLogicalNot) {
   struct TestFacade : pro::facade_builder::add_convention<OpLogicalNot, bool()>::build {};
   int v1 = 12, v2 = 0;
   pro::proxy<TestFacade> p1 = &v1, p2 = &v2;
-  ASSERT_EQ(!p1, false);
-  ASSERT_EQ(!p2, true);
+  ASSERT_EQ(!*p1, false);
+  ASSERT_EQ(!*p2, true);
 }
 
 TEST(ProxyDispatchTests, TestOpLogicalAnd) {
   struct TestFacade : pro::facade_builder::add_convention<OpLogicalAnd, bool(bool val)>::build {};
   bool v = true;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p && true, true);
-  ASSERT_EQ(p && false, false);
+  ASSERT_EQ(*p && true, true);
+  ASSERT_EQ(*p && false, false);
 }
 
 TEST(ProxyDispatchTests, TestOpLogicalOr) {
   struct TestFacade : pro::facade_builder::add_convention<OpLogicalOr, bool(bool val)>::build {};
   bool v = false;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(v || true, true);
-  ASSERT_EQ(v || false, false);
+  ASSERT_EQ(*p || true, true);
+  ASSERT_EQ(*p || false, false);
 }
 
 TEST(ProxyDispatchTests, TestOpTilde) {
   struct TestFacade : pro::facade_builder::add_convention<OpTilde, int()>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(~v, -13);
+  ASSERT_EQ(~*p, -13);
 }
 
 TEST(ProxyDispatchTests, TestOpAmpersand) {
   struct TestFacade : pro::facade_builder::add_convention<OpAmpersand, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p & 4, 4);
+  ASSERT_EQ(*p & 4, 4);
 }
 
 TEST(ProxyDispatchTests, TestOpPipe) {
   struct TestFacade : pro::facade_builder::add_convention<OpPipe, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p | 6, 14);
+  ASSERT_EQ(*p | 6, 14);
 }
 
 TEST(ProxyDispatchTests, TestOpCaret) {
   struct TestFacade : pro::facade_builder::add_convention<OpCaret, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p ^ 5, 9);
+  ASSERT_EQ(*p ^ 5, 9);
 }
 
 TEST(ProxyDispatchTests, TestOpLeftShift) {
   struct TestFacade : pro::facade_builder::add_convention<OpLeftShift, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p << 2, 48);
+  ASSERT_EQ(*p << 2, 48);
 }
 
 TEST(ProxyDispatchTests, TestOpRightShift) {
   struct TestFacade : pro::facade_builder::add_convention<OpRightShift, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p >> 2, 3);
+  ASSERT_EQ(*p >> 2, 3);
 }
 
 TEST(ProxyDispatchTests, TestOpPlusAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpPlusAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p += 2).has_value());
-  ASSERT_EQ(v, 14);
+  (*p += 2) += 3;
+  ASSERT_EQ(v, 17);
 }
 
 TEST(ProxyDispatchTests, TestOpMinusAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpMinusAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p -= 2).has_value());
-  ASSERT_EQ(v, 10);
+  (*p -= 2) -= 3;
+  ASSERT_EQ(v, 7);
 }
 
 TEST(ProxyDispatchTests, TestOpMultiplicationAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpMultiplicationAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p *= 2).has_value());
-  ASSERT_EQ(v, 24);
+  (*p *= 2) *= 3;
+  ASSERT_EQ(v, 72);
 }
 
 TEST(ProxyDispatchTests, TestOpDivisionAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpDivisionAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p /= 2).has_value());
-  ASSERT_EQ(v, 6);
+  (*p /= 2) /= 2;
+  ASSERT_EQ(v, 3);
 }
 
 TEST(ProxyDispatchTests, TestOpBitwiseAndAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpBitwiseAndAssignment, void(int val)>::build {};
-  int v = 12;
+  int v = 15;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p &= 6).has_value());
-  ASSERT_EQ(v, 4);
+  (*p &= 11) &= 14;
+  ASSERT_EQ(v, 10);
 }
 
 TEST(ProxyDispatchTests, TestOpBitwiseOrAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpBitwiseOrAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p |= 2).has_value());
-  ASSERT_EQ(v, 14);
+  (*p |= 2) |= 1;
+  ASSERT_EQ(v, 15);
 }
 
 TEST(ProxyDispatchTests, TestOpBitwiseXorAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpBitwiseXorAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p ^= 6).has_value());
-  ASSERT_EQ(v, 10);
+  (*p ^= 6) ^= 1;
+  ASSERT_EQ(v, 11);
 }
 
 TEST(ProxyDispatchTests, TestOpLeftShiftAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpLeftShiftAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p <<= 2).has_value());
-  ASSERT_EQ(v, 48);
+  (*p <<= 2) <<= 1;
+  ASSERT_EQ(v, 96);
 }
 
 TEST(ProxyDispatchTests, TestOpRightShiftAssignment) {
   struct TestFacade : pro::facade_builder::add_convention<OpRightShiftAssignment, void(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_TRUE((p >>= 2).has_value());
-  ASSERT_EQ(v, 3);
+  (*p >>= 2) >>= 1;
+  ASSERT_EQ(v, 1);
 }
 
 TEST(ProxyDispatchTests, TestOpComma) {
   struct TestFacade : pro::facade_builder::add_convention<OpComma, int(int val)>::build {};
   CommaTester v{3};
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ((p, 6), 9);
+  ASSERT_EQ((*p, 6), 9);
 }
 
 TEST(ProxyDispatchTests, TestOpPtrToMem) {
@@ -373,25 +374,18 @@ TEST(ProxyDispatchTests, TestOpPtrToMem) {
   ASSERT_EQ(v2.c, 3);
 }
 
-TEST(ProxyDispatchTests, TestOpArrow) {
-  struct TestFacade : pro::facade_builder::add_convention<OpArrow, const void*()>::build {};
-  int v = 12;
-  pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(std::to_address(p), &v);
-}
-
 TEST(ProxyDispatchTests, TestOpParentheses) {
   struct TestFacade : pro::facade_builder::add_convention<OpParentheses, int(int a, int b)>::build {};
   auto v = [](auto&&... args) { return (args + ...); };
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(p(2, 3), 5);
+  ASSERT_EQ((*p)(2, 3), 5);
 }
 
 TEST(ProxyDispatchTests, TestOpBrackets) {
   struct TestFacade : pro::facade_builder::add_convention<OpBrackets, int&(int idx)>::build {};
   std::unordered_map<int, int> v;
   pro::proxy<TestFacade> p = &v;
-  p[3] = 12;
+  (*p)[3] = 12;
   ASSERT_EQ(v.size(), 1u);
   ASSERT_EQ(v.at(3), 12);
 }
@@ -400,45 +394,44 @@ TEST(ProxyDispatchTests, TestPreOpPlus) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpPlus, int(), int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(+p, 12);
-  ASSERT_EQ(2 + p, 14);
+  ASSERT_EQ(+*p, 12);
+  ASSERT_EQ(2 + *p, 14);
 }
 
 TEST(ProxyDispatchTests, TestPreOpMinus) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpMinus, int(), int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(-p, -12);
-  ASSERT_EQ(2 - p, -10);
+  ASSERT_EQ(-*p, -12);
+  ASSERT_EQ(2 - *p, -10);
 }
 
 TEST(ProxyDispatchTests, TestPreOpAsterisk) {
-  struct TestFacade : pro::facade_builder::add_convention<PreOpAsterisk, int(), int(int val)>::build {};
+  struct TestFacade : pro::facade_builder::add_convention<PreOpAsterisk, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(*p, 12);
-  ASSERT_EQ(2 * p, 24);
+  ASSERT_EQ(2 * *p, 24);
 }
 
 TEST(ProxyDispatchTests, TestPreOpSlash) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpSlash, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(50 / p, 4);
+  ASSERT_EQ(50 / *p, 4);
 }
 
 TEST(ProxyDispatchTests, TestPreOpPercent) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpPercent, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(26 % p, 2);
+  ASSERT_EQ(26 % *p, 2);
 }
 
 TEST(ProxyDispatchTests, TestPreOpIncrement) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpIncrement, int()>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(++p, 13);
+  ASSERT_EQ(++*p, 13);
   ASSERT_EQ(v, 13);
 }
 
@@ -446,7 +439,7 @@ TEST(ProxyDispatchTests, TestPreOpDecrement) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpDecrement, int()>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(--p, 11);
+  ASSERT_EQ(--*p, 11);
   ASSERT_EQ(v, 11);
 }
 
@@ -454,104 +447,104 @@ TEST(ProxyDispatchTests, TestPreOpEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpEqualTo, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(2 == p, false);
-  ASSERT_EQ(12 == p, true);
+  ASSERT_EQ(2 == *p, false);
+  ASSERT_EQ(12 == *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpNotEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpNotEqualTo, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(2 != p, true);
-  ASSERT_EQ(12 != p, false);
+  ASSERT_EQ(2 != *p, true);
+  ASSERT_EQ(12 != *p, false);
 }
 
 TEST(ProxyDispatchTests, TestPreOpGreaterThan) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpGreaterThan, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(12 > p, false);
-  ASSERT_EQ(13 > p, true);
+  ASSERT_EQ(12 > *p, false);
+  ASSERT_EQ(13 > *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpLessThan) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpLessThan, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(12 < p, false);
-  ASSERT_EQ(11 < p, true);
+  ASSERT_EQ(12 < *p, false);
+  ASSERT_EQ(11 < *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpGreaterThanOrEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpGreaterThanOrEqualTo, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(11 >= p, false);
-  ASSERT_EQ(12 >= p, true);
+  ASSERT_EQ(11 >= *p, false);
+  ASSERT_EQ(12 >= *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpLessThanOrEqualTo) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpLessThanOrEqualTo, bool(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(13 <= p, false);
-  ASSERT_EQ(12 <= p, true);
+  ASSERT_EQ(13 <= *p, false);
+  ASSERT_EQ(12 <= *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpSpaceship) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpSpaceship, std::strong_ordering(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(2 <=> p, std::strong_ordering::less);
-  ASSERT_EQ(12 <=> p, std::strong_ordering::equal);
-  ASSERT_EQ(20 <=> p, std::strong_ordering::greater);
+  ASSERT_EQ(2 <=> *p, std::strong_ordering::less);
+  ASSERT_EQ(12 <=> *p, std::strong_ordering::equal);
+  ASSERT_EQ(20 <=> *p, std::strong_ordering::greater);
 }
 
 TEST(ProxyDispatchTests, TestPreOpLogicalAnd) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpLogicalAnd, bool(bool val)>::build {};
   bool v = true;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(true && p, true);
-  ASSERT_EQ(false && p, false);
+  ASSERT_EQ(true && *p, true);
+  ASSERT_EQ(false && *p, false);
 }
 
 TEST(ProxyDispatchTests, TestPreOpLogicalOr) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpLogicalOr, bool(bool val)>::build {};
   bool v = false;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(false || p, false);
-  ASSERT_EQ(true || p, true);
+  ASSERT_EQ(false || *p, false);
+  ASSERT_EQ(true || *p, true);
 }
 
 TEST(ProxyDispatchTests, TestPreOpAmpersand) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpAmpersand, const void*() noexcept, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(6 & p, 4);
-  ASSERT_EQ(&p, &v);
+  ASSERT_EQ(6 & *p, 4);
+  ASSERT_EQ(&*p, &v);
 }
 
 TEST(ProxyDispatchTests, TestPreOpPipe) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpPipe, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(6 | p, 14);
+  ASSERT_EQ(6 | *p, 14);
 }
 
 TEST(ProxyDispatchTests, TestPreOpCaret) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpCaret, int(int val)>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(8 ^ p, 4);
+  ASSERT_EQ(8 ^ *p, 4);
 }
 
 TEST(ProxyDispatchTests, TestPreOpLeftShift) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpLeftShift, int(int val), std::ostream&(std::ostream& out)>::build {};
   int v = 2;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(12 << p, 48);
+  ASSERT_EQ(12 << *p, 48);
   std::ostringstream stream;
-  stream << p;
+  stream << *p;
   ASSERT_EQ(stream.str(), "2");
 }
 
@@ -559,9 +552,9 @@ TEST(ProxyDispatchTests, TestPreOpRightShift) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpRightShift, int(int val), std::istream&(std::istream& in)>::build {};
   int v = 1;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(25 >> p, 12);
+  ASSERT_EQ(25 >> *p, 12);
   std::istringstream stream("123");
-  stream >> p;
+  stream >> *p;
   ASSERT_EQ(v, 123);
 }
 
@@ -569,19 +562,36 @@ TEST(ProxyDispatchTests, TestPreOpComma) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpComma, int(int val)>::build {};
   CommaTester v{3};
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ((7, p), 21);
+  ASSERT_EQ((7, *p), 21);
 }
 
 TEST(ProxyDispatchTests, TestPreOpPtrToMem) {
   struct TestFacade : pro::facade_builder::add_convention<PreOpPtrToMem, int(int val)>::build {};
   PtrToMemTester v{3};
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(2->*p, 6);
+  ASSERT_EQ(2->**p, 6);
 }
 
-TEST(ProxyDispatchTests, TestConversion) {
+TEST(ProxyDispatchTests, TestIndirectConversion) {
   struct TestFacade : pro::facade_builder::add_convention<ConvertToInt, int()>::build {};
   double v = 12.3;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(static_cast<int>(p), 12);
+  ASSERT_EQ(static_cast<int>(*p), 12);
+}
+
+TEST(ProxyDispatchTests, TestDirectConversion) {
+  struct TestFacadeBase : pro::facade_builder
+      ::add_convention<PreOpLeftShift, std::ostream&(std::ostream& out)>
+      ::build {};
+  struct TestFacade : pro::facade_builder
+      ::add_facade<TestFacadeBase>
+      ::add_convention<OpPlusAssignment, void(int val)>
+      ::add_convention<ConvertToBase<TestFacadeBase>, pro::proxy<TestFacadeBase>() &&>
+      ::build {};
+  pro::proxy<TestFacade> p1 = std::make_unique<int>(123);
+  *p1 += 3;
+  pro::proxy<TestFacadeBase> p2 = static_cast<pro::proxy<TestFacadeBase>>(std::move(p1));
+  std::ostringstream stream;
+  stream << *p2;
+  ASSERT_EQ(stream.str(), "126");
 }

@@ -155,6 +155,8 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockFuncti
 static_assert(sizeof(pro::proxy<TrivialFacade>) == 2 * sizeof(void*));  // VTABLE should be eliminated, but a placeholder is required
 
 struct ReflectionOfSmallPtr {
+  static constexpr bool is_direct = true;
+
   template <class P> requires(sizeof(P) <= sizeof(void*))
   constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
 };
@@ -168,6 +170,8 @@ static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacadeWithReflection>);
 
 struct RuntimeReflection {
+  static constexpr bool is_direct = true;
+
   template <class P>
   explicit RuntimeReflection(std::in_place_type_t<P>) { throw std::runtime_error{"Not supported"}; }
 };
@@ -303,9 +307,12 @@ struct BadFacade_MissingReflectionTypes {
 };
 static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
 
+struct BadReflection {
+  static const bool is_direct;
+};
 struct BadFacade_BadReflectionType {
   using convention_types = std::tuple<>;
-  using reflection_types = std::tuple<std::unique_ptr<int>>;  // Probably constexpr, unknown until the evaluation of proxiablility
+  using reflection_types = std::tuple<BadReflection>;
   static constexpr auto constraints = pro::proxiable_ptr_constraints{
       .max_size = 2 * sizeof(void*),
       .max_align = alignof(void*),
@@ -314,6 +321,7 @@ struct BadFacade_BadReflectionType {
       .destructibility = pro::constraint_level::nothrow,
   };
 };
-static_assert(pro::facade<BadFacade_BadReflectionType>);
+static_assert(!pro::facade<BadFacade_BadReflectionType>);
+const bool BadReflection::is_direct = true;
 
 }  // namespace

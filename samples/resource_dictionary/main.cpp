@@ -15,7 +15,7 @@ struct Dictionary : pro::facade_builder
 }  // namespace spec
 
 void demo_print(pro::proxy<spec::Dictionary> dictionary) {
-  std::cout << dictionary.at(1) << std::endl;
+  std::cout << dictionary->at(1) << std::endl;
 }
 
 int main() {

@@ -15,9 +15,11 @@ concept ReflectionApplicable = requires(pro::proxy<F> p) {
 
 class RttiReflection {
  public:
-  template <class P>
-  constexpr explicit RttiReflection(std::in_place_type_t<P>)
-      : type_(typeid(P)) {}
+  static constexpr bool is_direct = false;
+
+  template <class T>
+  constexpr explicit RttiReflection(std::in_place_type_t<T>)
+      : type_(typeid(T)) {}
 
   const char* GetName() const noexcept { return type_.name(); }
 
@@ -27,6 +29,8 @@ class RttiReflection {
 
 struct TraitsReflection {
  public:
+  static constexpr bool is_direct = true;
+
   template <class P>
   constexpr explicit TraitsReflection(std::in_place_type_t<P>)
       : is_default_constructible_(std::is_default_constructible_v<P>),
@@ -60,12 +64,12 @@ static_assert(ReflectionApplicable<TestTraitsFacade, TraitsReflection>);
 TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
-  ASSERT_EQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(int*).name());
+  ASSERT_STREQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(int).name());
 }
 
 TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
-  ASSERT_EQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(std::unique_ptr<double>).name());
+  ASSERT_STREQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(double).name());
 }
 
 TEST(ProxyReflectionTests, TestTraits_RawPtr) {

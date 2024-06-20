@@ -48,8 +48,8 @@ class Rectangle {
 std::string PrintDrawableToString(pro::proxy<Drawable> p) {
   std::stringstream result;
   result << "shape = ";
-  p.Draw(result);  // Polymorphic call
-  result << ", area = " << p.Area();  // Polymorphic call
+  p->Draw(result);  // Polymorphic call
+  result << ", area = " << p->Area();  // Polymorphic call
   return std::move(result).str();
 }
 
@@ -76,11 +76,11 @@ struct Logger : pro::facade_builder
 
 // Client - Consumer
 void MyVerboseFunction(pro::proxy<Logger> logger) {
-  logger.Log("hello");
+  logger->Log("hello");
   try {
     throw std::runtime_error{"runtime error!"};
   } catch (const std::exception& e) {
-    logger.Log("world", e);
+    logger->Log("world", e);
   }
 }
 
@@ -133,11 +133,11 @@ int main() {
     puts("");
   };
   MyFunction<void(int)> p0{&f};
-  p0(123);  // Prints "f() called. Args: 123:i," (assuming GCC)
+  (*p0)(123);  // Prints "f() called. Args: 123:i," (assuming GCC)
   MyMoveOnlyFunction<void(), void(int), void(double)> p1{&f};
-  p1();  // Prints "f() called. Args:"
-  p1(456);  // Prints "f() called. Args: 456:i,"
-  p1(1.2);  // Prints "f() called. Args: 1.2:d,"
+  (*p1)();  // Prints "f() called. Args:"
+  (*p1)(456);  // Prints "f() called. Args: 456:i,"
+  (*p1)(1.2);  // Prints "f() called. Args: 1.2:d,"
   return 0;
 }
 ```
