@@ -414,8 +414,9 @@ consteval bool is_meta_is_direct_well_formed() {
 template <class T, class F>
 consteval bool is_a11y_well_formed() {
   if constexpr (requires { typename proxy_accessor<T, F>; }) {
-    return !std::is_final_v<proxy_accessor<T, F>> &&
-        std::is_nothrow_default_constructible_v<proxy_accessor<T, F>>;
+    return std::is_trivial_v<proxy_accessor<T, F>> &&
+        std::is_empty_v<proxy_accessor<T, F>> &&
+        !std::is_final_v<proxy_accessor<T, F>>;
   } else {
     return true;
   }
