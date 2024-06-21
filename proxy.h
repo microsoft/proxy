@@ -216,8 +216,7 @@ R indirect_conv_dispatcher(const std::byte& self, Args... args)
 }
 template <class P, class D, qualifier_type Q, class R, class... Args>
 R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
-    noexcept(invocable_dispatch<
-        D, true, R, typename ptr_traits<P>::target_type&, Args...>) {
+    noexcept(invocable_dispatch<D, true, R, add_qualifier_t<P, Q>, Args...>) {
   using Ptr = add_qualifier_t<P, Q>;
   return invoke_dispatch<D, R>(std::forward<Ptr>(*std::launder(reinterpret_cast<
       std::remove_reference_t<Ptr>*>(&self))), std::forward<Args>(args)...);
