@@ -51,23 +51,6 @@ template <class U, class... T>
 using lazy_eval_t = typename lazy_eval_traits<U, T...>::type;
 
 enum class qualifier_type { lv, const_lv, rv, const_rv };
-
-template <class T> struct qualifier_of_traits;
-template <class T>
-struct qualifier_of_traits<T&>
-    : std::integral_constant<qualifier_type, qualifier_type::lv> {};
-template <class T>
-struct qualifier_of_traits<const T&>
-    : std::integral_constant<qualifier_type, qualifier_type::const_lv> {};
-template <class T>
-struct qualifier_of_traits<T&&>
-    : std::integral_constant<qualifier_type, qualifier_type::rv> {};
-template <class T>
-struct qualifier_of_traits<const T&&>
-    : std::integral_constant<qualifier_type, qualifier_type::const_rv> {};
-template <class T>
-constexpr qualifier_type qualifier_of_v = qualifier_of_traits<T>::value;
-
 template <class T, qualifier_type Q> struct add_qualifier_traits;
 template <class T>
 struct add_qualifier_traits<T, qualifier_type::lv> : std::type_identity<T&> {};
@@ -441,9 +424,9 @@ struct conv_traits_impl<C, Os...> : applicable_traits {
   using meta = composite_meta_impl<dispatcher_meta<
       typename overload_traits<C::dispatch_type::is_direct, Os>
           ::template meta_provider<dispatch_type>>...>;
-  template <class... Args>
-  using matched_overload_traits =
-      std::invoke_result_t<overload_resolver, Args...>;
+  template <qualifier_type Q, class... Args>
+  using matched_overload_traits = std::invoke_result_t<
+      overload_resolver, add_qualifier_t<std::byte, Q>, Args...>;
 
   template <class P>
   static constexpr bool applicable_ptr = (overload_traits<
@@ -601,14 +584,20 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
       composite_accessor<F, true, typename conv_traits<Cs>::dispatch_type...>;
   using indirect_conv_accessor =
       composite_accessor<F, false, typename conv_traits<Cs>::dispatch_type...>;
-  template <class D, class... Args>
+  template <class D, qualifier_type Q, class... Args>
   using matched_overload_traits = typename conv_traits<first_applicable_t<
       dispatch_match_helper<D>::template traits, Cs...>>
-      ::template matched_overload_traits<Args...>;
+      ::template matched_overload_traits<Q, Args...>;
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs>::template applicable_ptr<P> && ...);
+  template <class D, qualifier_type Q, class... Args>
+  static constexpr bool is_invocable =
+      requires { typename matched_overload_traits<D, Q, Args...>; };
+  template <class D, qualifier_type Q, class... Args>
+  static constexpr bool is_nothrow_invocable =
+      matched_overload_traits<D, Q, Args...>::is_noexcept;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl : inapplicable_traits {};
@@ -691,28 +680,37 @@ struct meta_ptr<M> : M {
 
 template <class F>
 struct proxy_helper {
-  template <class D, class P, class... Args>
-  using matched_overload_traits = typename facade_traits<F>
-      ::template matched_overload_traits<D, add_qualifier_t<
-          std::byte, qualifier_of_v<P&&>>, Args...>;
-
   static inline const auto& get_meta(const proxy<F>& p) noexcept
       { return *p.meta_.operator->(); }
-  template <class D, class P, class... Args>
-  static decltype(auto) invoke(P&& p, Args&&... args)
-      noexcept(matched_overload_traits<D, P, Args...>::is_noexcept)
-      requires(requires { typename matched_overload_traits<D, P, Args...>; }) {
-    return p.meta_->template dispatcher_meta<typename matched_overload_traits<
-        D, P, Args...>::template meta_provider<D>>::dispatcher(
-        std::forward<add_qualifier_t<std::byte, qualifier_of_v<P&&>>>(*p.ptr_),
+  template <class D, qualifier_type Q, class... Args>
+  static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
+    return p.meta_->template dispatcher_meta<typename facade_traits<F>
+        ::template matched_overload_traits<D, Q, Args...>
+        ::template meta_provider<D>>::dispatcher(
+        std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
         std::forward<Args>(args)...);
   }
-  static inline const proxy<F>& access(
-      const typename facade_traits<F>::indirect_accessor& ia) {
+  template <class A>
+  static const proxy<F>& indirect_access(const A& ia) {
+    using IA = typename facade_traits<F>::indirect_accessor;
+    static_assert(std::is_base_of_v<A, IA>);
     return *reinterpret_cast<const proxy<F>*>(
-        reinterpret_cast<const std::byte*>(&ia) - offsetof(proxy<F>, ia_));
+        reinterpret_cast<const std::byte*>(static_cast<const IA*>(&ia)) -
+        offsetof(proxy<F>, ia_));
   }
 };
+template <class P> struct access_proxy_traits;
+template <class F>
+struct access_proxy_traits<proxy<F>> { using helper = proxy_helper<F>; };
+template <class P, qualifier_type Q, class A>
+decltype(auto) access_proxy_impl(add_qualifier_t<A, Q> a) {
+  if constexpr (std::is_base_of_v<A, P>) {
+    return static_cast<add_qualifier_t<P, Q>>(
+        std::forward<add_qualifier_t<A, Q>>(a));
+  } else {
+    return access_proxy_traits<P>::helper::template indirect_access(a);
+  }
+}
 
 }  // namespace details
 
@@ -778,8 +776,6 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   static constexpr bool HasMoveAssignment = HasMoveConstructor && HasDestructor;
 
  public:
-  using facade_type = F;
-
   proxy() noexcept = default;
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy& rhs) noexcept(HasNothrowCopyConstructor)
@@ -936,39 +932,66 @@ class proxy : public details::facade_traits<F>::direct_accessor {
 
 template <class D, facade F, class... Args>
 decltype(auto) proxy_invoke(proxy<F>& p, Args&&... args)
-    ___PRO_DIRECT_FUNC_IMPL(details::proxy_helper<F>::template invoke<D>(
-        p, std::forward<Args>(args)...))
+    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
+        D, details::qualifier_type::lv, Args...>)
+    requires(details::facade_traits<F>::template is_invocable<
+        D, details::qualifier_type::lv, Args...>) {
+  return details::proxy_helper<F>::template invoke<
+      D, details::qualifier_type::lv>(p, std::forward<Args>(args)...);
+}
 template <class D, facade F, class... Args>
 decltype(auto) proxy_invoke(const proxy<F>& p, Args&&... args)
-    ___PRO_DIRECT_FUNC_IMPL(details::proxy_helper<F>::template invoke<D>(
-        p, std::forward<Args>(args)...))
+    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
+        D, details::qualifier_type::const_lv, Args...>)
+    requires(details::facade_traits<F>::template is_invocable<
+        D, details::qualifier_type::const_lv, Args...>) {
+  return details::proxy_helper<F>::template invoke<
+      D, details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
+}
 template <class D, facade F, class... Args>
 decltype(auto) proxy_invoke(proxy<F>&& p, Args&&... args)
-    ___PRO_DIRECT_FUNC_IMPL(details::proxy_helper<F>::template invoke<D>(
-        static_cast<proxy<F>&&>(p), std::forward<Args>(args)...))
+    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
+        D, details::qualifier_type::rv, Args...>)
+    requires(details::facade_traits<F>::template is_invocable<
+        D, details::qualifier_type::rv, Args...>) {
+  return details::proxy_helper<F>::template invoke<
+      D, details::qualifier_type::rv>(
+      std::forward<proxy<F>>(p), std::forward<Args>(args)...);
+}
 template <class D, facade F, class... Args>
 decltype(auto) proxy_invoke(const proxy<F>&& p, Args&&... args)
-    ___PRO_DIRECT_FUNC_IMPL(details::proxy_helper<F>::template invoke<D>(
-        static_cast<const proxy<F>&&>(p), std::forward<Args>(args)...))
+    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
+        D, details::qualifier_type::const_rv, Args...>)
+    requires(details::facade_traits<F>::template is_invocable<
+        D, details::qualifier_type::const_rv, Args...>) {
+  return details::proxy_helper<F>::template invoke<
+      D, details::qualifier_type::const_rv>(
+      std::forward<const proxy<F>>(p), std::forward<Args>(args)...);
+}
+
+template <class P, class A>
+decltype(auto) access_proxy(A& a) noexcept {
+  return details::access_proxy_impl<P, details::qualifier_type::lv, A>(a);
+}
+template <class P, class A>
+decltype(auto) access_proxy(const A& a) noexcept {
+  return details::access_proxy_impl<P, details::qualifier_type::const_lv, A>(a);
+}
+template <class P, class A>
+decltype(auto) access_proxy(A&& a) noexcept {
+  return details::access_proxy_impl<P, details::qualifier_type::rv, A>(
+      std::forward<A>(a));
+}
+template <class P, class A>
+decltype(auto) access_proxy(const A&& a) noexcept {
+  return details::access_proxy_impl<P, details::qualifier_type::const_rv, A>(
+      std::forward<const A>(a));
+}
 
 template <class R, facade F>
 const R& proxy_reflect(const proxy<F>& p) noexcept
     requires(details::facade_traits<F>::template has_refl<R>)
     { return details::proxy_helper<F>::get_meta(p); }
-
-template <class P, class A>
-decltype(auto) access_proxy(A&& a) noexcept {
-  if constexpr (std::is_base_of_v<std::remove_cvref_t<A>, P>) {
-    return static_cast<details::add_qualifier_t<
-        P, details::qualifier_of_v<A&&>>>(std::forward<A>(a));
-  } else {
-    using IA = typename details::facade_traits<typename P::facade_type>
-        ::indirect_accessor;
-    static_assert(std::is_base_of_v<std::remove_cvref_t<A>, IA>);
-    return details::proxy_helper<typename P::facade_type>
-        ::access(static_cast<const IA&>(a));
-  }
-}
 
 namespace details {
 
