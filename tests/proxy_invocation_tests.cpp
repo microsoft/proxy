@@ -3,6 +3,7 @@
 
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <functional>
 #include <list>
 #include <map>
 #include <ranges>
@@ -49,7 +50,7 @@ PRO_DEF_FREE_DISPATCH(FreeForEach, std::ranges::for_each, ForEach);
 
 template <class T>
 struct Iterable : pro::facade_builder
-    ::add_convention<FreeForEach, void(pro::proxy<Callable<void(T&)>>)>
+    ::add_convention<FreeForEach, void(std::function<void(T&)>)>
     ::template add_convention<FreeSize, std::size_t() noexcept>
     ::build {};
 
@@ -97,11 +98,11 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
+PRO_DEF_DIRECT_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>()>
+    ::add_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
     ::build {};
 
 }  // namespace spec
@@ -115,8 +116,8 @@ concept InvocableWithDispatch =
 template <class F, bool NE, class... Args>
 concept InvocableWithoutDispatch =
   requires(const pro::proxy<F> p, Args... args) {
-    { p(std::forward<Args>(args)...) };
-    typename std::enable_if_t<NE == noexcept(p(std::forward<Args>(args)...))>;
+    { (*p)(std::forward<Args>(args)...) };
+    typename std::enable_if_t<NE == noexcept((*p)(std::forward<Args>(args)...))>;
 };
 
 // Static assertions for a facade of a single dispatch
@@ -153,7 +154,7 @@ TEST(ProxyInvocationTests, TestArgumentForwarding) {
     return expected_result;
   };
   pro::proxy<spec::Callable<int(std::string, std::vector<int>)>> p = &f;
-  int result = p(arg1, std::move(arg2));
+  int result = (*p)(arg1, std::move(arg2));
   ASSERT_TRUE(p.has_value());
   ASSERT_EQ(arg1_received, arg1);
   ASSERT_TRUE(arg2.empty());
@@ -167,7 +168,7 @@ TEST(ProxyInvocationTests, TestThrow) {
   bool exception_thrown = false;
   pro::proxy<spec::Callable<void()>> p = &f;
   try {
-    p();
+    (*p)();
   } catch (const std::runtime_error& e) {
     exception_thrown = true;
     ASSERT_STREQ(e.what(), expected_error_message);
@@ -179,42 +180,42 @@ TEST(ProxyInvocationTests, TestThrow) {
 TEST(ProxyInvocationTests, TestMultipleDispatches_Unique) {
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<spec::Iterable<int>> p = &l;
-  ASSERT_EQ(Size(p), 3);
+  ASSERT_EQ(Size(*p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  ForEach(p, &accumulate_sum);
+  ForEach(*p, accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestMultipleDispatches_Duplicated) {
   struct DuplicatedIterable : pro::facade_builder
-      ::add_convention<spec::FreeForEach, void(pro::proxy<spec::Callable<void(int&)>>)>
+      ::add_convention<spec::FreeForEach, void(std::function<void(int&)>)>
       ::add_convention<spec::FreeSize, std::size_t()>
-      ::add_convention<spec::FreeForEach, void(pro::proxy<spec::Callable<void(int&)>>)>
+      ::add_convention<spec::FreeForEach, void(std::function<void(int&)>)>
       ::build {};
   static_assert(sizeof(pro::details::facade_traits<DuplicatedIterable>::meta) ==
       sizeof(pro::details::facade_traits<spec::Iterable<int>>::meta));
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<DuplicatedIterable> p = &l;
-  ASSERT_EQ(Size(p), 3);
+  ASSERT_EQ(Size(*p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  ForEach(p, &accumulate_sum);
+  ForEach(*p, accumulate_sum);
   ASSERT_EQ(sum, 6);
 }
 
 TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   std::list<int> l = { 1, 2, 3 };
   pro::proxy<spec::Container<int>> p = &l;
-  ASSERT_EQ(Size(p), 3);
+  ASSERT_EQ(Size(*p), 3);
   int sum = 0;
   auto accumulate_sum = [&](int x) { sum += x; };
-  ForEach(p, &accumulate_sum);
+  ForEach(*p, accumulate_sum);
   ASSERT_EQ(sum, 6);
-  Append(Append(Append(p, 4), 5), 6);
-  ASSERT_EQ(Size(p), 6);
+  Append(*Append(*Append(*p, 4), 5), 6);
+  ASSERT_EQ(Size(*p), 6);
   sum = 0;
-  ForEach(p, &accumulate_sum);
+  ForEach(*p, accumulate_sum);
   ASSERT_EQ(sum, 21);
 }
 
@@ -225,37 +226,37 @@ TEST(ProxyInvocationTests, TestOverloadResolution) {
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
       { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
-  p(123);
+  (*p)(123);
   ASSERT_EQ(side_effect, GetTypeIndices<int>());
-  p(1.23);
+  (*p)(1.23);
   ASSERT_EQ(side_effect, GetTypeIndices<double>());
   char foo[2];
-  p(foo);
+  (*p)(foo);
   ASSERT_EQ(side_effect, GetTypeIndices<char*>());
-  p("lalala");
+  (*p)("lalala");
   ASSERT_EQ(side_effect, GetTypeIndices<const char*>());
-  p("lalala", 0);
+  (*p)("lalala", 0);
   ASSERT_EQ(side_effect, (GetTypeIndices<std::string, int>()));
-  ASSERT_FALSE((std::is_invocable_v<decltype(p), std::vector<int>>));
+  ASSERT_FALSE((std::is_invocable_v<decltype(*p), std::vector<int>>));
 }
 
 TEST(ProxyInvocationTests, TestNoexcept) {
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<spec::Callable<void(int) noexcept, void(double)>>([&](auto&&... args) noexcept
     { side_effect = GetTypeIndices<std::decay_t<decltype(args)>...>(); });
-  static_assert(noexcept(p(123)));
-  p(123);
+  static_assert(noexcept((*p)(123)));
+  (*p)(123);
   ASSERT_EQ(side_effect, GetTypeIndices<int>());
-  static_assert(!noexcept(p(1.23)));
-  p(1.23);
+  static_assert(!noexcept((*p)(1.23)));
+  (*p)(1.23);
   ASSERT_EQ(side_effect, GetTypeIndices<double>());
-  ASSERT_FALSE((std::is_invocable_v<decltype(p), char*>));
+  ASSERT_FALSE((std::is_invocable_v<decltype(*p), char*>));
 }
 
 TEST(ProxyInvocationTests, TestFunctionPointer) {
   struct TestFacade : spec::Callable<std::vector<std::type_index>()> {};
   pro::proxy<TestFacade> p{ &GetTypeIndices<int, double> };
-  auto ret = p();
+  auto ret = (*p)();
   ASSERT_EQ(ret, (GetTypeIndices<int, double>()));
 }
 
@@ -263,12 +264,12 @@ TEST(ProxyInvocationTests, TestMemberDispatchDefault) {
   std::vector<std::string> container1{ "hello", "world", "!"};
   std::list<std::string> container2{ "hello", "world" };
   pro::proxy<spec::ResourceDictionary> p = &container1;
-  ASSERT_EQ(p.at(0), "hello");
+  ASSERT_EQ(p->at(0), "hello");
   p = &container2;
   {
     bool exception_thrown = false;
     try {
-      p.at(0);
+      p->at(0);
     } catch (const std::runtime_error& e) {
       exception_thrown = true;
       ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
@@ -281,14 +282,14 @@ TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
   {
     int side_effect = 0;
     auto p = pro::make_proxy<spec::WeakCallable<void()>>([&] { side_effect = 1; });
-    p();
+    (*p)();
     ASSERT_EQ(side_effect, 1);
   }
   {
     bool exception_thrown = false;
     auto p = pro::make_proxy<spec::WeakCallable<void()>>(123);
     try {
-      p();
+      (*p)();
     } catch (const std::runtime_error& e) {
       exception_thrown = true;
       ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
@@ -303,24 +304,13 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   auto weak = GetWeak(p);
   ASSERT_TRUE(weak.has_value());
   {
-    auto locked = Lock(weak);
+    auto locked = Lock(*weak);
     ASSERT_TRUE(locked.has_value());
-    ASSERT_EQ(ToString(locked), "123");
+    ASSERT_EQ(ToString(*locked), "123");
   }
   p = &test_val;  // The underlying std::shared_ptr will be destroyed
   ASSERT_TRUE(weak.has_value());
-  ASSERT_FALSE(Lock(weak).has_value());
+  ASSERT_FALSE(Lock(*weak).has_value());
   ASSERT_FALSE(GetWeak(p).has_value());
-  ASSERT_EQ(ToString(p), "123");
-}
-
-TEST(ProxyInvocationTests, TestPtrToMember) {
-  using Runnable = pro::proxy<spec::Callable<void()>>;
-  constexpr auto OpCallPtr = Runnable::get_dispatch_ptr<spec::OpCall>();
-  static_assert(std::is_same_v<decltype(OpCallPtr), const Runnable::dispatch_ptr<void()>>);
-  int side_effects = 0;
-  auto f = [&] { side_effects = 1; };
-  Runnable p = &f;
-  (p->*OpCallPtr)();
-  ASSERT_EQ(side_effects, 1);
+  ASSERT_EQ(ToString(*p), "123");
 }
