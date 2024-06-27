@@ -1246,10 +1246,10 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
         .destructibility = details::invalid_cl}>;
 
 #define ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0(__MACRO, __NAME, ...) \
-    __MACRO(__NAME, , *this, __VA_ARGS__); \
+    __MACRO(__NAME,, *this, __VA_ARGS__); \
     __MACRO(__NAME, noexcept, *this, __VA_ARGS__);
 #define ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1(__MACRO, __NAME, ...) \
-    __MACRO(__NAME, , *this, __VA_ARGS__); \
+    __MACRO(__NAME,, *this, __VA_ARGS__); \
     __MACRO(__NAME, noexcept, *this, __VA_ARGS__); \
     __MACRO(__NAME, &, *this, __VA_ARGS__); \
     __MACRO(__NAME, & noexcept, *this, __VA_ARGS__); \
@@ -1601,7 +1601,7 @@ struct conversion_dispatch_traits {
 #undef ___PRO_DEF_LHS_OP_ACCESSOR_TEMPLATE_IMPL
 
 template <int IS_DIRECT, int IS_RHS, sign SIGN>
-struct op_dispatch_base : dispatch_base<IS_DIRECT>,
+struct ___PRO_ENFORCE_EBO op_dispatch_base : dispatch_base<IS_DIRECT>,
     op_dispatch_traits<static_cast<bool>(IS_RHS), SIGN>::base {};
 template <int IS_DIRECT, int IS_RHS, sign SIGN, class D, class P, class... Os>
 using op_dispatch_accessor = std::conditional_t<static_cast<bool>(IS_DIRECT),
@@ -1611,7 +1611,7 @@ using op_dispatch_accessor = std::conditional_t<static_cast<bool>(IS_DIRECT),
         ::template indirect_accessor<D, P, Os...>>;
 
 template <int IS_DIRECT, class T>
-struct conversion_dispatch_base
+struct ___PRO_ENFORCE_EBO conversion_dispatch_base
     : dispatch_base<IS_DIRECT>, conversion_dispatch_traits<T>::base {};
 template <int IS_DIRECT, class T, class D, class P, class... Os>
 using conversion_dispatch_accessor = std::conditional_t<
