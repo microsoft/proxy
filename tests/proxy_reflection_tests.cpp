@@ -8,11 +8,6 @@
 
 namespace {
 
-template <class F, class R>
-concept ReflectionApplicable = requires(pro::proxy<F> p) {
-  { pro::proxy_reflect<R>(p) };
-};
-
 class RttiReflection {
  public:
   static constexpr bool is_direct = false;
@@ -46,18 +41,13 @@ struct TraitsReflection {
   bool is_trivial_;
 };
 
-struct DefaultFacade : pro::facade_builder::build {};
-static_assert(!ReflectionApplicable<DefaultFacade, RttiReflection>);
-
 struct TestRttiFacade : pro::facade_builder
     ::add_reflection<RttiReflection>
     ::build {};
-static_assert(ReflectionApplicable<TestRttiFacade, RttiReflection>);
 
 struct TestTraitsFacade : pro::facade_builder
     ::add_reflection<TraitsReflection>
     ::build {};
-static_assert(ReflectionApplicable<TestTraitsFacade, TraitsReflection>);
 
 }  // namespace
 

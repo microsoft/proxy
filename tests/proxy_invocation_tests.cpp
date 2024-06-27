@@ -107,33 +107,18 @@ struct SharedStringable : pro::facade_builder
 
 }  // namespace spec
 
-template <class F, class D, bool NE, class... Args>
-concept InvocableWithDispatch =
-    requires(const pro::proxy<F> p, Args... args) {
-      { pro::proxy_invoke<D>(p, std::forward<Args>(args)...) };
-      typename std::enable_if_t<NE == noexcept(pro::proxy_invoke<D>(p, std::forward<Args>(args)...))>;
-    };
 template <class F, bool NE, class... Args>
-concept InvocableWithoutDispatch =
+concept CallableFacade =
   requires(const pro::proxy<F> p, Args... args) {
     { (*p)(std::forward<Args>(args)...) };
     typename std::enable_if_t<NE == noexcept((*p)(std::forward<Args>(args)...))>;
 };
 
-// Static assertions for a facade of a single dispatch
-static_assert(InvocableWithDispatch<spec::Callable<int(double)>, spec::OpCall, false, double>);
-static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, spec::OpCall, false, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithoutDispatch<spec::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<spec::Callable<int(double)>, int(double), false, double>);  // Wrong dispatch
-static_assert(InvocableWithoutDispatch<spec::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
-static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noexcept>, true, int>);  // Invoking noexcept overloads
-static_assert(InvocableWithoutDispatch<spec::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
-
-// Static assertions for a facade of multiple dispatches
-static_assert(InvocableWithDispatch<spec::Iterable<int>, spec::FreeSize, true>);
-static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::FreeForEach, false, pro::proxy<spec::Callable<void(double&)>>>);  // Wrong arguments
-static_assert(!InvocableWithDispatch<spec::Iterable<int>, spec::FreeAppend, false>);  // Wrong dispatch
-static_assert(!InvocableWithoutDispatch<spec::Iterable<int>, false>);  // Invoking without specifying a dispatch
+// Static assertions for facade Callable
+static_assert(!CallableFacade<spec::Callable<int(double)>, false, std::nullptr_t>);  // Wrong arguments
+static_assert(CallableFacade<spec::Callable<int(double)>, false, float>);  // Invoking without specifying a dispatch
+static_assert(CallableFacade<spec::Callable<int(double), void(int) noexcept>, true, int>);  // Invoking noexcept overloads
+static_assert(CallableFacade<spec::Callable<int(double), void(int) noexcept>, false, double>);  // Invoking overloads that may throw
 
 template <class... Args>
 std::vector<std::type_index> GetTypeIndices()

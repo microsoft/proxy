@@ -324,4 +324,16 @@ struct BadFacade_BadReflectionType {
 static_assert(!pro::facade<BadFacade_BadReflectionType>);
 const bool BadReflection::is_direct = true;
 
+PRO_DEF_INDIRECT_MEM_DISPATCH(MemFoo, Foo);
+PRO_DEF_INDIRECT_MEM_DISPATCH(MemBar, Bar);
+PRO_DEF_DIRECT_MEM_DISPATCH(DirMemFoo, Foo);
+PRO_DEF_DIRECT_MEM_DISPATCH(DirMemBar, Bar);
+struct BigFacade : pro::facade_builder
+    ::add_convention<MemFoo, void(), void(int)>
+    ::add_convention<MemBar, void(), void(int)>
+    ::add_convention<DirMemFoo, void(), void(int)>
+    ::add_convention<DirMemBar, void(), void(int)>
+    ::build {};
+static_assert(sizeof(pro::proxy<BigFacade>) == 3 * sizeof(void*));  // Accessors should not add paddings
+
 }  // namespace

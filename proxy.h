@@ -21,6 +21,12 @@
 #error "Proxy requires C++20 attribute no_unique_address"
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#define ___PRO_ENFORCE_EBO __declspec(empty_bases)
+#else
+#define ___PRO_ENFORCE_EBO
+#endif  // defined(_MSC_VER) && !defined(__clang__)
+
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
     { return __VA_ARGS__; }
@@ -45,10 +51,6 @@ template <bool A>
 struct conditional_traits { static constexpr bool applicable = A; };
 using applicable_traits = conditional_traits<true>;
 using inapplicable_traits = conditional_traits<false>;
-
-template <class T, class...> struct lazy_eval_traits : std::type_identity<T> {};
-template <class U, class... T>
-using lazy_eval_t = typename lazy_eval_traits<U, T...>::type;
 
 enum class qualifier_type { lv, const_lv, rv, const_rv };
 template <class T, qualifier_type Q> struct add_qualifier_traits;
@@ -251,12 +253,9 @@ struct indirect_overload_traits_impl : applicable_traits {
       }
     }
   };
-  struct resolver
-      { indirect_overload_traits_impl operator()(const std::byte&, Args...); };
   template <class D, class P>
   static constexpr bool applicable_ptr =
       invocable_indirect_dispatch_ptr<D, P, NE, R, Args...>;
-  static constexpr bool is_noexcept = NE;
 };
 template <qualifier_type Q, bool NE, class R, class... Args>
 struct direct_overload_traits_impl : applicable_traits {
@@ -274,14 +273,9 @@ struct direct_overload_traits_impl : applicable_traits {
       }
     }
   };
-  struct resolver {
-    direct_overload_traits_impl operator()(
-        add_qualifier_t<std::byte, Q>, Args...);
-  };
   template <class D, class P>
   static constexpr bool applicable_ptr =
       invocable_direct_dispatch_ptr<D, P, Q, NE, R, Args...>;
-  static constexpr bool is_noexcept = NE;
 };
 template <class R, class... Args>
 struct overload_traits<false, R(Args...)>
@@ -382,25 +376,12 @@ template <class... Ms>
 using composite_meta =
     recursive_reduction_t<meta_reduction_t, composite_meta_impl<>, Ms...>;
 
-template <class T, class F>
-using proxy_accessor = typename T::template accessor<proxy<F>>;
 template <class T>
 consteval bool is_meta_is_direct_well_formed() {
   if constexpr (requires { { T::is_direct } -> std::same_as<const bool&>; }) {
     if constexpr (is_consteval([] { return T::is_direct; })) {
       return true;
     }
-  }
-  return false;
-}
-template <class T, class F>
-consteval bool is_a11y_well_formed() {
-  if constexpr (requires { typename proxy_accessor<T, F>; }) {
-    return std::is_trivial_v<proxy_accessor<T, F>> &&
-        std::is_empty_v<proxy_accessor<T, F>> &&
-        !std::is_final_v<proxy_accessor<T, F>>;
-  } else {
-    return true;
   }
   return false;
 }
@@ -411,26 +392,17 @@ template <class C, class... Os>
     requires(sizeof...(Os) > 0u && (overload_traits<
         C::dispatch_type::is_direct, Os>::applicable && ...))
 struct conv_traits_impl<C, Os...> : applicable_traits {
- private:
-  struct overload_resolver : overload_traits<
-      C::dispatch_type::is_direct, Os>::resolver... {
-    using overload_traits<C::dispatch_type::is_direct, Os>::resolver
-        ::operator()...;
-  };
-
- public:
-  using dispatch_type = typename C::dispatch_type;
   using meta = composite_meta_impl<dispatcher_meta<
       typename overload_traits<C::dispatch_type::is_direct, Os>
-          ::template meta_provider<dispatch_type>>...>;
-  template <qualifier_type Q, class... Args>
-  using matched_overload_traits = std::invoke_result_t<
-      overload_resolver, add_qualifier_t<std::byte, Q>, Args...>;
+          ::template meta_provider<typename C::dispatch_type>>...>;
+  template <class F>
+  using accessor = typename C::dispatch_type
+      ::template accessor<proxy<F>, Os...>;
 
   template <class P>
   static constexpr bool applicable_ptr = (overload_traits<
       C::dispatch_type::is_direct, Os>
-          ::template applicable_ptr<dispatch_type, P> && ...);
+          ::template applicable_ptr<typename C::dispatch_type, P> && ...);
 };
 template <class C> struct conv_traits : inapplicable_traits {};
 template <class C>
@@ -504,7 +476,7 @@ template <template <bool> class MP, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
 
 template <class... As>
-class composite_accessor_impl : public As... {
+class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
   template <class> friend class pro::proxy;
 
   composite_accessor_impl() noexcept = default;
@@ -512,24 +484,23 @@ class composite_accessor_impl : public As... {
   composite_accessor_impl& operator=(const composite_accessor_impl&) noexcept
       = default;
 };
-template <class F, bool IS_DIRECT, class O, class I>
+
+template <template <class> class TA, class O, class I>
 struct composite_accessor_reduction : std::type_identity<O> {};
-template <class F, bool IS_DIRECT, class... As, class I>
-    requires((I::is_direct == IS_DIRECT) &&
-        requires { typename proxy_accessor<I, F>; })
-struct composite_accessor_reduction<
-    F, IS_DIRECT, composite_accessor_impl<As...>, I>
-    : std::type_identity<composite_accessor_impl<
-          As..., proxy_accessor<I, F>>> {};
-template <class F, bool IS_DIRECT>
+template <template <class> class TA, class... As, class I>
+    requires(requires { typename TA<I>; } && std::is_trivial_v<TA<I>> &&
+        !std::is_final_v<TA<I>>)
+struct composite_accessor_reduction<TA, composite_accessor_impl<As...>, I>
+    { using type = composite_accessor_impl<As..., TA<I>>; };
+template <template <class> class TA>
 struct composite_accessor_helper {
   template <class O, class I>
-  using reduction_t =
-      typename composite_accessor_reduction<F, IS_DIRECT, O, I>::type;
+  using reduction_t = typename composite_accessor_reduction<TA, O, I>::type;
 };
-template <class F, bool IS_DIRECT, class... Ts>
-using composite_accessor = recursive_reduction_t<composite_accessor_helper<
-    F, IS_DIRECT>::template reduction_t, composite_accessor_impl<>, Ts...>;
+template <template <class> class TA, class... Us>
+using composite_accessor = recursive_reduction_t<
+      composite_accessor_helper<TA>::template reduction_t,
+      composite_accessor_impl<>, Us...>;
 
 template <class As1, class As2> struct merge_composite_accessor_traits;
 template <class... As1, class... As2>
@@ -540,6 +511,20 @@ template <class T, class U>
 using merged_composite_accessor =
     typename merge_composite_accessor_traits<T, U>::type;
 
+template <bool IS_DIRECT, class F>
+struct conv_accessor_helper {
+  template <class C> requires(C::dispatch_type::is_direct == IS_DIRECT)
+  using single_accessor = typename conv_traits<C>::template accessor<F>;
+  template <class... Cs>
+  using accessor = composite_accessor<single_accessor, Cs...>;
+};
+template <bool IS_DIRECT, class F>
+struct refl_accessor_helper {
+  template <class R> requires(R::is_direct == IS_DIRECT)
+  using single_accessor = typename R::template accessor<proxy<F>>;
+  template <class... Rs>
+  using accessor = composite_accessor<single_accessor, Rs...>;
+};
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (requires {
@@ -562,55 +547,32 @@ consteval bool is_reflection_type_well_formed() {
   }
   return false;
 }
-template <class D>
-struct dispatch_match_helper {
-  template <class C>
-  using traits =
-      conditional_traits<std::is_same_v<typename C::dispatch_type, D>>;
-};
-template <class D, class C>
-struct dispatch_match_traits : inapplicable_traits {};
-template <class D, class C>
-    requires(std::is_same_v<typename C::dispatch_type, D>)
-struct dispatch_match_traits<D, C> : applicable_traits {};
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
-template <class F, class... Cs> requires((conv_traits<Cs>::applicable && ...) &&
-    (is_a11y_well_formed<typename Cs::dispatch_type, F>() && ...))
+template <class F, class... Cs> requires(conv_traits<Cs>::applicable && ...)
 struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   using conv_meta = composite_meta<typename conv_traits<Cs>::meta...>;
-  using direct_conv_accessor =
-      composite_accessor<F, true, typename conv_traits<Cs>::dispatch_type...>;
   using indirect_conv_accessor =
-      composite_accessor<F, false, typename conv_traits<Cs>::dispatch_type...>;
-  template <class D, qualifier_type Q, class... Args>
-  using matched_overload_traits = typename conv_traits<first_applicable_t<
-      dispatch_match_helper<D>::template traits, Cs...>>
-      ::template matched_overload_traits<Q, Args...>;
+      typename conv_accessor_helper<false, F>::template accessor<Cs...>;
+  using direct_conv_accessor =
+      typename conv_accessor_helper<true, F>::template accessor<Cs...>;
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs>::template applicable_ptr<P> && ...);
-  template <class D, qualifier_type Q, class... Args>
-  static constexpr bool is_invocable =
-      requires { typename matched_overload_traits<D, Q, Args...>; };
-  template <class D, qualifier_type Q, class... Args>
-  static constexpr bool is_nothrow_invocable =
-      matched_overload_traits<D, Q, Args...>::is_noexcept;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl : inapplicable_traits {};
 template <class F, class... Rs>
-    requires((is_meta_is_direct_well_formed<Rs>() && ...) &&
-        (is_a11y_well_formed<Rs, F>() && ...))
+    requires(is_meta_is_direct_well_formed<Rs>() && ...)
 struct facade_refl_traits_impl<F, Rs...> : applicable_traits {
   using refl_meta = composite_meta<std::conditional_t<
       Rs::is_direct, Rs, indirect_refl_meta<Rs>>...>;
-  using direct_refl_accessor = composite_accessor<F, true, Rs...>;
-  using indirect_refl_accessor = composite_accessor<F, false, Rs...>;
+  using indirect_refl_accessor =
+      typename refl_accessor_helper<false, F>::template accessor<Rs...>;
+  using direct_refl_accessor =
+      typename refl_accessor_helper<true, F>::template accessor<Rs...>;
 
-  template <class R>
-  static constexpr bool has_refl = (std::is_same_v<R, Rs> || ...);
   template <class P>
   static constexpr bool refl_applicable_ptr =
       (is_reflection_type_well_formed<Rs, P>() && ...);
@@ -649,8 +611,6 @@ struct facade_traits<F>
       typename facade_traits::indirect_refl_accessor>;
 
   static constexpr bool applicable = true;
-  static constexpr bool has_indirection =
-      !std::is_same_v<indirect_accessor, composite_accessor_impl<>>;
 };
 
 using ptr_prototype = void*[2];
@@ -681,11 +641,10 @@ template <class F>
 struct proxy_helper {
   static inline const auto& get_meta(const proxy<F>& p) noexcept
       { return *p.meta_.operator->(); }
-  template <class D, qualifier_type Q, class... Args>
+  template <class D, class O, qualifier_type Q, class... Args>
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    return p.meta_->template dispatcher_meta<typename facade_traits<F>
-        ::template matched_overload_traits<D, Q, Args...>
-        ::template meta_provider<D>>::dispatcher(
+    return p.meta_->template dispatcher_meta<typename overload_traits<
+        D::is_direct, O>::template meta_provider<D>>::dispatcher(
         std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
         std::forward<Args>(args)...);
   }
@@ -773,6 +732,8 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   static constexpr bool HasNothrowMoveAssignment = HasNothrowMoveConstructor &&
       HasNothrowDestructor;
   static constexpr bool HasMoveAssignment = HasMoveConstructor && HasDestructor;
+  static constexpr bool HasIndirection = !std::is_same_v<
+      typename Traits::indirect_accessor, details::composite_accessor_impl<>>;
 
  public:
   proxy() noexcept = default;
@@ -910,10 +871,8 @@ class proxy : public details::facade_traits<F>::direct_accessor {
     reset();
     return initialize<P>(il, std::forward<Args>(args)...);
   }
-  auto operator->() const noexcept requires(Traits::has_indirection)
-      { return &ia_; }
-  auto& operator*() const noexcept requires(Traits::has_indirection)
-      { return ia_; }
+  auto operator->() const noexcept requires(HasIndirection) { return &ia_; }
+  auto& operator*() const noexcept requires(HasIndirection) { return ia_; }
 
  private:
   template <class P, class... Args>
@@ -929,44 +888,32 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
 
-template <class D, facade F, class... Args>
-decltype(auto) proxy_invoke(proxy<F>& p, Args&&... args)
-    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
-        D, details::qualifier_type::lv, Args...>)
-    requires(details::facade_traits<F>::template is_invocable<
-        D, details::qualifier_type::lv, Args...>) {
+template <class D, class O, class F, class... Args>
+decltype(auto) proxy_invoke(proxy<F>& p, Args&&... args) {
   return details::proxy_helper<F>::template invoke<
-      D, details::qualifier_type::lv>(p, std::forward<Args>(args)...);
+      D, O, details::qualifier_type::lv>(p, std::forward<Args>(args)...);
 }
-template <class D, facade F, class... Args>
-decltype(auto) proxy_invoke(const proxy<F>& p, Args&&... args)
-    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
-        D, details::qualifier_type::const_lv, Args...>)
-    requires(details::facade_traits<F>::template is_invocable<
-        D, details::qualifier_type::const_lv, Args...>) {
+template <class D, class O, class F, class... Args>
+decltype(auto) proxy_invoke(const proxy<F>& p, Args&&... args) {
   return details::proxy_helper<F>::template invoke<
-      D, details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
+      D, O, details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
 }
-template <class D, facade F, class... Args>
-decltype(auto) proxy_invoke(proxy<F>&& p, Args&&... args)
-    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
-        D, details::qualifier_type::rv, Args...>)
-    requires(details::facade_traits<F>::template is_invocable<
-        D, details::qualifier_type::rv, Args...>) {
+template <class D, class O, class F, class... Args>
+decltype(auto) proxy_invoke(proxy<F>&& p, Args&&... args) {
   return details::proxy_helper<F>::template invoke<
-      D, details::qualifier_type::rv>(
+      D, O, details::qualifier_type::rv>(
       std::forward<proxy<F>>(p), std::forward<Args>(args)...);
 }
-template <class D, facade F, class... Args>
-decltype(auto) proxy_invoke(const proxy<F>&& p, Args&&... args)
-    noexcept(details::facade_traits<F>::template is_nothrow_invocable<
-        D, details::qualifier_type::const_rv, Args...>)
-    requires(details::facade_traits<F>::template is_invocable<
-        D, details::qualifier_type::const_rv, Args...>) {
+template <class D, class O, class F, class... Args>
+decltype(auto) proxy_invoke(const proxy<F>&& p, Args&&... args) {
   return details::proxy_helper<F>::template invoke<
-      D, details::qualifier_type::const_rv>(
+      D, O, details::qualifier_type::const_rv>(
       std::forward<const proxy<F>>(p), std::forward<Args>(args)...);
 }
+
+template <class R, class F>
+const R& proxy_reflect(const proxy<F>& p) noexcept
+    { return details::proxy_helper<F>::get_meta(p); }
 
 template <class P, class A>
 decltype(auto) access_proxy(A& a) noexcept {
@@ -986,11 +933,6 @@ decltype(auto) access_proxy(const A&& a) noexcept {
   return details::access_proxy_impl<P, details::qualifier_type::const_rv, A>(
       std::forward<const A>(a));
 }
-
-template <class R, facade F>
-const R& proxy_reflect(const proxy<F>& p) noexcept
-    requires(details::facade_traits<F>::template has_refl<R>)
-    { return details::proxy_helper<F>::get_meta(p); }
 
 namespace details {
 
@@ -1303,50 +1245,48 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
         .relocatability = details::invalid_cl,
         .destructibility = details::invalid_cl}>;
 
-#define ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, __QP, __SELF, __ARGS) \
-    noexcept(noexcept(::pro::proxy_invoke<__D>( \
-        ::std::declval<__QP>(), __ARGS))) \
-    requires(requires { ::pro::proxy_invoke<__D>( \
-        ::std::declval<__QP>(), __ARGS); }) \
-    { return ::pro::proxy_invoke<__D>( \
-        ::pro::access_proxy<__P>(__SELF), __ARGS); }
+#define ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0(__MACRO, __NAME, ...) \
+    __MACRO(__NAME,, *this, __VA_ARGS__); \
+    __MACRO(__NAME, noexcept, *this, __VA_ARGS__);
+#define ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1(__MACRO, __NAME, ...) \
+    __MACRO(__NAME,, *this, __VA_ARGS__); \
+    __MACRO(__NAME, noexcept, *this, __VA_ARGS__); \
+    __MACRO(__NAME, &, *this, __VA_ARGS__); \
+    __MACRO(__NAME, & noexcept, *this, __VA_ARGS__); \
+    __MACRO(__NAME, &&, ::std::forward<__NAME>(*this), __VA_ARGS__); \
+    __MACRO(__NAME, && noexcept, ::std::forward<__NAME>(*this), __VA_ARGS__); \
+    __MACRO(__NAME, const, *this, __VA_ARGS__); \
+    __MACRO(__NAME, const noexcept, *this, __VA_ARGS__); \
+    __MACRO(__NAME, const&, *this, __VA_ARGS__); \
+    __MACRO(__NAME, const& noexcept, *this, __VA_ARGS__); \
+    __MACRO(__NAME, const&&, ::std::forward<const __NAME>(*this), \
+        __VA_ARGS__); \
+    __MACRO(__NAME, const&& noexcept, ::std::forward<const __NAME>(*this), \
+        __VA_ARGS__);
 
-#define ___PRO_GEN_MEM_ACCESSOR_0(__SELF, __DECL, __D, __P, __ARGS, ...) \
-    __DECL(, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&, *this, __ARGS)
-#define ___PRO_GEN_MEM_ACCESSOR_1(__SELF, __DECL, __D, __P, __ARGS, ...) \
-    __DECL(&, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, __P&, *this, __ARGS) \
-    __DECL(const&, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&, *this, __ARGS) \
-    __DECL(&&, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, __P&&, \
-            ::std::forward<__SELF>(*this), __ARGS) \
-    __DECL(const&&, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&&, \
-            ::std::forward<const __SELF>(*this), __ARGS) \
-
-#define ___PRO_GEN_FREE_ACCESSOR_0(__SELF, __DECL, __D, __P, __ARGS, ...) \
-    __DECL(__SELF& __self, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&, __self, __ARGS)
-#define ___PRO_GEN_FREE_ACCESSOR_1(__SELF, __DECL, __D, __P, __ARGS, ...) \
-    __DECL(__SELF& __self, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, __P&, __self, __ARGS) \
-    __DECL(const __SELF& __self, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&, __self, __ARGS) \
-    __DECL(__SELF&& __self, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, __P&&, \
-            ::std::forward<__SELF>(__self), __ARGS) \
-    __DECL(const __SELF&& __self, __VA_ARGS__) \
-        ___PRO_ACCESSOR_FUNC_IMPL(__D, __P, const __P&&, \
-            ::std::forward<const __SELF>(__self), __ARGS) \
-
-#define ___PRO_DECL_MEM_ACCESSOR(__Q, __FNAME) \
-    template <class... __Args> decltype(auto) __FNAME(__Args&&... __args) __Q
-
-#define ___PRO_DECL_FREE_ACCESSOR(__SELF, __FNAME) \
-    template <class... __Args> \
-    friend decltype(auto) __FNAME(__SELF, __Args&&... __args)
+#define ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_0(__MACRO, __NAME, ...) \
+    __MACRO(__NAME,,, __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, noexcept, noexcept, __NAME& __self, __self, __VA_ARGS__);
+#define ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_1(__MACRO, __NAME, ...) \
+    __MACRO(__NAME,,, __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, noexcept, noexcept, __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, &,, __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, & noexcept, noexcept, __NAME& __self, \
+        __self, __VA_ARGS__); \
+    __MACRO(__NAME, &&,, __NAME&& __self, \
+        ::std::forward<__NAME>(__self), __VA_ARGS__); \
+    __MACRO(__NAME, && noexcept, noexcept, __NAME&& __self, \
+        ::std::forward<__NAME>(__self), __VA_ARGS__); \
+    __MACRO(__NAME, const,, const __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, const noexcept, noexcept, const __NAME& __self, \
+        __self, __VA_ARGS__); \
+    __MACRO(__NAME, const&,, const __NAME& __self, __self, __VA_ARGS__); \
+    __MACRO(__NAME, const& noexcept, noexcept, const __NAME& __self, \
+        __self, __VA_ARGS__); \
+    __MACRO(__NAME, const&&,, const __NAME&& __self, \
+        ::std::forward<const __NAME>(__self), __VA_ARGS__); \
+    __MACRO(__NAME, const&& noexcept, noexcept, const __NAME&& __self, \
+        ::std::forward<const __NAME>(__self), __VA_ARGS__);
 
 namespace details {
 
@@ -1364,339 +1304,244 @@ struct sign {
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
-enum class sign_pos_type { none, left, right };
+template <bool RHS, sign SIGN> struct op_dispatch_traits;
 
-template <sign SIGN, sign_pos_type POS>
-struct op_dispatch_traits_impl : inapplicable_traits {};
+#define ___PRO_DEF_LHS_OP_ACCESSOR_TEMPLATE_IMPL(NAME, ...) \
+    template <class D, class P, class... Os> \
+    struct ___PRO_ENFORCE_EBO NAME { NAME() = delete; }; \
+    template <class D, class P, class... Os> requires(sizeof...(Os) > 1u && \
+        (std::is_trivial_v<NAME<D, P, Os>> && ...)) \
+    struct NAME<D, P, Os...> : NAME<D, P, Os>... \
+        { using NAME<D, P, Os>::operator __VA_ARGS__...; };
+#define ___PRO_DEF_RHS_OP_ACCESSOR_TEMPLATE_IMPL(NAME, ...) \
+    template <class D, class P, class... Os> \
+    struct ___PRO_ENFORCE_EBO NAME { NAME() = delete; }; \
+    template <class D, class P, class... Os> requires(sizeof...(Os) > 1u && \
+        (std::is_trivial_v<NAME<D, P, Os>> && ...)) \
+    struct NAME<D, P, Os...> : NAME<D, P, Os>... {};
+#define ___PRO_DEF_OP_ACCESSOR_TEMPLATES(TYPE, ...) \
+    ___PRO_DEF_##TYPE##_OP_ACCESSOR_TEMPLATE_IMPL( \
+        indirect_accessor, __VA_ARGS__) \
+    ___PRO_DEF_##TYPE##_OP_ACCESSOR_TEMPLATE_IMPL(direct_accessor, __VA_ARGS__)
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(...) \
+#define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P, class R> \
+    struct NAME<D, P, R() Q> { \
+      R operator __VA_ARGS__ () Q \
+          { return proxy_invoke<D, R() Q>(access_proxy<P>(SELF)); } \
+    }
+#define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P, class R, class... Args> \
+    struct NAME<D, P, R(Args...) Q> { \
+      R operator __VA_ARGS__ (Args... args) Q { \
+        return proxy_invoke<D, R(Args...) Q>( \
+            access_proxy<P>(SELF), std::forward<Args>(args)...); \
+      } \
+    }
+#define ___PRO_DEF_LHS_UNARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+    template <class T> \
+    decltype(auto) operator()(T&& self) \
+        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
+#define ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+    template <class T> \
+    decltype(auto) operator()(T&& self) \
+        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
+    template <class T> \
+    decltype(auto) operator()(T&& self, int) \
+        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
+#define ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+    template <class T, class Arg> \
+    decltype(auto) operator()(T&& self, Arg&& arg) \
+        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
+            std::forward<Arg>(arg))
+#define ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+    ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__) \
+    ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__)
+#define ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(TYPE, ...) \
     template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
-        : applicable_traits { \
-      struct base { \
-        template <class T> \
-        decltype(auto) operator()(T&& self) \
-            ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
-      }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () \
-            noexcept(noexcept( \
-                proxy_invoke<lazy_eval_t<D>>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () & \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () const& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () && \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<direct_accessor>(*this))); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () const&& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<const direct_accessor>(*this))); } \
-      }; \
+    struct op_dispatch_traits<false, #__VA_ARGS__> { \
+      struct base \
+          { ___PRO_LHS_##TYPE##_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__) }; \
+      ___PRO_DEF_OP_ACCESSOR_TEMPLATES(LHS, __VA_ARGS__) \
+      ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0( \
+          ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, indirect_accessor, __VA_ARGS__) \
+      ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1( \
+          ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, direct_accessor, __VA_ARGS__) \
     };
 
-#define ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1(SELF, ...) \
-    template <class Arg> \
-    friend decltype(auto) operator __VA_ARGS__ (Arg&& arg, SELF)
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(...) \
+#define ___PRO_DEF_RHS_OP_ACCESSOR(NAME, Q, NE, SELF, FW_SELF, ...) \
+    template <class D, class P, class R, class Arg> \
+    struct NAME<D, P, R(Arg) Q> { \
+      friend R operator __VA_ARGS__ (Arg arg, SELF) NE { \
+        return proxy_invoke<D, R(Arg) Q>( \
+            access_proxy<P>(FW_SELF), std::forward<Arg>(arg)); \
+      } \
+    }
+#define ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
-        : applicable_traits { \
+    struct op_dispatch_traits<true, #__VA_ARGS__> { \
       struct base { \
         template <class T, class Arg> \
         decltype(auto) operator()(T&& self, Arg&& arg) \
             ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
                 std::forward<T>(self)) \
       }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        ___PRO_GEN_FREE_ACCESSOR_0( \
-            indirect_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        ___PRO_GEN_FREE_ACCESSOR_1( \
-            direct_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
+      ___PRO_DEF_OP_ACCESSOR_TEMPLATES(RHS, __VA_ARGS__) \
+      ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_0( \
+          ___PRO_DEF_RHS_OP_ACCESSOR, indirect_accessor, __VA_ARGS__) \
+      ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_1( \
+          ___PRO_DEF_RHS_OP_ACCESSOR, direct_accessor, __VA_ARGS__) \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(...) \
-    template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::left> \
-        : applicable_traits { \
-      struct base { \
-        template <class T> \
-        decltype(auto) operator()(T&& self) \
-            ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
-        template <class T, class Arg> \
-        decltype(auto) operator()(T&& self, Arg&& arg) \
-            ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
-                std::forward<T>(self)) \
-      }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        ___PRO_GEN_FREE_ACCESSOR_0( \
-            indirect_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () & \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () const& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () && \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<direct_accessor>(*this))); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ () const&& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<const direct_accessor>(*this))); } \
-        ___PRO_GEN_FREE_ACCESSOR_1( \
-            direct_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
-    };
+#define ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(ALL, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(__VA_ARGS__)
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(...) \
-    template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
-        : applicable_traits { \
-      struct base { \
-        template <class T> \
-        decltype(auto) operator()(T&& self) \
-            ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__) \
-      }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ (int) \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ (int) & \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ (int) const& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>(*this)); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ (int) && \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<direct_accessor>(*this))); } \
-        template <class Barrier = void> \
-        decltype(auto) operator __VA_ARGS__ (int) const&& \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&&>()))) \
-            requires(requires { proxy_invoke< \
-                lazy_eval_t<D, Barrier>>(std::declval<const P&&>()); }) \
-            { return proxy_invoke<D>(access_proxy<P>( \
-                std::forward<const direct_accessor>(*this))); } \
-      }; \
-    };
+#define ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(BINARY, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(__VA_ARGS__)
 
-#define ___PRO_DECL_OPERATOR_ACCESSOR_POSTFIX_1(Q, ...) \
-    template <class Arg> \
-    decltype(auto) operator __VA_ARGS__ (Arg&& arg) Q
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(...) \
+#define ___PRO_DEF_LHS_INDIRECT_ASSIGNMENT_OP_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P, class R, class Arg> \
+    struct NAME<D, P, R(Arg) Q> { \
+      decltype(auto) operator __VA_ARGS__ (Arg arg) Q { \
+        proxy_invoke<D, R(Arg) Q>( \
+            access_proxy<P>(SELF), std::forward<Arg>(arg)); \
+        return *access_proxy<P>(SELF); \
+      } \
+    }
+#define ___PRO_DEF_LHS_DIRECT_ASSIGNMENT_OP_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P, class R, class Arg> \
+    struct NAME<D, P, R(Arg) Q> { \
+      decltype(auto) operator __VA_ARGS__ (Arg arg) Q { \
+        proxy_invoke<D, R(Arg) Q>( \
+            access_proxy<P>(SELF), std::forward<Arg>(arg)); \
+        return access_proxy<P>(SELF); \
+      } \
+    }
+#define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(NAME, Q, NE, SELF, FW_SELF, ...) \
+    template <class D, class P, class R, class Arg> \
+    struct NAME<D, P, R(Arg&) Q> { \
+      friend Arg& operator __VA_ARGS__ (Arg& arg, SELF) NE { \
+        proxy_invoke<D, R(Arg&) Q>(access_proxy<P>(FW_SELF), arg); \
+        return arg; \
+      } \
+    }
+#define ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(...) \
     template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
-        : applicable_traits { \
+    struct op_dispatch_traits<false, #__VA_ARGS__> { \
       struct base { \
         template <class T, class Arg> \
         decltype(auto) operator()(T&& self, Arg&& arg) \
             ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
                 std::forward<Arg>(arg)) \
       }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        ___PRO_GEN_MEM_ACCESSOR_0( \
-            indirect_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_POSTFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        ___PRO_GEN_MEM_ACCESSOR_1( \
-            direct_accessor, ___PRO_DECL_OPERATOR_ACCESSOR_POSTFIX_1, D, P, \
-                std::forward<Arg>(arg), __VA_ARGS__) \
-      }; \
-    };
-
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(...) \
+      ___PRO_DEF_OP_ACCESSOR_TEMPLATES(LHS, __VA_ARGS__) \
+      ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0( \
+          ___PRO_DEF_LHS_INDIRECT_ASSIGNMENT_OP_ACCESSOR, indirect_accessor, \
+          __VA_ARGS__) \
+      ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0( \
+          ___PRO_DEF_LHS_DIRECT_ASSIGNMENT_OP_ACCESSOR, direct_accessor, \
+          __VA_ARGS__) \
+    }; \
     template <> \
-    struct op_dispatch_traits_impl<#__VA_ARGS__, sign_pos_type::right> \
-        : applicable_traits { \
+    struct op_dispatch_traits<true, #__VA_ARGS__> { \
       struct base { \
-        template <class Arg> \
-        decltype(auto) operator()(auto& self, Arg&& arg) \
-            ___PRO_DIRECT_FUNC_IMPL(self __VA_ARGS__ std::forward<Arg>(arg)) \
+        template <class T, class Arg> \
+        decltype(auto) operator()(T&& self, Arg&& arg) \
+            ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
+                std::forward<T>(self)) \
       }; \
-      template <class D, class P> \
-      struct indirect_accessor { \
-        template <class Arg> \
-        decltype(auto) operator __VA_ARGS__ (Arg&& arg) \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>(), \
-                std::forward<Arg>(arg)))) \
-            requires(requires { proxy_invoke<D>(std::declval<const P&>(), \
-                std::forward<Arg>(arg)); }) { \
-          proxy_invoke<D>(access_proxy<P>(*this), std::forward<Arg>(arg)); \
-          return *access_proxy<P>(*this); \
-        } \
-      }; \
-      template <class D, class P> \
-      struct direct_accessor { \
-        template <class Arg> \
-        decltype(auto) operator __VA_ARGS__ (Arg&& arg) \
-            noexcept(noexcept(proxy_invoke<D>(std::declval<P&>(), \
-                std::forward<Arg>(arg)))) \
-            requires(requires { proxy_invoke<D>(std::declval<P&>(), \
-                std::forward<Arg>(arg)); }) { \
-          proxy_invoke<D>(access_proxy<P>(*this), std::forward<Arg>(arg)); \
-          return access_proxy<P>(*this); \
-        } \
-      }; \
+      ___PRO_DEF_OP_ACCESSOR_TEMPLATES(RHS, __VA_ARGS__) \
+      ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_0( \
+          ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, indirect_accessor, \
+          __VA_ARGS__) \
+      ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_1( \
+          ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, direct_accessor, __VA_ARGS__) \
     };
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(...) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL(__VA_ARGS__) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(__VA_ARGS__)
+#define ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS(NAME, Q, SELF, ...) \
+    template <class D, class P, class R, class... Args> \
+    struct NAME<D, P, R(Args...) Q> { \
+      R operator __VA_ARGS__ (Args... args) Q { \
+        return proxy_invoke<D, R(Args...) Q>(access_proxy<P>(SELF), \
+            std::forward<Args>(args)...); \
+      } \
+    }
 
-#define ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(...) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL(__VA_ARGS__) \
-    ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL(__VA_ARGS__)
+#define ___PRO_DEF_INDIRECT_CONVERSION_DISPATCH_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P> \
+    struct NAME<D, P, T() Q> { \
+      explicit operator T() Q \
+          { return proxy_invoke<D, T() Q>(access_proxy<P>(SELF)); } \
+    }
+#define ___PRO_DEF_DIRECT_CONVERSION_DISPATCH_ACCESSOR(NAME, Q, SELF, ...) \
+    template <class D, class P> \
+    struct NAME<D, P, T() Q> { \
+      explicit operator T() Q \
+          requires(std::is_nothrow_default_constructible_v<T>) { \
+        if (access_proxy<P>(*this).has_value()) { \
+          return proxy_invoke<D, T() Q>(access_proxy<P>(SELF)); \
+        } else { \
+          return T{}; \
+        } \
+      } \
+    }
 
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(+)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(-)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(*)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(/)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(%)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(++)
-___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(++)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(--)
-___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL(--)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(==)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(!=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<=>)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(!)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(&&)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(||)
-___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL(~)
-___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL(&)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(|)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(^)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(<<)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(>>)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(+=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(-=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(*=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(/=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(&=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(|=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(^=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(<<=)
-___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL(>>=)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(,)
-___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL(->*)
-
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_EXTENDED_BINARY_IMPL
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_BINARY_IMPL
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_ASSIGNMENT_IMPL
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_1_IMPL
-#undef ___PRO_DECL_OPERATOR_ACCESSOR_POSTFIX_1
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_POSTFIX_0_IMPL
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_OR_1_IMPL
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_1_IMPL
-#undef ___PRO_DECL_OPERATOR_ACCESSOR_PREFIX_1
-#undef ___PRO_OPERATOR_DISPATCH_TRAITS_PREFIX_0_IMPL
+___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(+)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(-)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(*)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(/)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(%)
+___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(UNARY, ++)
+___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(UNARY, --)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(==)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(!=)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>=)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<=)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<=>)
+___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(LEFT, !)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(&&)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(||)
+___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(LEFT, ~)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(&)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(|)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(^)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<<)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>>)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(+=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(-=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(*=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(/=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(&=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(|=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(^=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(<<=)
+___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(>>=)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(,)
+___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(->*)
 
 template <>
-struct op_dispatch_traits_impl<"()", sign_pos_type::right>
-    : applicable_traits {
+struct op_dispatch_traits<false, "()"> {
   struct base {
     template <class T, class... Args>
     decltype(auto) operator()(T&& self, Args&&... args)
         ___PRO_DIRECT_FUNC_IMPL(
             std::forward<T>(self)(std::forward<Args>(args)...))
   };
-  template <class D, class P>
-  struct indirect_accessor {
-      ___PRO_GEN_MEM_ACCESSOR_0(
-          indirect_accessor, ___PRO_DECL_MEM_ACCESSOR, D, P,
-              std::forward<__Args>(__args)..., operator())
-  };
-  template <class D, class P>
-  struct direct_accessor {
-      ___PRO_GEN_MEM_ACCESSOR_1(
-          direct_accessor, ___PRO_DECL_MEM_ACCESSOR, D, P,
-              std::forward<__Args>(__args)..., operator())
-  };
+  ___PRO_DEF_OP_ACCESSOR_TEMPLATES(LHS, ())
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0(
+      ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS, indirect_accessor, ())
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1(
+      ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS, direct_accessor, ())
 };
 template <>
-struct op_dispatch_traits_impl<"[]", sign_pos_type::right>
-    : applicable_traits {
+struct op_dispatch_traits<false, "[]"> {
   struct base {
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
     template <class T, class... Args>
@@ -1709,113 +1554,72 @@ struct op_dispatch_traits_impl<"[]", sign_pos_type::right>
         ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
   };
-  template <class D, class P>
-  struct indirect_accessor {
-      ___PRO_GEN_MEM_ACCESSOR_0(
-          indirect_accessor, ___PRO_DECL_MEM_ACCESSOR, D, P,
-              std::forward<__Args>(__args)..., operator[])
-  };
-  template <class D, class P>
-  struct direct_accessor {
-      ___PRO_GEN_MEM_ACCESSOR_1(
-          direct_accessor, ___PRO_DECL_MEM_ACCESSOR, D, P,
-              std::forward<__Args>(__args)..., operator[])
-  };
+  ___PRO_DEF_OP_ACCESSOR_TEMPLATES(LHS, [])
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0(
+      ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS, indirect_accessor, [])
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1(
+      ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS, direct_accessor, [])
 };
-
-template <sign SIGN, sign_pos_type POS>
-struct op_dispatch_traits : op_dispatch_traits_impl<SIGN, POS>
-    { static_assert(op_dispatch_traits::applicable, "Unexpected operator"); };
-template <sign SIGN>
-    requires(op_dispatch_traits_impl<SIGN, sign_pos_type::right>::applicable)
-struct op_dispatch_traits<SIGN, sign_pos_type::none>
-    : op_dispatch_traits_impl<SIGN, sign_pos_type::right> {};
-template <sign SIGN>
-    requires(!op_dispatch_traits_impl<SIGN, sign_pos_type::right>::applicable &&
-        op_dispatch_traits_impl<SIGN, sign_pos_type::left>::applicable)
-struct op_dispatch_traits<SIGN, sign_pos_type::none>
-    : op_dispatch_traits_impl<SIGN, sign_pos_type::left> {};
-
-template <int IS_DIRECT, sign SIGN, sign_pos_type POS>
-struct op_dispatch_base :
-    dispatch_base<IS_DIRECT>, op_dispatch_traits<SIGN, POS>::base {};
-template <int IS_DIRECT, sign SIGN, sign_pos_type POS, class D, class P>
-using op_dispatch_accessor = std::conditional_t<static_cast<bool>(IS_DIRECT),
-    typename op_dispatch_traits<SIGN, POS>::template direct_accessor<D, P>,
-    typename op_dispatch_traits<SIGN, POS>::template indirect_accessor<D, P>>;
 
 template <class T>
-struct conversion_dispatch_base_impl {
-  template <class U>
-  T operator()(U&& self)
-      ___PRO_DIRECT_FUNC_IMPL(static_cast<T>(std::forward<U>(self)))
+struct conversion_dispatch_traits {
+  struct base {
+    template <class U>
+    T operator()(U&& self)
+        ___PRO_DIRECT_FUNC_IMPL(static_cast<T>(std::forward<U>(self)))
+  };
+  ___PRO_DEF_OP_ACCESSOR_TEMPLATES(LHS, [])
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_0(
+      ___PRO_DEF_INDIRECT_CONVERSION_DISPATCH_ACCESSOR, indirect_accessor)
+  ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_1(
+      ___PRO_DEF_DIRECT_CONVERSION_DISPATCH_ACCESSOR, direct_accessor)
 };
+
+#undef ___PRO_DEF_DIRECT_CONVERSION_DISPATCH_ACCESSOR
+#undef ___PRO_DEF_INDIRECT_CONVERSION_DISPATCH_ACCESSOR
+#undef ___PRO_DEF_OP_DISPATCH_ACCESSOR_BRACKETS
+#undef ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_DIRECT_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_INDIRECT_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_DEF_RHS_OP_ACCESSOR
+#undef ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
+#undef ___PRO_DEF_OP_ACCESSOR_TEMPLATES
+#undef ___PRO_DEF_RHS_OP_ACCESSOR_TEMPLATE_IMPL
+#undef ___PRO_DEF_LHS_OP_ACCESSOR_TEMPLATE_IMPL
+
+template <int IS_DIRECT, int IS_RHS, sign SIGN>
+struct ___PRO_ENFORCE_EBO op_dispatch_base : dispatch_base<IS_DIRECT>,
+    op_dispatch_traits<static_cast<bool>(IS_RHS), SIGN>::base {};
+template <int IS_DIRECT, int IS_RHS, sign SIGN, class D, class P, class... Os>
+using op_dispatch_accessor = std::conditional_t<static_cast<bool>(IS_DIRECT),
+    typename op_dispatch_traits<static_cast<bool>(IS_RHS), SIGN>
+        ::template direct_accessor<D, P, Os...>,
+    typename op_dispatch_traits<static_cast<bool>(IS_RHS), SIGN>
+        ::template indirect_accessor<D, P, Os...>>;
+
 template <int IS_DIRECT, class T>
-struct conversion_dispatch_base
-    : dispatch_base<IS_DIRECT>, conversion_dispatch_base_impl<T> {};
-template <class T, class D, class P>
-struct indirect_conversion_accessor {
-  template <class Barrier = void>
-  explicit operator T()
-      noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>())))
-      requires(requires { proxy_invoke<
-          lazy_eval_t<D, Barrier>>(std::declval<const P&>()); })
-      { return proxy_invoke<D>(access_proxy<P>(*this)); }
-};
-template <class T, class D, class P>
-struct direct_conversion_accessor {
-  static_assert(std::is_nothrow_default_constructible_v<T>);
-  template <class Barrier = void>
-  explicit operator T() &
-      noexcept(noexcept(proxy_invoke<D>(std::declval<P&>())))
-      requires(requires { proxy_invoke<
-          lazy_eval_t<D, Barrier>>(std::declval<P&>()); }) {
-    if (access_proxy<P>(*this).has_value()) {
-      return proxy_invoke<D>(access_proxy<P>(*this));
-    } else {
-      return T{};
-    }
-  }
-  template <class Barrier = void>
-  explicit operator T() const&
-      noexcept(noexcept(proxy_invoke<D>(std::declval<const P&>())))
-      requires(requires { proxy_invoke<
-          lazy_eval_t<D, Barrier>>(std::declval<const P&>()); }) {
-    if (access_proxy<P>(*this).has_value()) {
-      return proxy_invoke<D>(access_proxy<P>(*this));
-    } else {
-      return T{};
-    }
-  }
-  template <class Barrier = void>
-  explicit operator T() &&
-      noexcept(noexcept(proxy_invoke<D>(std::declval<P&&>())))
-      requires(requires { proxy_invoke<
-          lazy_eval_t<D, Barrier>>(std::declval<P&&>()); }) {
-    if (access_proxy<P>(*this).has_value()) {
-      return proxy_invoke<D>(access_proxy<P>(std::forward<
-          direct_conversion_accessor>(*this)));
-    } else {
-      return T{};
-    }
-  }
-  template <class Barrier = void>
-  explicit operator T() const&&
-      noexcept(noexcept(proxy_invoke<D>(std::declval<const P&&>())))
-      requires(requires { proxy_invoke<
-          lazy_eval_t<D, Barrier>>(std::declval<const P&&>()); }) {
-    if (access_proxy<P>(*this).has_value()) {
-      return proxy_invoke<D>(access_proxy<P>(std::forward<
-          const direct_conversion_accessor>(*this)));
-    } else {
-      return T{};
-    }
-  }
-};
-template <int IS_DIRECT, class T, class D, class P>
+struct ___PRO_ENFORCE_EBO conversion_dispatch_base
+    : dispatch_base<IS_DIRECT>, conversion_dispatch_traits<T>::base {};
+template <int IS_DIRECT, class T, class D, class P, class... Os>
 using conversion_dispatch_accessor = std::conditional_t<
-    static_cast<bool>(IS_DIRECT), direct_conversion_accessor<T, D, P>,
-    indirect_conversion_accessor<T, D, P>>;
+    static_cast<bool>(IS_DIRECT),
+    typename conversion_dispatch_traits<T>
+        ::template direct_accessor<D, P, Os...>,
+    typename conversion_dispatch_traits<T>
+        ::template indirect_accessor<D, P, Os...>>;
 
 }  // namespace details
 
@@ -1832,6 +1636,15 @@ using conversion_dispatch_accessor = std::conditional_t<
     decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
         ___PRO_DIRECT_FUNC_IMPL(__DEFFUNC(::std::forward<__Args>(__args)...))
 
+#define ___PRO_DEF_MEM_DISPATCH_ACCESSOR(__NAME, __Q, __SELF, __FNAME) \
+    template <class __P, class __R, class... __Args> \
+    struct __NAME<__P, __R(__Args...) __Q> { \
+      __R __FNAME(__Args... __args) __Q { \
+        return ::pro::proxy_invoke<__name, __R(__Args...) __Q>( \
+            ::pro::access_proxy<__P>(__SELF), \
+            ::std::forward<__Args>(__args)...); \
+      } \
+    }
 #define ___PRO_DEF_MEM_DISPATCH_IMPL( \
     __NAME, __IS_DIRECT, __FUNC, __FNAME, ...) \
     struct __NAME : ::pro::details::dispatch_base<__IS_DIRECT> { \
@@ -1840,12 +1653,14 @@ using conversion_dispatch_accessor = std::conditional_t<
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
               .__FUNC(::std::forward<__Args>(__args)...)) \
-      template <class __P> \
-      struct accessor { \
-        ___PRO_GEN_MEM_ACCESSOR_##__IS_DIRECT( \
-            accessor, ___PRO_DECL_MEM_ACCESSOR, __name, __P, \
-                ::std::forward<__Args>(__args)..., __FNAME) \
-      }; \
+      template <class __P, class... __Os> \
+      struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+      template <class __P, class... __Os> requires(sizeof...(__Os) > 1u && \
+          (::std::is_trivial_v<accessor<__P, __Os>> && ...)) \
+      struct accessor<__P, __Os...> : accessor<__P, __Os>... \
+          { using accessor<__P, __Os>::__FNAME...; }; \
+      ___PRO_DEF_MEM_ACCESSOR_SPECIALIZATIONS_##__IS_DIRECT( \
+          ___PRO_DEF_MEM_DISPATCH_ACCESSOR, accessor, __FNAME) \
       __VA_ARGS__ \
     }
 #define ___PRO_DEF_MEM_DISPATCH_3(__NAME, __IS_DIRECT, __FUNC) \
@@ -1863,6 +1678,16 @@ using conversion_dispatch_accessor = std::conditional_t<
 #define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
     PRO_DEF_INDIRECT_MEM_DISPATCH(__NAME, __VA_ARGS__)
 
+#define ___PRO_DEF_FREE_DISPATCH_ACCESSOR( \
+    __NAME, __Q, __NE, __SELF, __FW_SELF, __FNAME) \
+    template <class __P, class __R, class... __Args> \
+    struct __NAME<__P, __R(__Args...) __Q> { \
+      friend __R __FNAME(__SELF, __Args... __args) __NE { \
+        return ::pro::proxy_invoke<__name, __R(__Args...) __Q>( \
+            ::pro::access_proxy<__P>(__FW_SELF), \
+            ::std::forward<__Args>(__args)...); \
+      } \
+    }
 #define ___PRO_DEF_FREE_DISPATCH_IMPL( \
     __NAME, __IS_DIRECT, __FUNC, __FNAME, ...) \
     struct __NAME : ::pro::details::dispatch_base<__IS_DIRECT> { \
@@ -1871,12 +1696,13 @@ using conversion_dispatch_accessor = std::conditional_t<
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
-      template <class __P> \
-      struct accessor { \
-        ___PRO_GEN_FREE_ACCESSOR_##__IS_DIRECT( \
-            accessor, ___PRO_DECL_FREE_ACCESSOR, __name, __P, \
-                ::std::forward<__Args>(__args)..., __FNAME) \
-      }; \
+      template <class __P, class... __Os> \
+      struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+      template <class __P, class... __Os> requires(sizeof...(__Os) > 1u && \
+          (::std::is_trivial_v<accessor<__P, __Os>> && ...)) \
+      struct accessor<__P, __Os...> : accessor<__P, __Os>... {}; \
+      ___PRO_DEF_FREE_ACCESSOR_SPECIALIZATIONS_##__IS_DIRECT( \
+          ___PRO_DEF_FREE_DISPATCH_ACCESSOR, accessor, __FNAME) \
       __VA_ARGS__ \
     }
 #define ___PRO_DEF_FREE_DISPATCH_3(__NAME, __IS_DIRECT, __FUNC) \
@@ -1895,57 +1721,51 @@ using conversion_dispatch_accessor = std::conditional_t<
     PRO_DEF_INDIRECT_FREE_DISPATCH(__NAME, __VA_ARGS__)
 
 #define ___PRO_DEF_OPERATOR_DISPATCH_IMPL( \
-    __NAME, __IS_DIRECT, __POS, __SIGN, ...) \
-    struct __NAME : ::pro::details::op_dispatch_base<__IS_DIRECT, __SIGN, \
-        ::pro::details::sign_pos_type::__POS> { \
-      using ::pro::details::op_dispatch_base<__IS_DIRECT, __SIGN, \
-          ::pro::details::sign_pos_type::__POS>::operator(); \
-      template <class __P> \
-      using accessor = ::pro::details::op_dispatch_accessor<__IS_DIRECT, \
-          __SIGN, ::pro::details::sign_pos_type::__POS, __NAME, __P>; \
+    __NAME, __IS_DIRECT, __IS_RHS, __SIGN, ...) \
+    struct __NAME : ::pro::details::op_dispatch_base< \
+        __IS_DIRECT, __IS_RHS, __SIGN> { \
+      using ::pro::details::op_dispatch_base< \
+          __IS_DIRECT, __IS_RHS, __SIGN>::operator(); \
+      template <class __P, class... __Os> \
+      using accessor = ::pro::details::op_dispatch_accessor< \
+          __IS_DIRECT, __IS_RHS, __SIGN, __NAME, __P, __Os...>; \
       __VA_ARGS__ \
-    };
-#define ___PRO_DEF_OPERATOR_DISPATCH_4(__NAME, __IS_DIRECT, __POS, __SIGN) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_DIRECT, __POS, __SIGN)
+    }
+#define ___PRO_DEF_OPERATOR_DISPATCH_4(__NAME, __IS_DIRECT, __IS_RHS, __SIGN) \
+    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_DIRECT, __IS_RHS, __SIGN)
 #define ___PRO_DEF_OPERATOR_DISPATCH_5( \
-    __NAME, __IS_DIRECT, __POS, __SIGN, __DEFFUNC) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_DIRECT, __POS, __SIGN, \
+    __NAME, __IS_DIRECT, __IS_RHS, __SIGN, __DEFFUNC) \
+    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_DIRECT, __IS_RHS, __SIGN, \
         ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
+#define PRO_DEF_INDIRECT_LHS_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 0, 0, __VA_ARGS__)
+#define PRO_DEF_DIRECT_LHS_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 1, 0, __VA_ARGS__)
+#define PRO_DEF_LHS_OPERATOR_DISPATCH(__NAME, ...) \
+    PRO_DEF_INDIRECT_LHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
+#define PRO_DEF_INDIRECT_RHS_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 0, 1, __VA_ARGS__)
+#define PRO_DEF_DIRECT_RHS_OPERATOR_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 1, 1, __VA_ARGS__)
+#define PRO_DEF_RHS_OPERATOR_DISPATCH(__NAME, ...) \
+    PRO_DEF_INDIRECT_RHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
 #define PRO_DEF_INDIRECT_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 0, none, \
-        __VA_ARGS__)
+    PRO_DEF_INDIRECT_LHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
 #define PRO_DEF_DIRECT_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 1, none, \
-        __VA_ARGS__)
+    PRO_DEF_DIRECT_LHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
 #define PRO_DEF_OPERATOR_DISPATCH(__NAME, ...) \
-    PRO_DEF_INDIRECT_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
-#define PRO_DEF_INDIRECT_PREFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 0, left, \
-        __VA_ARGS__)
-#define PRO_DEF_DIRECT_PREFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 1, left, \
-        __VA_ARGS__)
-#define PRO_DEF_PREFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    PRO_DEF_INDIRECT_PREFIX_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
-#define PRO_DEF_INDIRECT_POSTFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 0, right, \
-        __VA_ARGS__)
-#define PRO_DEF_DIRECT_POSTFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, 1, right, \
-        __VA_ARGS__)
-#define PRO_DEF_POSTFIX_OPERATOR_DISPATCH(__NAME, ...) \
-    PRO_DEF_INDIRECT_POSTFIX_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
+    PRO_DEF_LHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
 
 #define ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __IS_DIRECT, __T, ...) \
     struct __NAME \
         : ::pro::details::conversion_dispatch_base<__IS_DIRECT, __T> { \
       using ::pro::details::conversion_dispatch_base<__IS_DIRECT, __T> \
           ::operator(); \
-      template <class __P> \
+      template <class __P, class... __Os> \
       using accessor = ::pro::details::conversion_dispatch_accessor< \
-          __IS_DIRECT, __T, __NAME, __P>; \
+          __IS_DIRECT, __T, __NAME, __P, __Os...>; \
       __VA_ARGS__ \
-    };
+    }
 #define ___PRO_DEF_CONVERSION_DISPATCH_3(__NAME, __IS_DIRECT, __T) \
     ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __IS_DIRECT, __T)
 #define ___PRO_DEF_CONVERSION_DISPATCH_4(__NAME, __IS_DIRECT, __T, __DEFFUNC) \
