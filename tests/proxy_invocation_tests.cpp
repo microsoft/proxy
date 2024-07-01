@@ -68,7 +68,7 @@ PRO_DEF_FREE_DISPATCH(FreeAppend, AppendImpl, Append);
 template <class T>
 struct Container : pro::facade_builder
     ::add_facade<Iterable<T>>
-    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T)>
+    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T) const&>
     ::build {};
 
 PRO_DEF_MEM_DISPATCH(MemAtWeak, at, at, NotImplemented);
@@ -98,18 +98,18 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_DIRECT_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
+PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
+    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
     ::build {};
 
 }  // namespace spec
 
 template <class F, bool NE, class... Args>
 concept CallableFacade =
-  requires(const pro::proxy<F> p, Args... args) {
+  requires(pro::proxy<F> p, Args... args) {
     { (*p)(std::forward<Args>(args)...) };
     typename std::enable_if_t<NE == noexcept((*p)(std::forward<Args>(args)...))>;
 };
