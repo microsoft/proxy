@@ -82,10 +82,7 @@ PRO_DEF_RHS_OPERATOR_DISPATCH(RhsOpRightShiftAssignment, ">>=");
 PRO_DEF_RHS_OPERATOR_DISPATCH(RhsOpComma, ",");
 PRO_DEF_RHS_OPERATOR_DISPATCH(RhsOpPtrToMem, "->*");
 
-struct ConvertToInt : ::pro::details::conversion_dispatch_base<int> {
-  using ::pro::details::conversion_dispatch_base<int>::operator();
-  template <class __F, class __C, class... __Os> using accessor = ::pro::details::conversion_dispatch_accessor< int, __F, __C, __Os...>;
-};
+PRO_DEF_CONVERSION_DISPATCH(ConvertToInt, int);
 template <class F>
 PRO_DEF_CONVERSION_DISPATCH(ConvertToBase, pro::proxy<F>);
 

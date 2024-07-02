@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <bit>
 #include <concepts>
-#include <exception>
 #include <initializer_list>
 #include <memory>
 #include <tuple>
@@ -246,7 +245,7 @@ struct overload_traits_impl : applicable_traits {
           D, NE, R, std::nullptr_t, Args...>) {
         return &default_conv_dispatcher<D, Q, R, Args...>;
       } else {
-        std::terminate();
+        return nullptr;
       }
     }
   };
@@ -255,8 +254,8 @@ struct overload_traits_impl : applicable_traits {
   };
 
   template <bool IS_DIRECT, class D, class P>
-  static constexpr bool applicable_ptr = is_consteval(
-      [] { return meta_provider<IS_DIRECT, D>::template get<P>(); });
+  static constexpr bool applicable_ptr =
+      meta_provider<IS_DIRECT, D>::template get<P>() != nullptr;
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...)>
