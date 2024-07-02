@@ -27,10 +27,6 @@
 #define ___PRO_ENFORCE_EBO
 #endif  // defined(_MSC_VER) && !defined(__clang__)
 
-#define ___PRO_DIRECT_FUNC_IMPL(...) \
-    noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
-    { return __VA_ARGS__; }
-
 namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
@@ -1193,6 +1189,10 @@ using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
         .relocatability = details::invalid_cl,
         .destructibility = details::invalid_cl}>;
 
+#define ___PRO_DIRECT_FUNC_IMPL(...) \
+    noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
+    { return __VA_ARGS__; }
+
 #define ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(__MACRO, ...) \
     template <class __F, class __C, class... __Os> \
     struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
@@ -1371,32 +1371,6 @@ template <bool RHS, sign SIGN> struct op_dispatch_traits;
           operator __VA_ARGS__) \
     };
 
-#define ___PRO_DEF_BRACKETS_OP_ACCESSOR(Q, SELF, ...) \
-    template <class F, class C, class R, class... Args> \
-    struct accessor<F, C, R(Args...) Q> { \
-      R __VA_ARGS__ (Args... args) Q { \
-        return proxy_invoke<C>(access_proxy<F>(SELF), \
-            std::forward<Args>(args)...); \
-      } \
-    }
-
-#define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
-    template <class F, class C> \
-    struct accessor<F, C, T() Q> { \
-      explicit __VA_ARGS__ () Q { \
-        if constexpr (C::is_direct && \
-            std::is_nothrow_default_constructible_v<T>) { \
-          if (access_proxy<F>(SELF).has_value()) { \
-            return proxy_invoke<C>(access_proxy<F>(SELF)); \
-          } else { \
-            return T{}; \
-          } \
-        } else { \
-          return proxy_invoke<C>(access_proxy<F>(SELF)); \
-        } \
-      } \
-    }
-
 ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(+)
 ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(-)
 ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(*)
@@ -1432,6 +1406,32 @@ ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(>>=)
 ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(,)
 ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(->*)
 
+#undef ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_DEF_RHS_OP_ACCESSOR
+#undef ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
+
+#define ___PRO_DEF_BRACKETS_OP_ACCESSOR(Q, SELF, ...) \
+    template <class F, class C, class R, class... Args> \
+    struct accessor<F, C, R(Args...) Q> { \
+      R __VA_ARGS__ (Args... args) Q { \
+        return proxy_invoke<C>(access_proxy<F>(SELF), \
+            std::forward<Args>(args)...); \
+      } \
+    }
 template <>
 struct op_dispatch_traits<false, "()"> {
   struct base {
@@ -1458,7 +1458,24 @@ struct op_dispatch_traits<false, "[]"> {
   };
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_BRACKETS_OP_ACCESSOR, operator[])
 };
+#undef ___PRO_DEF_BRACKETS_OP_ACCESSOR
 
+#define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
+    template <class F, class C> \
+    struct accessor<F, C, T() Q> { \
+      explicit __VA_ARGS__ () Q { \
+        if constexpr (C::is_direct && \
+            std::is_nothrow_default_constructible_v<T>) { \
+          if (access_proxy<F>(SELF).has_value()) { \
+            return proxy_invoke<C>(access_proxy<F>(SELF)); \
+          } else { \
+            return T{}; \
+          } \
+        } else { \
+          return proxy_invoke<C>(access_proxy<F>(SELF)); \
+        } \
+      } \
+    }
 template <class T>
 struct conversion_dispatch_traits {
   struct base {
@@ -1468,26 +1485,7 @@ struct conversion_dispatch_traits {
   };
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CONVERSION_ACCESSOR, operator T)
 };
-
 #undef ___PRO_DEF_CONVERSION_ACCESSOR
-#undef ___PRO_DEF_BRACKETS_OP_ACCESSOR
-#undef ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_DEF_RHS_OP_ACCESSOR
-#undef ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
 
 template <bool IS_RHS, sign SIGN>
 using op_dispatch_base = typename op_dispatch_traits<IS_RHS, SIGN>::base;
