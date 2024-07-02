@@ -10,7 +10,6 @@ namespace {
 
 struct SboObserver {
  public:
-  static constexpr bool is_direct = true;
   template <class T>
   constexpr explicit SboObserver(std::in_place_type_t<pro::details::inplace_ptr<T>>)
       : SboEnabled(true), AllocatorAllocatesForItself(false) {}

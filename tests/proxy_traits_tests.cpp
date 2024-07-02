@@ -155,8 +155,6 @@ static_assert(std::is_nothrow_assignable_v<pro::proxy<TrivialFacade>, MockFuncti
 static_assert(sizeof(pro::proxy<TrivialFacade>) == 2 * sizeof(void*));  // VTABLE should be eliminated, but a placeholder is required
 
 struct ReflectionOfSmallPtr {
-  static constexpr bool is_direct = true;
-
   template <class P> requires(sizeof(P) <= sizeof(void*))
   constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
 };
@@ -170,8 +168,6 @@ static_assert(pro::proxiable<MockTrivialPtr, RelocatableFacadeWithReflection>);
 static_assert(pro::proxiable<MockFunctionPtr, RelocatableFacadeWithReflection>);
 
 struct RuntimeReflection {
-  static constexpr bool is_direct = true;
-
   template <class P>
   explicit RuntimeReflection(std::in_place_type_t<P>) { throw std::runtime_error{"Not supported"}; }
 };
@@ -182,6 +178,7 @@ static_assert(!pro::proxiable<MockTrivialPtr, FacadeWithRuntimeReflection>);
 
 struct FacadeWithTupleLikeConventions {
   struct ToStringConvention {
+    static constexpr bool is_direct = false;
     using dispatch_type = utils::spec::FreeToString;
     using overload_types = std::tuple<std::string()>;
   };
@@ -308,7 +305,7 @@ struct BadFacade_MissingReflectionTypes {
 static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
 
 struct BadReflection {
-  static const bool is_direct;
+  BadReflection() = delete;
 };
 struct BadFacade_BadReflectionType {
   using convention_types = std::tuple<>;
@@ -321,18 +318,15 @@ struct BadFacade_BadReflectionType {
       .destructibility = pro::constraint_level::nothrow,
   };
 };
-static_assert(!pro::facade<BadFacade_BadReflectionType>);
-const bool BadReflection::is_direct = true;
+static_assert(pro::facade<BadFacade_BadReflectionType>);
 
-PRO_DEF_INDIRECT_MEM_DISPATCH(MemFoo, Foo);
-PRO_DEF_INDIRECT_MEM_DISPATCH(MemBar, Bar);
-PRO_DEF_DIRECT_MEM_DISPATCH(DirMemFoo, Foo);
-PRO_DEF_DIRECT_MEM_DISPATCH(DirMemBar, Bar);
+PRO_DEF_MEM_DISPATCH(MemFoo, Foo);
+PRO_DEF_MEM_DISPATCH(MemBar, Bar);
 struct BigFacade : pro::facade_builder
     ::add_convention<MemFoo, void(), void(int)>
     ::add_convention<MemBar, void(), void(int)>
-    ::add_convention<DirMemFoo, void(), void(int)>
-    ::add_convention<DirMemBar, void(), void(int)>
+    ::add_direct_convention<MemFoo, void(), void(int)>
+    ::add_direct_convention<MemBar, void(), void(int)>
     ::build {};
 static_assert(sizeof(pro::proxy<BigFacade>) == 3 * sizeof(void*));  // Accessors should not add paddings
 

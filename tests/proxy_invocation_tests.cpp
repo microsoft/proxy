@@ -68,7 +68,7 @@ PRO_DEF_FREE_DISPATCH(FreeAppend, AppendImpl, Append);
 template <class T>
 struct Container : pro::facade_builder
     ::add_facade<Iterable<T>>
-    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T)>
+    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T) const&>
     ::build {};
 
 PRO_DEF_MEM_DISPATCH(MemAtWeak, at, at, NotImplemented);
@@ -98,18 +98,18 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_DIRECT_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
+PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
+    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
     ::build {};
 
 }  // namespace spec
 
 template <class F, bool NE, class... Args>
 concept CallableFacade =
-  requires(const pro::proxy<F> p, Args... args) {
+  requires(pro::proxy<F> p, Args... args) {
     { (*p)(std::forward<Args>(args)...) };
     typename std::enable_if_t<NE == noexcept((*p)(std::forward<Args>(args)...))>;
 };
@@ -298,4 +298,25 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   ASSERT_FALSE(Lock(*weak).has_value());
   ASSERT_FALSE(GetWeak(p).has_value());
   ASSERT_EQ(ToString(*p), "123");
+}
+
+TEST(ProxyInvocationTests, TestQualifiedConvention) {
+  struct TestFacade : pro::facade_builder
+      ::add_convention<spec::OpCall, int()&, int() const&, int()&& noexcept, int() const&&>
+      ::build {};
+
+  struct TestCallable {
+    int operator()()& noexcept { return 0; }
+    int operator()() const& noexcept { return 1; }
+    int operator()() && noexcept { return 2; }
+    int operator()() const&& noexcept { return 3; }
+  };
+
+  pro::proxy<TestFacade> p = pro::make_proxy<TestFacade, TestCallable>();
+  static_assert(!noexcept((*p)()));
+  static_assert(noexcept((*std::move(p))()));
+  ASSERT_EQ((*p)(), 0);
+  ASSERT_EQ((*std::as_const(p))(), 1);
+  ASSERT_EQ((*std::move(p))(), 2);
+  ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
 }
