@@ -299,3 +299,24 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   ASSERT_FALSE(GetWeak(p).has_value());
   ASSERT_EQ(ToString(*p), "123");
 }
+
+TEST(ProxyInvocationTests, TestQualifiedConvention) {
+  struct TestFacade : pro::facade_builder
+      ::add_convention<spec::OpCall, int()&, int() const&, int()&& noexcept, int() const&&>
+      ::build {};
+
+  struct TestCallable {
+    int operator()()& noexcept { return 0; }
+    int operator()() const& noexcept { return 1; }
+    int operator()() && noexcept { return 2; }
+    int operator()() const&& noexcept { return 3; }
+  };
+
+  pro::proxy<TestFacade> p = pro::make_proxy<TestFacade, TestCallable>();
+  static_assert(!noexcept((*p)()));
+  static_assert(noexcept((*std::move(p))()));
+  ASSERT_EQ((*p)(), 0);
+  ASSERT_EQ((*std::as_const(p))(), 1);
+  ASSERT_EQ((*std::move(p))(), 2);
+  ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
+}

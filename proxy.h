@@ -565,11 +565,10 @@ struct proxy_helper {
           std::forward<add_qualifier_t<A, Q>>(a));
     } else {
       return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(
-          std::forward<add_qualifier_t<std::byte, Q>>(
-              *(reinterpret_cast<add_qualifier_ptr_t<std::byte, Q>>(
-                  static_cast<add_qualifier_ptr_t<
-                      typename facade_traits<F>::indirect_accessor, Q>>(
-                          std::addressof(a))) - offsetof(proxy<F>, ia_))));
+          *(reinterpret_cast<add_qualifier_ptr_t<std::byte, Q>>(
+              static_cast<add_qualifier_ptr_t<
+                  typename facade_traits<F>::indirect_accessor, Q>>(
+                      std::addressof(a))) - offsetof(proxy<F>, ia_)));
     }
   }
 };
