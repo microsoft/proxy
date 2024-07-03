@@ -37,7 +37,6 @@ PRO_DEF_OPERATOR_DISPATCH(OpPipe, "|");
 PRO_DEF_OPERATOR_DISPATCH(OpCaret, "^");
 PRO_DEF_OPERATOR_DISPATCH(OpLeftShift, "<<");
 PRO_DEF_OPERATOR_DISPATCH(OpRightShift, ">>");
-PRO_DEF_DIRECT_OPERATOR_DISPATCH(DirectOpPlusAssignment, "+=");
 PRO_DEF_OPERATOR_DISPATCH(OpPlusAssignment, "+=");
 PRO_DEF_OPERATOR_DISPATCH(OpMinusAssignment, "-=");
 PRO_DEF_OPERATOR_DISPATCH(OpMultiplicationAssignment, "*=");
@@ -48,7 +47,7 @@ PRO_DEF_OPERATOR_DISPATCH(OpBitwiseXorAssignment, "^=");
 PRO_DEF_OPERATOR_DISPATCH(OpLeftShiftAssignment, "<<=");
 PRO_DEF_OPERATOR_DISPATCH(OpRightShiftAssignment, ">>=");
 PRO_DEF_OPERATOR_DISPATCH(OpComma, ",");
-PRO_DEF_DIRECT_OPERATOR_DISPATCH(OpPtrToMem, "->*");
+PRO_DEF_OPERATOR_DISPATCH(OpPtrToMem, "->*");
 PRO_DEF_OPERATOR_DISPATCH(OpParentheses, "()");
 PRO_DEF_OPERATOR_DISPATCH(OpBrackets, "[]");
 
@@ -85,7 +84,7 @@ PRO_DEF_RHS_OPERATOR_DISPATCH(RhsOpPtrToMem, "->*");
 
 PRO_DEF_CONVERSION_DISPATCH(ConvertToInt, int);
 template <class F>
-PRO_DEF_DIRECT_CONVERSION_DISPATCH(ConvertToBase, pro::proxy<F>);
+PRO_DEF_CONVERSION_DISPATCH(ConvertToBase, pro::proxy<F>);
 
 struct CommaTester {
 public:
@@ -289,7 +288,7 @@ TEST(ProxyDispatchTests, TestOpRightShift) {
 TEST(ProxyDispatchTests, TestOpPlusAssignment) {
   struct TestFacade : pro::facade_builder
       ::add_convention<OpPlusAssignment, void(int val)>
-      ::add_convention<DirectOpPlusAssignment, void(int val)>
+      ::add_direct_convention<OpPlusAssignment, void(int val)>
       ::build {};
   int v[3] = {12, 0, 7};
   pro::proxy<TestFacade> p = v;
@@ -377,7 +376,7 @@ TEST(ProxyDispatchTests, TestOpPtrToMem) {
   struct Base2 { double x; };
   struct Derived1 : Base1 { int x; };
   struct Derived2 : Base2, Base1 { int d; };
-  struct TestFacade : pro::facade_builder::add_convention<OpPtrToMem, int&(int Base1::* ptm)>::build {};
+  struct TestFacade : pro::facade_builder::add_direct_convention<OpPtrToMem, int&(int Base1::* ptm)>::build {};
   Derived1 v1{};
   Derived2 v2{};
   pro::proxy<TestFacade> p1 = &v1, p2 = &v2;
@@ -668,7 +667,7 @@ TEST(ProxyDispatchTests, TestDirectConversion) {
   struct TestFacade : pro::facade_builder
       ::add_facade<TestFacadeBase>
       ::add_convention<OpPlusAssignment, void(int val)>
-      ::add_convention<ConvertToBase<TestFacadeBase>, pro::proxy<TestFacadeBase>() &&>
+      ::add_direct_convention<ConvertToBase<TestFacadeBase>, pro::proxy<TestFacadeBase>() &&>
       ::build {};
   pro::proxy<TestFacade> p1 = std::make_unique<int>(123);
   *p1 += 3;
