@@ -208,7 +208,7 @@ TEST(ProxyLifetimeTests, TestMoveConstrction_FromValue_Trivial) {
     pro::proxy<TestTrivialFacade> p1 = &session;
     ASSERT_TRUE(p1.has_value());
     auto p2 = std::move(p1);
-    ASSERT_FALSE(p1.has_value());
+    ASSERT_TRUE(p1.has_value());
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(ToString(*p2), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
@@ -544,14 +544,10 @@ TEST(ProxyLifetimeTests, TestCopyAssignment_FromValue_ToSelf) {
 #pragma clang diagnostic pop
 #endif  // __clang__
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(ToString(*p), "Session 3");
-    expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
-    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
-    expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
-    expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+    ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(3, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 

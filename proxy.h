@@ -114,37 +114,38 @@ using instantiated_t = typename instantiated_traits<
 template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
-    case constraint_level::trivial:
-      return std::is_trivially_copy_constructible_v<T>;
+    case constraint_level::none: return true;
+    case constraint_level::nontrivial: return std::is_copy_constructible_v<T>;
     case constraint_level::nothrow:
       return std::is_nothrow_copy_constructible_v<T>;
-    case constraint_level::nontrivial: return std::is_copy_constructible_v<T>;
-    case constraint_level::none: return true;
+    case constraint_level::trivial:
+      return std::is_trivially_copy_constructible_v<T> &&
+          std::is_trivially_destructible_v<T>;
     default: return false;
   }
 }
 template <class T>
 consteval bool has_relocatability(constraint_level level) {
   switch (level) {
-    case constraint_level::trivial:
-      return std::is_trivially_move_constructible_v<T> &&
-          std::is_trivially_destructible_v<T>;
+    case constraint_level::none: return true;
+    case constraint_level::nontrivial:
+      return std::is_move_constructible_v<T> && std::is_destructible_v<T>;
     case constraint_level::nothrow:
       return std::is_nothrow_move_constructible_v<T> &&
           std::is_nothrow_destructible_v<T>;
-    case constraint_level::nontrivial:
-      return std::is_move_constructible_v<T> && std::is_destructible_v<T>;
-    case constraint_level::none: return true;
+    case constraint_level::trivial:
+      return std::is_trivially_move_constructible_v<T> &&
+          std::is_trivially_destructible_v<T>;
     default: return false;
   }
 }
 template <class T>
 consteval bool has_destructibility(constraint_level level) {
   switch (level) {
-    case constraint_level::trivial: return std::is_trivially_destructible_v<T>;
-    case constraint_level::nothrow: return std::is_nothrow_destructible_v<T>;
-    case constraint_level::nontrivial: return std::is_destructible_v<T>;
     case constraint_level::none: return true;
+    case constraint_level::nontrivial: return std::is_destructible_v<T>;
+    case constraint_level::nothrow: return std::is_nothrow_destructible_v<T>;
+    case constraint_level::trivial: return std::is_trivially_destructible_v<T>;
     default: return false;
   }
 }
@@ -513,12 +514,16 @@ struct facade_traits<F>
   using copyability_meta = lifetime_meta_t<
       copyability_meta_provider, F::constraints.copyability>;
   using relocatability_meta = lifetime_meta_t<
-      relocatability_meta_provider, F::constraints.relocatability>;
+      relocatability_meta_provider,
+      F::constraints.copyability == constraint_level::trivial ?
+          constraint_level::trivial : F::constraints.relocatability>;
   using destructibility_meta = lifetime_meta_t<
       destructibility_meta_provider, F::constraints.destructibility>;
   using meta = composite_meta<copyability_meta, relocatability_meta,
       destructibility_meta, typename facade_traits::conv_meta,
       typename facade_traits::refl_meta>;
+  static constexpr bool has_indirection = !std::is_same_v<
+      typename facade_traits::indirect_accessor, composite_accessor_impl<>>;
 };
 
 using ptr_prototype = void*[2];
@@ -589,158 +594,127 @@ concept proxiable = facade<F> && sizeof(P) <= F::constraints.max_size &&
 
 template <class F>
 class proxy : public details::facade_traits<F>::direct_accessor {
+  static_assert(facade<F>);
   friend struct details::proxy_helper<F>;
-  using Traits = details::facade_traits<F>;
-  static_assert(Traits::applicable);
-  using Meta = typename Traits::meta;
-
-  template <class P, class... Args>
-  static constexpr bool HasNothrowPolyConstructor = std::conditional_t<
-      proxiable<P, F>, std::is_nothrow_constructible<P, Args...>,
-          std::false_type>::value;
-  template <class P, class... Args>
-  static constexpr bool HasPolyConstructor = std::conditional_t<
-      proxiable<P, F>, std::is_constructible<P, Args...>,
-          std::false_type>::value;
-  static constexpr bool HasTrivialCopyConstructor =
-      F::constraints.copyability == constraint_level::trivial;
-  static constexpr bool HasNothrowCopyConstructor =
-      F::constraints.copyability >= constraint_level::nothrow;
-  static constexpr bool HasCopyConstructor =
-      F::constraints.copyability >= constraint_level::nontrivial;
-  static constexpr bool HasNothrowMoveConstructor =
-      F::constraints.relocatability >= constraint_level::nothrow;
-  static constexpr bool HasMoveConstructor =
-      F::constraints.relocatability >= constraint_level::nontrivial;
-  static constexpr bool HasTrivialDestructor =
-      F::constraints.destructibility == constraint_level::trivial;
-  static constexpr bool HasNothrowDestructor =
-      F::constraints.destructibility >= constraint_level::nothrow;
-  static constexpr bool HasDestructor =
-      F::constraints.destructibility >= constraint_level::nontrivial;
-  template <class P, class... Args>
-  static constexpr bool HasNothrowPolyAssignment =
-      HasNothrowPolyConstructor<P, Args...> && HasNothrowDestructor;
-  template <class P, class... Args>
-  static constexpr bool HasPolyAssignment = HasPolyConstructor<P, Args...> &&
-      HasDestructor;
-  static constexpr bool HasTrivialCopyAssignment = HasTrivialCopyConstructor &&
-      HasTrivialDestructor;
-  static constexpr bool HasNothrowCopyAssignment = HasNothrowCopyConstructor &&
-      HasNothrowDestructor;
-  static constexpr bool HasCopyAssignment = HasNothrowCopyAssignment ||
-      (HasCopyConstructor && HasMoveConstructor && HasDestructor);
-  static constexpr bool HasNothrowMoveAssignment = HasNothrowMoveConstructor &&
-      HasNothrowDestructor;
-  static constexpr bool HasMoveAssignment = HasMoveConstructor && HasDestructor;
-  static constexpr bool HasIndirection = !std::is_same_v<
-      typename Traits::indirect_accessor, details::composite_accessor_impl<>>;
+  using _Traits = details::facade_traits<F>;
 
  public:
   proxy() noexcept = default;
-  proxy(std::nullptr_t) noexcept : proxy() {}
-  proxy(const proxy& rhs) noexcept(HasNothrowCopyConstructor)
-      requires(!HasTrivialCopyConstructor && HasCopyConstructor) {
+  proxy(std::nullptr_t) noexcept {}
+  proxy(const proxy&) noexcept requires(F::constraints.copyability ==
+      constraint_level::trivial) = default;
+  proxy(const proxy& rhs)
+      noexcept(F::constraints.copyability == constraint_level::nothrow)
+      requires(F::constraints.copyability == constraint_level::nontrivial ||
+          F::constraints.copyability == constraint_level::nothrow) {
     if (rhs.meta_.has_value()) {
-      rhs.meta_->Traits::copyability_meta::dispatcher(*ptr_, *rhs.ptr_);
+      rhs.meta_->_Traits::copyability_meta::dispatcher(*ptr_, *rhs.ptr_);
       meta_ = rhs.meta_;
-    } else {
-      meta_.reset();
     }
   }
-  proxy(const proxy&) noexcept requires(HasTrivialCopyConstructor) = default;
-  proxy(const proxy&) requires(!HasCopyConstructor) = delete;
-  proxy(proxy&& rhs) noexcept(HasNothrowMoveConstructor)
-      requires(HasMoveConstructor) {
+  proxy(proxy&& rhs)
+      noexcept(F::constraints.relocatability == constraint_level::nothrow)
+      requires(F::constraints.relocatability >= constraint_level::nontrivial &&
+          F::constraints.copyability != constraint_level::trivial) {
     if (rhs.meta_.has_value()) {
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
       } else {
-        rhs.meta_->Traits::relocatability_meta::dispatcher(*ptr_, *rhs.ptr_);
+        rhs.meta_->_Traits::relocatability_meta::dispatcher(*ptr_, *rhs.ptr_);
       }
       meta_ = rhs.meta_;
       rhs.meta_.reset();
-    } else {
-      meta_.reset();
     }
   }
-  proxy(proxy&&) requires(!HasMoveConstructor) = delete;
   template <class P>
-  proxy(P&& ptr) noexcept(HasNothrowPolyConstructor<std::decay_t<P>, P>)
-      requires(HasPolyConstructor<std::decay_t<P>, P>)
+  proxy(P&& ptr) noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
+      requires(proxiable<std::decay_t<P>, F> &&
+          std::is_constructible_v<std::decay_t<P>, P>)
       { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
-  template <class P, class... Args>
+  template <proxiable<F> P, class... Args>
   explicit proxy(std::in_place_type_t<P>, Args&&... args)
-      noexcept(HasNothrowPolyConstructor<P, Args...>)
-      requires(HasPolyConstructor<P, Args...>)
+      noexcept(std::is_nothrow_constructible_v<P, Args...>)
+      requires(std::is_constructible_v<P, Args...>)
       { initialize<P>(std::forward<Args>(args)...); }
-  template <class P, class U, class... Args>
+  template <proxiable<F> P, class U, class... Args>
   explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
           Args&&... args)
-      noexcept(HasNothrowPolyConstructor<P, std::initializer_list<U>&, Args...>)
-      requires(HasPolyConstructor<P, std::initializer_list<U>&, Args...>)
+      noexcept(std::is_nothrow_constructible_v<
+          P, std::initializer_list<U>&, Args...>)
+      requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...>)
       { initialize<P>(il, std::forward<Args>(args)...); }
-  proxy& operator=(std::nullptr_t) noexcept(HasNothrowDestructor)
-      requires(HasDestructor) {
-    std::destroy_at(this);
-    std::construct_at(this);
-    return *this;
-  }
+  proxy& operator=(std::nullptr_t)
+      noexcept(F::constraints.destructibility >= constraint_level::nothrow)
+      requires(F::constraints.destructibility >= constraint_level::nontrivial)
+      { reset(); return *this; }
+  proxy& operator=(const proxy&) noexcept requires(F::constraints.copyability ==
+      constraint_level::trivial) = default;
   proxy& operator=(const proxy& rhs)
-      requires(!HasNothrowCopyAssignment && HasCopyAssignment)
-      { return *this = proxy{rhs}; }
-  proxy& operator=(const proxy& rhs) noexcept
-      requires(!HasTrivialCopyAssignment && HasNothrowCopyAssignment) {
+      noexcept(F::constraints.copyability >= constraint_level::nothrow &&
+          F::constraints.destructibility >= constraint_level::nothrow)
+      requires((F::constraints.copyability == constraint_level::nontrivial ||
+          F::constraints.copyability == constraint_level::nothrow) &&
+          F::constraints.destructibility >= constraint_level::nontrivial) {
     if (this != &rhs) {
-      std::destroy_at(this);
-      std::construct_at(this, rhs);
+      if constexpr (F::constraints.copyability == constraint_level::nothrow) {
+        std::destroy_at(this);
+        std::construct_at(this, rhs);
+      } else {
+        *this = proxy{rhs};
+      }
     }
     return *this;
   }
-  proxy& operator=(const proxy&) noexcept requires(HasTrivialCopyAssignment) =
-      default;
-  proxy& operator=(const proxy&) requires(!HasCopyAssignment) = delete;
-  proxy& operator=(proxy&& rhs) noexcept(HasNothrowMoveAssignment)
-    requires(HasMoveAssignment) {
+  proxy& operator=(proxy&& rhs)
+      noexcept(F::constraints.relocatability >= constraint_level::nothrow &&
+          F::constraints.destructibility >= constraint_level::nothrow)
+      requires(F::constraints.relocatability >= constraint_level::nontrivial &&
+          F::constraints.destructibility >= constraint_level::nontrivial &&
+          F::constraints.copyability != constraint_level::trivial) {
     if (this != &rhs) {
-      if constexpr (HasNothrowMoveAssignment) {
-        std::destroy_at(this);
-      } else {
-        reset();  // For weak exception safety
-      }
+      reset();
       std::construct_at(this, std::move(rhs));
     }
     return *this;
   }
-  proxy& operator=(proxy&&) requires(!HasMoveAssignment) = delete;
-  template <class P>
-  proxy& operator=(P&& ptr) noexcept
-      requires(HasNothrowPolyAssignment<std::decay_t<P>, P>) {
-    std::destroy_at(this);
-    initialize<std::decay_t<P>>(std::forward<P>(ptr));
-    return *this;
-  }
   template <class P>
   proxy& operator=(P&& ptr)
-      requires(!HasNothrowPolyAssignment<std::decay_t<P>, P> &&
-          HasPolyAssignment<std::decay_t<P>, P>)
-      { return *this = proxy{std::forward<P>(ptr)}; }
-  ~proxy() noexcept(HasNothrowDestructor)
-      requires(!HasTrivialDestructor && HasDestructor) {
+      noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P> &&
+          F::constraints.destructibility >= constraint_level::nothrow)
+      requires(proxiable<std::decay_t<P>, F> &&
+          std::is_constructible_v<std::decay_t<P>, P> &&
+          F::constraints.destructibility >= constraint_level::nontrivial) {
+    if constexpr (std::is_nothrow_constructible_v<std::decay_t<P>, P>) {
+      std::destroy_at(this);
+      initialize<std::decay_t<P>>(std::forward<P>(ptr));
+    } else {
+      *this = proxy{std::forward<P>(ptr)};
+    }
+    return *this;
+  }
+  ~proxy() requires(F::constraints.destructibility == constraint_level::trivial)
+      = default;
+  ~proxy() noexcept(F::constraints.destructibility == constraint_level::nothrow)
+      requires(F::constraints.destructibility == constraint_level::nontrivial ||
+          F::constraints.destructibility == constraint_level::nothrow) {
     if (meta_.has_value()) {
-      meta_->Traits::destructibility_meta::dispatcher(*ptr_);
+      meta_->_Traits::destructibility_meta::dispatcher(*ptr_);
     }
   }
-  ~proxy() requires(HasTrivialDestructor) = default;
-  ~proxy() requires(!HasDestructor) = delete;
 
   bool has_value() const noexcept { return meta_.has_value(); }
-  void reset() noexcept(HasNothrowDestructor) requires(HasDestructor)
+  void reset()
+      noexcept(F::constraints.destructibility >= constraint_level::nothrow)
+      requires(F::constraints.destructibility >= constraint_level::nontrivial)
       { std::destroy_at(this); meta_.reset(); }
-  void swap(proxy& rhs) noexcept(HasNothrowMoveConstructor)
-      requires(HasMoveConstructor) {
-    if constexpr (F::constraints.relocatability == constraint_level::trivial) {
+  void swap(proxy& rhs)
+      noexcept(F::constraints.relocatability >= constraint_level::nothrow ||
+          F::constraints.copyability == constraint_level::trivial)
+      requires(F::constraints.relocatability >= constraint_level::nontrivial ||
+          F::constraints.copyability == constraint_level::trivial) {
+    if constexpr (F::constraints.relocatability == constraint_level::trivial ||
+        F::constraints.copyability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
       std::swap(ptr_, rhs.ptr);
     } else {
@@ -757,43 +731,45 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       }
     }
   }
-  friend void swap(proxy& a, proxy& b) noexcept(HasNothrowMoveConstructor)
-      { a.swap(b); }
-  template <class P, class... Args>
-  P& emplace(Args&&... args) noexcept(HasNothrowPolyAssignment<P, Args...>)
-      requires(HasPolyAssignment<P, Args...>) {
-    reset();
-    return initialize<P>(std::forward<Args>(args)...);
-  }
-  template <class P, class U, class... Args>
+  template <proxiable<F> P, class... Args>
+  P& emplace(Args&&... args)
+      noexcept(std::is_nothrow_constructible_v<P, Args...> &&
+          F::constraints.destructibility >= constraint_level::nothrow)
+      requires(std::is_constructible_v<P, Args...> &&
+          F::constraints.destructibility >= constraint_level::nontrivial)
+      { reset(); return initialize<P>(std::forward<Args>(args)...); }
+  template <proxiable<F> P, class U, class... Args>
   P& emplace(std::initializer_list<U> il, Args&&... args)
-      noexcept(HasNothrowPolyAssignment<P, std::initializer_list<U>&, Args...>)
-      requires(HasPolyAssignment<P, std::initializer_list<U>&, Args...>) {
-    reset();
-    return initialize<P>(il, std::forward<Args>(args)...);
-  }
-  auto operator->() noexcept requires(HasIndirection)
+      noexcept(std::is_nothrow_constructible_v<
+          P, std::initializer_list<U>&, Args...> &&
+          F::constraints.destructibility >= constraint_level::nothrow)
+      requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
+          F::constraints.destructibility >= constraint_level::nontrivial)
+      { reset(); return initialize<P>(il, std::forward<Args>(args)...); }
+  auto operator->() noexcept requires(_Traits::has_indirection)
       { return std::addressof(ia_); }
-  auto operator->() const noexcept requires(HasIndirection)
+  auto operator->() const noexcept requires(_Traits::has_indirection)
       { return std::addressof(ia_); }
-  auto& operator*() & noexcept requires(HasIndirection) { return ia_; }
-  auto& operator*() const& noexcept requires(HasIndirection) { return ia_; }
-  auto&& operator*() && noexcept requires(HasIndirection)
-      { return std::forward<typename Traits::indirect_accessor>(ia_); }
-  auto&& operator*() const&& noexcept requires(HasIndirection)
-      { return std::forward<const typename Traits::indirect_accessor>(ia_); }
+  auto& operator*() & noexcept requires(_Traits::has_indirection)
+      { return ia_; }
+  auto& operator*() const& noexcept requires(_Traits::has_indirection)
+      { return ia_; }
+  auto&& operator*() && noexcept requires(_Traits::has_indirection)
+      { return std::forward<typename _Traits::indirect_accessor>(ia_); }
+  auto&& operator*() const&& noexcept requires(_Traits::has_indirection)
+      { return std::forward<const typename _Traits::indirect_accessor>(ia_); }
 
  private:
   template <class P, class... Args>
   P& initialize(Args&&... args) {
     std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    meta_ = details::meta_ptr<Meta>{std::in_place_type<P>};
+    meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
     return *std::launder(reinterpret_cast<P*>(ptr_));
   }
 
   [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
-  typename Traits::indirect_accessor ia_;
-  details::meta_ptr<Meta> meta_;
+  typename _Traits::indirect_accessor ia_;
+  details::meta_ptr<typename _Traits::meta> meta_;
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
 
@@ -821,22 +797,22 @@ decltype(auto) proxy_invoke(const proxy<F>&& p, Args&&... args) {
 }
 
 template <class F, class A>
-decltype(auto) access_proxy(A& a) noexcept {
+proxy<F>& access_proxy(A& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::lv>(a);
 }
 template <class F, class A>
-decltype(auto) access_proxy(const A& a) noexcept {
+const proxy<F>& access_proxy(const A& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::const_lv>(a);
 }
 template <class F, class A>
-decltype(auto) access_proxy(A&& a) noexcept {
+proxy<F>&& access_proxy(A&& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::rv>(std::forward<A>(a));
 }
 template <class F, class A>
-decltype(auto) access_proxy(const A&& a) noexcept {
+const proxy<F>&& access_proxy(const A&& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::const_rv>(std::forward<const A>(a));
 }
@@ -844,6 +820,9 @@ decltype(auto) access_proxy(const A&& a) noexcept {
 template <class R, class F>
 const R& proxy_reflect(const proxy<F>& p) noexcept
     { return details::proxy_helper<F>::get_meta(p); }
+
+template <class F>
+void swap(proxy<F>& a, proxy<F>& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
 
 namespace details {
 
