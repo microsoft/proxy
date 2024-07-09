@@ -133,9 +133,9 @@ struct TrivialFacade : pro::facade_builder
 static_assert(std::is_trivially_copy_constructible_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_trivially_copy_assignable_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_nothrow_move_constructible_v<pro::proxy<TrivialFacade>>);
-static_assert(!std::is_trivially_move_constructible_v<pro::proxy<TrivialFacade>>);
+static_assert(std::is_trivially_move_constructible_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_nothrow_move_assignable_v<pro::proxy<TrivialFacade>>);
-static_assert(!std::is_trivially_move_assignable_v<pro::proxy<TrivialFacade>>);
+static_assert(std::is_trivially_move_assignable_v<pro::proxy<TrivialFacade>>);
 static_assert(std::is_trivially_destructible_v<pro::proxy<TrivialFacade>>);
 static_assert(!pro::proxiable<MockMovablePtr, TrivialFacade>);
 static_assert(!pro::proxiable<MockCopyablePtr, TrivialFacade>);
