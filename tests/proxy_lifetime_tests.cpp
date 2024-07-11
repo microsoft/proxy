@@ -19,6 +19,13 @@ struct TestTrivialFacade : pro::facade_builder
     ::support_destruction<pro::constraint_level::trivial>
     ::build {};
 
+PRO_DEF_CONVERSION_DISPATCH(ConvertToSession, utils::LifetimeTracker::Session);
+
+struct TestConvertionFacade : pro::facade_builder
+    ::add_facade<utils::spec::Stringable>
+    ::add_direct_convention<ConvertToSession, utils::LifetimeTracker::Session() const&, utils::LifetimeTracker::Session() && noexcept>
+    ::build {};
+
 }  // namespace
 
 TEST(ProxyLifetimeTests, TestDefaultConstrction) {
@@ -884,4 +891,39 @@ TEST(ProxyLifetimeTests, TestSwap_Null_Null) {
   swap(p1, p2);
   ASSERT_FALSE(p1.has_value());
   ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, Test_DirectConvension_Lvalue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestConvertionFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    auto session = static_cast<utils::LifetimeTracker::Session>(p);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(ToString(*p), "Session 1");
+    ASSERT_EQ(to_string(session), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestConvertionFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    auto session = static_cast<utils::LifetimeTracker::Session>(std::move(p));
+    ASSERT_FALSE(p.has_value());
+    ASSERT_EQ(to_string(session), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }

@@ -167,7 +167,8 @@ concept invocable_dispatch_ptr_indirect = ptr_traits<P, Q, NE>::applicable &&
         D, NE, R, typename ptr_traits<P, Q, NE>::target_type, Args...>;
 template <class D, class P, qualifier_type Q, bool NE, class R, class... Args>
 concept invocable_dispatch_ptr_direct = invocable_dispatch<
-    D, NE, R, add_qualifier_t<P, Q>, Args...>;
+    D, NE, R, add_qualifier_t<P, Q>, Args...> &&
+        (Q != qualifier_type::rv || !NE || std::is_nothrow_destructible_v<P>);
 
 template <bool NE, class R, class... Args>
 using func_ptr_t = std::conditional_t<
@@ -191,9 +192,26 @@ R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
 template <class D, class P, qualifier_type Q, class R, class... Args>
 R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr_direct<D, P, Q, true, R, Args...>) {
-  return invoke_dispatch<D, R>(std::forward<add_qualifier_t<P, Q>>(
-      *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self))),
-      std::forward<Args>(args)...);
+  using QP = add_qualifier_t<P, Q>;
+  QP qp = std::forward<QP>(*std::launder(
+      reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self)));
+  if constexpr (Q == qualifier_type::rv) {
+    if constexpr (std::is_void_v<R>) {
+      D{}(std::forward<QP>(qp), std::forward<Args>(args)...);
+      std::destroy_at(&qp);
+    } else {
+      R result = D{}(std::forward<QP>(qp), std::forward<Args>(args)...);
+      std::destroy_at(&qp);
+      if constexpr (std::is_rvalue_reference_v<R>) {
+        return std::forward<R>(result);
+      } else {
+        return result;
+      }
+    }
+  } else {
+    return invoke_dispatch<D, R>(
+        std::forward<QP>(qp), std::forward<Args>(args)...);
+  }
 }
 template <class D, qualifier_type Q, class R, class... Args>
 R default_conv_dispatcher(add_qualifier_t<std::byte, Q>, Args... args)
@@ -249,6 +267,8 @@ struct overload_traits_impl : applicable_traits {
   struct resolver {
     overload_traits_impl operator()(add_qualifier_t<std::byte, Q>, Args...);
   };
+  using return_type = R;
+  static constexpr qualifier_type qualifier = Q;
 
   template <bool IS_DIRECT, class D, class P>
   static constexpr bool applicable_ptr =
@@ -556,12 +576,32 @@ struct proxy_helper {
       { return *p.meta_.operator->(); }
   template <class C, qualifier_type Q, class... Args>
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    using MetaProvider = typename conv_traits<C>
-        ::template matched_overload_traits<Q, Args...>
-        ::template meta_provider<C::is_direct, typename C::dispatch_type>;
-    return p.meta_->template dispatcher_meta<MetaProvider>::dispatcher(
-        std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-        std::forward<Args>(args)...);
+    using OverloadTraits = typename conv_traits<C>
+        ::template matched_overload_traits<Q, Args...>;
+    using Self = add_qualifier_t<std::byte, Q>;
+    auto dispatcher = p.meta_->template dispatcher_meta<typename OverloadTraits
+        ::template meta_provider<C::is_direct, typename C::dispatch_type>>
+        ::dispatcher;
+    if constexpr (C::is_direct &&
+        OverloadTraits::qualifier == qualifier_type::rv) {
+      using R = typename OverloadTraits::return_type;
+      if constexpr (std::is_void_v<R>) {
+        dispatcher(std::forward<Self>(*p.ptr_), std::forward<Args>(args)...);
+        p.meta_.reset();
+      } else {
+        R result = dispatcher(std::forward<Self>(*p.ptr_),
+            std::forward<Args>(args)...);
+        p.meta_.reset();
+        if constexpr (std::is_rvalue_reference_v<R>) {
+          return std::forward<R>(result);
+        } else {
+          return result;
+        }
+      }
+    } else {
+      return dispatcher(std::forward<Self>(*p.ptr_),
+          std::forward<Args>(args)...);
+    }
   }
   template <class A, qualifier_type Q>
   static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
@@ -1158,17 +1198,18 @@ struct facade_builder_impl {
   using support_destruction = facade_builder_impl<
       Cs, Rs, make_destructible(C, CL)>;
   using build = facade_impl<Cs, Rs, normalize(C)>;
+  facade_builder_impl() = delete;
 };
 
 }  // namespace details
 
-struct facade_builder : details::facade_builder_impl<std::tuple<>, std::tuple<>,
+using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
     proxiable_ptr_constraints{
         .max_size = details::invalid_size,
         .max_align = details::invalid_size,
         .copyability = details::invalid_cl,
         .relocatability = details::invalid_cl,
-        .destructibility = details::invalid_cl}> {};
+        .destructibility = details::invalid_cl}>;
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
