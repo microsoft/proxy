@@ -1162,13 +1162,13 @@ struct facade_builder_impl {
 
 }  // namespace details
 
-using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
+struct facade_builder : details::facade_builder_impl<std::tuple<>, std::tuple<>,
     proxiable_ptr_constraints{
         .max_size = details::invalid_size,
         .max_align = details::invalid_size,
         .copyability = details::invalid_cl,
         .relocatability = details::invalid_cl,
-        .destructibility = details::invalid_cl}>;
+        .destructibility = details::invalid_cl}> {};
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
