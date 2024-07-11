@@ -748,6 +748,15 @@ TEST(ProxyLifetimeTests, TestHasValue) {
   ASSERT_EQ(ToString(*p1), "123");
 }
 
+TEST(ProxyLifetimeTests, TestEqualsToNullptr) {
+  int foo = 123;
+  pro::proxy<TestFacade> p1;
+  ASSERT_TRUE(p1 == nullptr);
+  p1 = &foo;
+  ASSERT_TRUE(p1 != nullptr);
+  ASSERT_EQ(ToString(*p1), "123");
+}
+
 TEST(ProxyLifetimeTests, TestReset_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;

@@ -759,6 +759,11 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   auto&& operator*() const&& noexcept requires(_Traits::has_indirection)
       { return std::forward<const typename _Traits::indirect_accessor>(ia_); }
 
+  friend void swap(proxy& lhs, proxy& rhs) noexcept(noexcept(lhs.swap(rhs)))
+      { lhs.swap(rhs); }
+  friend bool operator==(const proxy& lhs, std::nullptr_t) noexcept
+      { return !lhs.has_value(); }
+
  private:
   template <class P, class... Args>
   P& initialize(Args&&... args) {
@@ -820,9 +825,6 @@ const proxy<F>&& access_proxy(const A&& a) noexcept {
 template <class R, class F>
 const R& proxy_reflect(const proxy<F>& p) noexcept
     { return details::proxy_helper<F>::get_meta(p); }
-
-template <class F>
-void swap(proxy<F>& a, proxy<F>& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
 
 namespace details {
 
