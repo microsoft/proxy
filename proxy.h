@@ -704,6 +704,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   }
 
   bool has_value() const noexcept { return meta_.has_value(); }
+  explicit operator bool() const noexcept { return meta_.has_value(); }
   void reset()
       noexcept(F::constraints.destructibility >= constraint_level::nothrow)
       requires(F::constraints.destructibility >= constraint_level::nontrivial)

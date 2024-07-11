@@ -748,6 +748,18 @@ TEST(ProxyLifetimeTests, TestHasValue) {
   ASSERT_EQ(ToString(*p1), "123");
 }
 
+TEST(ProxyLifetimeTests, TestOperatorBool) {
+  // Implicit conversion to bool shall be prohibited.
+  static_assert(!std::is_nothrow_convertible_v<pro::proxy<TestFacade>, bool>);
+
+  int foo = 123;
+  pro::proxy<TestFacade> p1;
+  ASSERT_FALSE(static_cast<bool>(p1));
+  p1 = &foo;
+  ASSERT_TRUE(static_cast<bool>(p1));
+  ASSERT_EQ(ToString(*p1), "123");
+}
+
 TEST(ProxyLifetimeTests, TestEqualsToNullptr) {
   int foo = 123;
   pro::proxy<TestFacade> p1;
