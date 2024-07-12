@@ -150,6 +150,18 @@ consteval bool has_destructibility(constraint_level level) {
   }
 }
 
+template <class T>
+class destruction_guard {
+ public:
+  explicit destruction_guard(T* p) noexcept : p_(p) {}
+  destruction_guard(const destruction_guard&) = delete;
+  ~destruction_guard() noexcept(std::is_nothrow_destructible_v<T>)
+      { std::destroy_at(p_); }
+
+ private:
+  T* p_;
+};
+
 template <class P, qualifier_type Q, bool NE>
 struct ptr_traits : inapplicable_traits {};
 template <class P, qualifier_type Q, bool NE>
@@ -167,8 +179,9 @@ concept invocable_dispatch_ptr_indirect = ptr_traits<P, Q, NE>::applicable &&
         D, NE, R, typename ptr_traits<P, Q, NE>::target_type, Args...>;
 template <class D, class P, qualifier_type Q, bool NE, class R, class... Args>
 concept invocable_dispatch_ptr_direct = invocable_dispatch<
-    D, NE, R, add_qualifier_t<P, Q>, Args...> &&
-        (Q != qualifier_type::rv || !NE || std::is_nothrow_destructible_v<P>);
+    D, NE, R, add_qualifier_t<P, Q>, Args...> && (Q != qualifier_type::rv ||
+        (NE && std::is_nothrow_destructible_v<P>) ||
+        (!NE && std::is_destructible_v<P>));
 
 template <bool NE, class R, class... Args>
 using func_ptr_t = std::conditional_t<
@@ -192,25 +205,15 @@ R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
 template <class D, class P, qualifier_type Q, class R, class... Args>
 R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr_direct<D, P, Q, true, R, Args...>) {
-  using QP = add_qualifier_t<P, Q>;
-  QP qp = std::forward<QP>(*std::launder(
-      reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self)));
+  auto& qp = *std::launder(
+      reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
   if constexpr (Q == qualifier_type::rv) {
-    if constexpr (std::is_void_v<R>) {
-      D{}(std::forward<QP>(qp), std::forward<Args>(args)...);
-      std::destroy_at(&qp);
-    } else {
-      R result = D{}(std::forward<QP>(qp), std::forward<Args>(args)...);
-      std::destroy_at(&qp);
-      if constexpr (std::is_rvalue_reference_v<R>) {
-        return std::forward<R>(result);
-      } else {
-        return result;
-      }
-    }
+    destruction_guard guard{&qp};
+    return invoke_dispatch<D, R>(
+        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
   } else {
     return invoke_dispatch<D, R>(
-        std::forward<QP>(qp), std::forward<Args>(args)...);
+        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
   }
 }
 template <class D, qualifier_type Q, class R, class... Args>
@@ -233,8 +236,8 @@ template <class P>
 void relocation_dispatcher(std::byte& self, const std::byte& rhs)
     noexcept(has_relocatability<P>(constraint_level::nothrow)) {
   P* other = std::launder(reinterpret_cast<P*>(const_cast<std::byte*>(&rhs)));
+  destruction_guard guard{other};
   std::construct_at(reinterpret_cast<P*>(&self), std::move(*other));
-  std::destroy_at(other);
 }
 template <class P>
 void destruction_dispatcher(std::byte& self)
@@ -267,12 +270,11 @@ struct overload_traits_impl : applicable_traits {
   struct resolver {
     overload_traits_impl operator()(add_qualifier_t<std::byte, Q>, Args...);
   };
-  using return_type = R;
-  static constexpr qualifier_type qualifier = Q;
 
   template <bool IS_DIRECT, class D, class P>
   static constexpr bool applicable_ptr =
       meta_provider<IS_DIRECT, D>::template get<P>() != nullptr;
+  static constexpr qualifier_type qualifier = Q;
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...)>
@@ -569,6 +571,16 @@ struct meta_ptr<M> : M {
   using M::M;
   const M* operator->() const noexcept { return this; }
 };
+template <class M>
+struct meta_ptr_reset_guard {
+ public:
+  explicit meta_ptr_reset_guard(meta_ptr<M>& meta) noexcept : meta_(meta) {}
+  meta_ptr_reset_guard(const meta_ptr_reset_guard&) = delete;
+  ~meta_ptr_reset_guard() { meta_.reset(); }
+
+ private:
+  meta_ptr<M>& meta_;
+};
 
 template <class F>
 struct proxy_helper {
@@ -578,28 +590,16 @@ struct proxy_helper {
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
     using OverloadTraits = typename conv_traits<C>
         ::template matched_overload_traits<Q, Args...>;
-    using Self = add_qualifier_t<std::byte, Q>;
     auto dispatcher = p.meta_->template dispatcher_meta<typename OverloadTraits
         ::template meta_provider<C::is_direct, typename C::dispatch_type>>
         ::dispatcher;
     if constexpr (C::is_direct &&
         OverloadTraits::qualifier == qualifier_type::rv) {
-      using R = typename OverloadTraits::return_type;
-      if constexpr (std::is_void_v<R>) {
-        dispatcher(std::forward<Self>(*p.ptr_), std::forward<Args>(args)...);
-        p.meta_.reset();
-      } else {
-        R result = dispatcher(std::forward<Self>(*p.ptr_),
-            std::forward<Args>(args)...);
-        p.meta_.reset();
-        if constexpr (std::is_rvalue_reference_v<R>) {
-          return std::forward<R>(result);
-        } else {
-          return result;
-        }
-      }
+      meta_ptr_reset_guard guard{p.meta_};
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
+          std::forward<Args>(args)...);
     } else {
-      return dispatcher(std::forward<Self>(*p.ptr_),
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
           std::forward<Args>(args)...);
     }
   }
@@ -657,6 +657,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       requires(F::constraints.relocatability >= constraint_level::nontrivial &&
           F::constraints.copyability != constraint_level::trivial) {
     if (rhs.meta_.has_value()) {
+      details::meta_ptr_reset_guard guard{rhs.meta_};
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
@@ -664,7 +665,6 @@ class proxy : public details::facade_traits<F>::direct_accessor {
         rhs.meta_->_Traits::relocatability_meta::dispatcher(*ptr_, *rhs.ptr_);
       }
       meta_ = rhs.meta_;
-      rhs.meta_.reset();
     }
   }
   template <class P>

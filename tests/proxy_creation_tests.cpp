@@ -27,7 +27,8 @@ struct SboObserver {
 namespace spec {
 
 struct TestLargeStringable : pro::facade_builder
-    ::add_facade<utils::spec::Stringable>
+    ::add_convention<utils::spec::FreeToString, std::string()>
+    ::support_relocation<pro::constraint_level::nontrivial>
     ::support_copy<pro::constraint_level::nontrivial>
     ::add_reflection<SboObserver>
     ::build {};

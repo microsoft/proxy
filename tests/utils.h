@@ -50,7 +50,7 @@ class LifetimeTracker {
     Session(const Session& rhs)
         : id_(rhs.host_->AllocateId(LifetimeOperationType::kCopyConstruction)),
           host_(rhs.host_) {}
-    Session(Session&& rhs) noexcept :
+    Session(Session&& rhs) :
           id_(rhs.host_->AllocateId(LifetimeOperationType::kMoveConstruction)),
           host_(rhs.host_) {}
     ~Session() { host_->ops_.emplace_back(id_, LifetimeOperationType::kDestruction); }
