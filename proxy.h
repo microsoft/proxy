@@ -8,6 +8,7 @@
 #include <bit>
 #include <concepts>
 #include <initializer_list>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -1058,8 +1059,9 @@ proxy<F> make_proxy(T&& value) {
 // convention, and facade types prior to C++26
 namespace details {
 
-constexpr std::size_t invalid_size = static_cast<std::size_t>(-1);
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(-1);
+constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
+constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+    std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size)
       { value.max_size = sizeof(ptr_prototype); }
@@ -1075,28 +1077,23 @@ consteval auto normalize(proxiable_ptr_constraints value) {
 }
 consteval auto make_restricted_layout(proxiable_ptr_constraints value,
     std::size_t max_size, std::size_t max_align) {
-  if (value.max_size == invalid_size || value.max_size > max_size)
-      { value.max_size = max_size; }
-  if (value.max_align == invalid_size || value.max_align > max_align)
-      { value.max_align = max_align; }
+  if (value.max_size > max_size) { value.max_size = max_size; }
+  if (value.max_align > max_align) { value.max_align = max_align; }
   return value;
 }
 consteval auto make_copyable(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.copyability == invalid_cl || value.copyability < cl)
-      { value.copyability = cl; }
+  if (value.copyability < cl) { value.copyability = cl; }
   return value;
 }
 consteval auto make_relocatable(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.relocatability == invalid_cl || value.relocatability < cl)
-      { value.relocatability = cl; }
+  if (value.relocatability < cl) { value.relocatability = cl; }
   return value;
 }
 consteval auto make_destructible(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.destructibility == invalid_cl || value.destructibility < cl)
-      { value.destructibility = cl; }
+  if (value.destructibility < cl) { value.destructibility = cl; }
   return value;
 }
 consteval auto merge_constraints(proxiable_ptr_constraints a,
@@ -1164,46 +1161,48 @@ using merge_conv_tuple_impl_t = recursive_reduction_t<add_conv_t, Cs0, Cs1...>;
 template <class Cs0, class Cs1>
 using merge_conv_tuple_t = instantiated_t<merge_conv_tuple_impl_t, Cs1, Cs0>;
 
-template <class Cs, class Rs, proxiable_ptr_constraints C>
-struct facade_builder_impl {
-  template <class D, class... Os>
-      requires(conv_traits<conv_impl<false, D, Os...>>::applicable)
-  using add_indirect_convention = facade_builder_impl<add_conv_t<
-      Cs, conv_impl<false, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(conv_traits<conv_impl<true, D, Os...>>::applicable)
-  using add_direct_convention = facade_builder_impl<add_conv_t<
-      Cs, conv_impl<true, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(requires { typename add_indirect_convention<D, Os...>; })
-  using add_convention = add_indirect_convention<D, Os...>;
-  template <class R>
-  using add_reflection = facade_builder_impl<Cs, add_tuple_t<Rs, R>, C>;
-  template <facade F>
-  using add_facade = facade_builder_impl<
-      merge_conv_tuple_t<Cs, typename F::convention_types>,
-      merge_tuple_t<Rs, typename F::reflection_types>,
-      merge_constraints(C, F::constraints)>;
-  template <std::size_t PtrSize, std::size_t PtrAlign =
-      std::min(PtrSize, alignof(std::max_align_t))>
-      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
-  using restrict_layout = facade_builder_impl<
-      Cs, Rs, make_restricted_layout(C, PtrSize, PtrAlign)>;
-  template <constraint_level CL>
-  using support_copy = facade_builder_impl<Cs, Rs, make_copyable(C, CL)>;
-  template <constraint_level CL>
-  using support_relocation = facade_builder_impl<
-      Cs, Rs, make_relocatable(C, CL)>;
-  template <constraint_level CL>
-  using support_destruction = facade_builder_impl<
-      Cs, Rs, make_destructible(C, CL)>;
-  using build = facade_impl<Cs, Rs, normalize(C)>;
-  facade_builder_impl() = delete;
-};
-
 }  // namespace details
 
-using facade_builder = details::facade_builder_impl<std::tuple<>, std::tuple<>,
+template <class Cs, class Rs, proxiable_ptr_constraints C>
+struct basic_facade_builder {
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_indirect_convention = basic_facade_builder<details::add_conv_t<
+      Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_direct_convention = basic_facade_builder<details::add_conv_t<
+      Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_convention = add_indirect_convention<D, Os...>;
+  template <class R>
+  using add_reflection = basic_facade_builder<
+      Cs, details::add_tuple_t<Rs, R>, C>;
+  template <facade F>
+  using add_facade = basic_facade_builder<
+      details::merge_conv_tuple_t<Cs, typename F::convention_types>,
+      details::merge_tuple_t<Rs, typename F::reflection_types>,
+      details::merge_constraints(C, F::constraints)>;
+  template <std::size_t PtrSize, std::size_t PtrAlign =
+      PtrSize < alignof(std::max_align_t) ? PtrSize : alignof(std::max_align_t)>
+      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
+  using restrict_layout = basic_facade_builder<
+      Cs, Rs, details::make_restricted_layout(C, PtrSize, PtrAlign)>;
+  template <constraint_level CL>
+  using support_copy = basic_facade_builder<
+      Cs, Rs, details::make_copyable(C, CL)>;
+  template <constraint_level CL>
+  using support_relocation = basic_facade_builder<
+      Cs, Rs, details::make_relocatable(C, CL)>;
+  template <constraint_level CL>
+  using support_destruction = basic_facade_builder<
+      Cs, Rs, details::make_destructible(C, CL)>;
+  using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
+  basic_facade_builder() = delete;
+};
+
+using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
     proxiable_ptr_constraints{
         .max_size = details::invalid_size,
         .max_align = details::invalid_size,
