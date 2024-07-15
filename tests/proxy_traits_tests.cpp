@@ -330,4 +330,11 @@ struct BigFacade : pro::facade_builder
     ::build {};
 static_assert(sizeof(pro::proxy<BigFacade>) == 3 * sizeof(void*));  // Accessors should not add paddings
 
+struct FacadeWithSizeOfNonPowerOfTwo : pro::facade_builder
+    ::restrict_layout<6u>
+    ::build {};
+static_assert(pro::facade<FacadeWithSizeOfNonPowerOfTwo>);
+static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_size == 6u);
+static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_align == 2u);
+
 }  // namespace

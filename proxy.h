@@ -1104,6 +1104,10 @@ consteval auto merge_constraints(proxiable_ptr_constraints a,
   a = make_destructible(a, b.destructibility);
   return a;
 }
+consteval std::size_t max_align_of(std::size_t value) {
+  value &= ~value + 1u;
+  return value < alignof(std::max_align_t) ? value : alignof(std::max_align_t);
+}
 
 template <bool IS_DIRECT, class D, class... Os>
 struct conv_impl {
@@ -1184,8 +1188,8 @@ struct basic_facade_builder {
       details::merge_conv_tuple_t<Cs, typename F::convention_types>,
       details::merge_tuple_t<Rs, typename F::reflection_types>,
       details::merge_constraints(C, F::constraints)>;
-  template <std::size_t PtrSize, std::size_t PtrAlign =
-      PtrSize < alignof(std::max_align_t) ? PtrSize : alignof(std::max_align_t)>
+  template <std::size_t PtrSize,
+      std::size_t PtrAlign = details::max_align_of(PtrSize)>
       requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
   using restrict_layout = basic_facade_builder<
       Cs, Rs, details::make_restricted_layout(C, PtrSize, PtrAlign)>;
