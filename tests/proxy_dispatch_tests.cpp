@@ -672,6 +672,7 @@ TEST(ProxyDispatchTests, TestDirectConversion) {
   pro::proxy<TestFacade> p1 = std::make_unique<int>(123);
   *p1 += 3;
   pro::proxy<TestFacadeBase> p2 = static_cast<pro::proxy<TestFacadeBase>>(std::move(p1));
+  ASSERT_FALSE(p1.has_value());
   std::ostringstream stream;
   stream << *p2;
   ASSERT_EQ(stream.str(), "126");

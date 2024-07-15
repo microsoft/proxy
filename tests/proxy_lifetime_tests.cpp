@@ -7,9 +7,13 @@
 
 namespace {
 
+PRO_DEF_CONVERSION_DISPATCH(ConvertToSession, utils::LifetimeTracker::Session);
+
 struct TestFacade : pro::facade_builder
-    ::add_facade<utils::spec::Stringable>
+    ::add_convention<utils::spec::FreeToString, std::string()>
+    ::support_relocation<pro::constraint_level::nontrivial>
     ::support_copy<pro::constraint_level::nontrivial>
+    ::add_direct_convention<ConvertToSession, utils::LifetimeTracker::Session() const&, utils::LifetimeTracker::Session()&&>
     ::build {};
 
 struct TestTrivialFacade : pro::facade_builder
@@ -252,14 +256,16 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_ToValue) {
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     p = utils::LifetimeTracker::Session{ &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(ToString(*p), "Session 3");
+    ASSERT_EQ(ToString(*p), "Session 4");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
-    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(4, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(3, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(3, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(4, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
@@ -296,13 +302,15 @@ TEST(ProxyLifetimeTests, TestPolyAssignment_FromValue_ToNull) {
     pro::proxy<TestFacade> p;
     p = utils::LifetimeTracker::Session{ &tracker };
     ASSERT_TRUE(p.has_value());
-    ASSERT_EQ(ToString(*p), "Session 2");
+    ASSERT_EQ(ToString(*p), "Session 3");
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(3, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
-  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(3, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
@@ -654,6 +662,32 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToValue) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToValue_Exception) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p1 = std::move(p2);
+    } catch (const utils::ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, utils::LifetimeOperationType::kMoveConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p1.has_value());
+    ASSERT_FALSE(p2.has_value());
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
 TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToSelf) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
@@ -696,6 +730,30 @@ TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToNull) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, TestMoveAssignment_FromValue_ToNull_Exception) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p1;
+    pro::proxy<TestFacade> p2{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      p1 = std::move(p2);
+    } catch (const utils::ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, utils::LifetimeOperationType::kMoveConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p1.has_value());
+    ASSERT_FALSE(p2.has_value());
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
@@ -884,4 +942,61 @@ TEST(ProxyLifetimeTests, TestSwap_Null_Null) {
   swap(p1, p2);
   ASSERT_FALSE(p1.has_value());
   ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, Test_DirectConvension_Lvalue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    auto session = static_cast<utils::LifetimeTracker::Session>(p);
+    ASSERT_TRUE(p.has_value());
+    ASSERT_EQ(ToString(*p), "Session 1");
+    ASSERT_EQ(to_string(session), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    auto session = static_cast<utils::LifetimeTracker::Session>(std::move(p));
+    ASSERT_FALSE(p.has_value());
+    ASSERT_EQ(to_string(session), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue_Exception) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    tracker.ThrowOnNextConstruction();
+    bool exception_thrown = false;
+    try {
+      auto session = static_cast<utils::LifetimeTracker::Session>(std::move(p));
+    } catch (const utils::ConstructionFailure& e) {
+      exception_thrown = true;
+      ASSERT_EQ(e.type_, utils::LifetimeOperationType::kMoveConstruction);
+    }
+    ASSERT_TRUE(exception_thrown);
+    ASSERT_FALSE(p.has_value());
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }

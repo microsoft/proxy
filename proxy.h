@@ -8,6 +8,7 @@
 #include <bit>
 #include <concepts>
 #include <initializer_list>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -150,6 +151,18 @@ consteval bool has_destructibility(constraint_level level) {
   }
 }
 
+template <class T>
+class destruction_guard {
+ public:
+  explicit destruction_guard(T* p) noexcept : p_(p) {}
+  destruction_guard(const destruction_guard&) = delete;
+  ~destruction_guard() noexcept(std::is_nothrow_destructible_v<T>)
+      { std::destroy_at(p_); }
+
+ private:
+  T* p_;
+};
+
 template <class P, qualifier_type Q, bool NE>
 struct ptr_traits : inapplicable_traits {};
 template <class P, qualifier_type Q, bool NE>
@@ -167,7 +180,9 @@ concept invocable_dispatch_ptr_indirect = ptr_traits<P, Q, NE>::applicable &&
         D, NE, R, typename ptr_traits<P, Q, NE>::target_type, Args...>;
 template <class D, class P, qualifier_type Q, bool NE, class R, class... Args>
 concept invocable_dispatch_ptr_direct = invocable_dispatch<
-    D, NE, R, add_qualifier_t<P, Q>, Args...>;
+    D, NE, R, add_qualifier_t<P, Q>, Args...> && (Q != qualifier_type::rv ||
+        (NE && std::is_nothrow_destructible_v<P>) ||
+        (!NE && std::is_destructible_v<P>));
 
 template <bool NE, class R, class... Args>
 using func_ptr_t = std::conditional_t<
@@ -191,9 +206,16 @@ R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
 template <class D, class P, qualifier_type Q, class R, class... Args>
 R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr_direct<D, P, Q, true, R, Args...>) {
-  return invoke_dispatch<D, R>(std::forward<add_qualifier_t<P, Q>>(
-      *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self))),
-      std::forward<Args>(args)...);
+  auto& qp = *std::launder(
+      reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
+  if constexpr (Q == qualifier_type::rv) {
+    destruction_guard guard{&qp};
+    return invoke_dispatch<D, R>(
+        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
+  } else {
+    return invoke_dispatch<D, R>(
+        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
+  }
 }
 template <class D, qualifier_type Q, class R, class... Args>
 R default_conv_dispatcher(add_qualifier_t<std::byte, Q>, Args... args)
@@ -215,8 +237,8 @@ template <class P>
 void relocation_dispatcher(std::byte& self, const std::byte& rhs)
     noexcept(has_relocatability<P>(constraint_level::nothrow)) {
   P* other = std::launder(reinterpret_cast<P*>(const_cast<std::byte*>(&rhs)));
+  destruction_guard guard{other};
   std::construct_at(reinterpret_cast<P*>(&self), std::move(*other));
-  std::destroy_at(other);
 }
 template <class P>
 void destruction_dispatcher(std::byte& self)
@@ -253,6 +275,7 @@ struct overload_traits_impl : applicable_traits {
   template <bool IS_DIRECT, class D, class P>
   static constexpr bool applicable_ptr =
       meta_provider<IS_DIRECT, D>::template get<P>() != nullptr;
+  static constexpr qualifier_type qualifier = Q;
 };
 template <class R, class... Args>
 struct overload_traits<R(Args...)>
@@ -549,6 +572,16 @@ struct meta_ptr<M> : M {
   using M::M;
   const M* operator->() const noexcept { return this; }
 };
+template <class M>
+struct meta_ptr_reset_guard {
+ public:
+  explicit meta_ptr_reset_guard(meta_ptr<M>& meta) noexcept : meta_(meta) {}
+  meta_ptr_reset_guard(const meta_ptr_reset_guard&) = delete;
+  ~meta_ptr_reset_guard() { meta_.reset(); }
+
+ private:
+  meta_ptr<M>& meta_;
+};
 
 template <class F>
 struct proxy_helper {
@@ -556,12 +589,20 @@ struct proxy_helper {
       { return *p.meta_.operator->(); }
   template <class C, qualifier_type Q, class... Args>
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    using MetaProvider = typename conv_traits<C>
-        ::template matched_overload_traits<Q, Args...>
-        ::template meta_provider<C::is_direct, typename C::dispatch_type>;
-    return p.meta_->template dispatcher_meta<MetaProvider>::dispatcher(
-        std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-        std::forward<Args>(args)...);
+    using OverloadTraits = typename conv_traits<C>
+        ::template matched_overload_traits<Q, Args...>;
+    auto dispatcher = p.meta_->template dispatcher_meta<typename OverloadTraits
+        ::template meta_provider<C::is_direct, typename C::dispatch_type>>
+        ::dispatcher;
+    if constexpr (C::is_direct &&
+        OverloadTraits::qualifier == qualifier_type::rv) {
+      meta_ptr_reset_guard guard{p.meta_};
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
+          std::forward<Args>(args)...);
+    } else {
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
+          std::forward<Args>(args)...);
+    }
   }
   template <class A, qualifier_type Q>
   static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
@@ -617,6 +658,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       requires(F::constraints.relocatability >= constraint_level::nontrivial &&
           F::constraints.copyability != constraint_level::trivial) {
     if (rhs.meta_.has_value()) {
+      details::meta_ptr_reset_guard guard{rhs.meta_};
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
@@ -624,7 +666,6 @@ class proxy : public details::facade_traits<F>::direct_accessor {
         rhs.meta_->_Traits::relocatability_meta::dispatcher(*ptr_, *rhs.ptr_);
       }
       meta_ = rhs.meta_;
-      rhs.meta_.reset();
     }
   }
   template <class P>
@@ -1018,8 +1059,9 @@ proxy<F> make_proxy(T&& value) {
 // convention, and facade types prior to C++26
 namespace details {
 
-constexpr std::size_t invalid_size = static_cast<std::size_t>(-1);
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(-1);
+constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
+constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+    std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size)
       { value.max_size = sizeof(ptr_prototype); }
@@ -1035,28 +1077,23 @@ consteval auto normalize(proxiable_ptr_constraints value) {
 }
 consteval auto make_restricted_layout(proxiable_ptr_constraints value,
     std::size_t max_size, std::size_t max_align) {
-  if (value.max_size == invalid_size || value.max_size > max_size)
-      { value.max_size = max_size; }
-  if (value.max_align == invalid_size || value.max_align > max_align)
-      { value.max_align = max_align; }
+  if (value.max_size > max_size) { value.max_size = max_size; }
+  if (value.max_align > max_align) { value.max_align = max_align; }
   return value;
 }
 consteval auto make_copyable(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.copyability == invalid_cl || value.copyability < cl)
-      { value.copyability = cl; }
+  if (value.copyability < cl) { value.copyability = cl; }
   return value;
 }
 consteval auto make_relocatable(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.relocatability == invalid_cl || value.relocatability < cl)
-      { value.relocatability = cl; }
+  if (value.relocatability < cl) { value.relocatability = cl; }
   return value;
 }
 consteval auto make_destructible(proxiable_ptr_constraints value,
     constraint_level cl) {
-  if (value.destructibility == invalid_cl || value.destructibility < cl)
-      { value.destructibility = cl; }
+  if (value.destructibility < cl) { value.destructibility = cl; }
   return value;
 }
 consteval auto merge_constraints(proxiable_ptr_constraints a,
@@ -1124,51 +1161,54 @@ using merge_conv_tuple_impl_t = recursive_reduction_t<add_conv_t, Cs0, Cs1...>;
 template <class Cs0, class Cs1>
 using merge_conv_tuple_t = instantiated_t<merge_conv_tuple_impl_t, Cs1, Cs0>;
 
-template <class Cs, class Rs, proxiable_ptr_constraints C>
-struct facade_builder_impl {
-  template <class D, class... Os>
-      requires(conv_traits<conv_impl<false, D, Os...>>::applicable)
-  using add_indirect_convention = facade_builder_impl<add_conv_t<
-      Cs, conv_impl<false, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(conv_traits<conv_impl<true, D, Os...>>::applicable)
-  using add_direct_convention = facade_builder_impl<add_conv_t<
-      Cs, conv_impl<true, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(requires { typename add_indirect_convention<D, Os...>; })
-  using add_convention = add_indirect_convention<D, Os...>;
-  template <class R>
-  using add_reflection = facade_builder_impl<Cs, add_tuple_t<Rs, R>, C>;
-  template <facade F>
-  using add_facade = facade_builder_impl<
-      merge_conv_tuple_t<Cs, typename F::convention_types>,
-      merge_tuple_t<Rs, typename F::reflection_types>,
-      merge_constraints(C, F::constraints)>;
-  template <std::size_t PtrSize, std::size_t PtrAlign =
-      std::min(PtrSize, alignof(std::max_align_t))>
-      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
-  using restrict_layout = facade_builder_impl<
-      Cs, Rs, make_restricted_layout(C, PtrSize, PtrAlign)>;
-  template <constraint_level CL>
-  using support_copy = facade_builder_impl<Cs, Rs, make_copyable(C, CL)>;
-  template <constraint_level CL>
-  using support_relocation = facade_builder_impl<
-      Cs, Rs, make_relocatable(C, CL)>;
-  template <constraint_level CL>
-  using support_destruction = facade_builder_impl<
-      Cs, Rs, make_destructible(C, CL)>;
-  using build = facade_impl<Cs, Rs, normalize(C)>;
-};
-
 }  // namespace details
 
-struct facade_builder : details::facade_builder_impl<std::tuple<>, std::tuple<>,
+template <class Cs, class Rs, proxiable_ptr_constraints C>
+struct basic_facade_builder {
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_indirect_convention = basic_facade_builder<details::add_conv_t<
+      Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_direct_convention = basic_facade_builder<details::add_conv_t<
+      Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
+  template <class D, class... Os>
+      requires(details::overload_traits<Os>::applicable && ...)
+  using add_convention = add_indirect_convention<D, Os...>;
+  template <class R>
+  using add_reflection = basic_facade_builder<
+      Cs, details::add_tuple_t<Rs, R>, C>;
+  template <facade F>
+  using add_facade = basic_facade_builder<
+      details::merge_conv_tuple_t<Cs, typename F::convention_types>,
+      details::merge_tuple_t<Rs, typename F::reflection_types>,
+      details::merge_constraints(C, F::constraints)>;
+  template <std::size_t PtrSize, std::size_t PtrAlign =
+      PtrSize < alignof(std::max_align_t) ? PtrSize : alignof(std::max_align_t)>
+      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
+  using restrict_layout = basic_facade_builder<
+      Cs, Rs, details::make_restricted_layout(C, PtrSize, PtrAlign)>;
+  template <constraint_level CL>
+  using support_copy = basic_facade_builder<
+      Cs, Rs, details::make_copyable(C, CL)>;
+  template <constraint_level CL>
+  using support_relocation = basic_facade_builder<
+      Cs, Rs, details::make_relocatable(C, CL)>;
+  template <constraint_level CL>
+  using support_destruction = basic_facade_builder<
+      Cs, Rs, details::make_destructible(C, CL)>;
+  using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
+  basic_facade_builder() = delete;
+};
+
+using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
     proxiable_ptr_constraints{
         .max_size = details::invalid_size,
         .max_align = details::invalid_size,
         .copyability = details::invalid_cl,
         .relocatability = details::invalid_cl,
-        .destructibility = details::invalid_cl}> {};
+        .destructibility = details::invalid_cl}>;
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
