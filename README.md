@@ -16,7 +16,7 @@ The "proxy" is a single-header, cross-platform C++ library that Microsoft uses t
 
 ## Quick start
 
-The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.info](https://vcpkg.info/port/proxy)).
+The "proxy" is a header-only C++20 library. Once you set the language level of your compiler not earlier than C++20 and get the header file ([proxy.h](proxy.h)), you are all set. You can also install the library via [vcpkg](https://github.com/microsoft/vcpkg/), which is a C++ library manager invented by Microsoft, by searching for "proxy" (see [vcpkg.io](https://vcpkg.io/en/package/proxy)).
 
 The majority of the library is defined in namespace `pro`. Some macros are provided (currently not included in the proposal for standardization) to simplify the definition of `proxy` prior to C++26. Here is a demo showing how to use this library to implement runtime polymorphism in a different way from the traditional inheritance-based approach:
 
