@@ -1170,15 +1170,18 @@ using merge_conv_tuple_t = instantiated_t<merge_conv_tuple_impl_t, Cs1, Cs0>;
 template <class Cs, class Rs, proxiable_ptr_constraints C>
 struct basic_facade_builder {
   template <class D, class... Os>
-      requires(details::overload_traits<Os>::applicable && ...)
+      requires(sizeof...(Os) > 0u &&
+          (details::overload_traits<Os>::applicable && ...))
   using add_indirect_convention = basic_facade_builder<details::add_conv_t<
       Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
   template <class D, class... Os>
-      requires(details::overload_traits<Os>::applicable && ...)
+      requires(sizeof...(Os) > 0u &&
+          (details::overload_traits<Os>::applicable && ...))
   using add_direct_convention = basic_facade_builder<details::add_conv_t<
       Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
   template <class D, class... Os>
-      requires(details::overload_traits<Os>::applicable && ...)
+      requires(sizeof...(Os) > 0u &&
+          (details::overload_traits<Os>::applicable && ...))
   using add_convention = add_indirect_convention<D, Os...>;
   template <class R>
   using add_reflection = basic_facade_builder<
@@ -1277,7 +1280,11 @@ struct sign {
 };
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
-template <bool RHS, sign SIGN> struct op_dispatch_traits;
+
+}  // namespace details
+
+template <details::sign SIGN, bool RHS = false>
+struct operator_dispatch;
 
 #define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R> \
@@ -1295,30 +1302,29 @@ template <bool RHS, sign SIGN> struct op_dispatch_traits;
 #define ___PRO_DEF_LHS_UNARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+#define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
     decltype(auto) operator()(T&& self) \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
-#define ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+#define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
     decltype(auto) operator()(T&& self) \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
     template <class T> \
     decltype(auto) operator()(T&& self, int) \
         ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
-#define ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
+#define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T, class Arg> \
     decltype(auto) operator()(T&& self, Arg&& arg) \
         ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
             std::forward<Arg>(arg))
-#define ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL(...) \
-    ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__) \
-    ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__)
-#define ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(TYPE, ...) \
+#define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
+    ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
+    ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
+#define ___PRO_LHS_OP_DISPATCH_IMPL(TYPE, ...) \
     template <> \
-    struct op_dispatch_traits<false, #__VA_ARGS__> { \
-      struct base \
-          { ___PRO_LHS_##TYPE##_OP_DISPATCH_TRAITS_BASE_IMPL(__VA_ARGS__) }; \
+    struct operator_dispatch<#__VA_ARGS__, false> { \
+      ___PRO_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     };
@@ -1331,26 +1337,24 @@ template <bool RHS, sign SIGN> struct op_dispatch_traits;
             access_proxy<F>(FW_SELF), std::forward<Arg>(arg)); \
       } \
     }
-#define ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(...) \
+#define ___PRO_RHS_OP_DISPATCH_IMPL(...) \
     template <> \
-    struct op_dispatch_traits<true, #__VA_ARGS__> { \
-      struct base { \
-        template <class T, class Arg> \
-        decltype(auto) operator()(T&& self, Arg&& arg) \
-            ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
-                std::forward<T>(self)) \
-      }; \
+    struct operator_dispatch<#__VA_ARGS__, true> { \
+      template <class T, class Arg> \
+      decltype(auto) operator()(T&& self, Arg&& arg) \
+          ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
+              std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     };
 
-#define ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(...) \
-    ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(ALL, __VA_ARGS__) \
-    ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(__VA_ARGS__)
+#define ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_IMPL(ALL, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
-#define ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(...) \
-    ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(BINARY, __VA_ARGS__) \
-    ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL(__VA_ARGS__)
+#define ___PRO_BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_IMPL(BINARY, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
 #define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class Arg> \
@@ -1372,77 +1376,73 @@ template <bool RHS, sign SIGN> struct op_dispatch_traits;
         return arg; \
       } \
     }
-#define ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(...) \
+#define ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
     template <> \
-    struct op_dispatch_traits<false, #__VA_ARGS__> { \
-      struct base { \
-        template <class T, class Arg> \
-        decltype(auto) operator()(T&& self, Arg&& arg) \
-            ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
-                std::forward<Arg>(arg)) \
-      }; \
+    struct operator_dispatch<#__VA_ARGS__, false> { \
+      template <class T, class Arg> \
+      decltype(auto) operator()(T&& self, Arg&& arg) \
+          ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
+              std::forward<Arg>(arg)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     }; \
     template <> \
-    struct op_dispatch_traits<true, #__VA_ARGS__> { \
-      struct base { \
-        template <class T, class Arg> \
-        decltype(auto) operator()(T&& self, Arg&& arg) \
-            ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
-                std::forward<T>(self)) \
-      }; \
+    struct operator_dispatch<#__VA_ARGS__, true> { \
+      template <class T, class Arg> \
+      decltype(auto) operator()(T&& self, Arg&& arg) \
+          ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
+              std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     };
 
-___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(+)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(-)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(*)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(/)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(%)
-___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(UNARY, ++)
-___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(UNARY, --)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(==)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(!=)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>=)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<=)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<=>)
-___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(LEFT, !)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(&&)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(||)
-___PRO_LHS_OP_DISPATCH_TRAITS_IMPL(LEFT, ~)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL(&)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(|)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(^)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(<<)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(>>)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(+=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(-=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(*=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(/=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(&=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(|=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(^=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(<<=)
-___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL(>>=)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(,)
-___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(->*)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(-)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(*)
+___PRO_BINARY_OP_DISPATCH_IMPL(/)
+___PRO_BINARY_OP_DISPATCH_IMPL(%)
+___PRO_LHS_OP_DISPATCH_IMPL(UNARY, ++)
+___PRO_LHS_OP_DISPATCH_IMPL(UNARY, --)
+___PRO_BINARY_OP_DISPATCH_IMPL(==)
+___PRO_BINARY_OP_DISPATCH_IMPL(!=)
+___PRO_BINARY_OP_DISPATCH_IMPL(>)
+___PRO_BINARY_OP_DISPATCH_IMPL(<)
+___PRO_BINARY_OP_DISPATCH_IMPL(>=)
+___PRO_BINARY_OP_DISPATCH_IMPL(<=)
+___PRO_BINARY_OP_DISPATCH_IMPL(<=>)
+___PRO_LHS_OP_DISPATCH_IMPL(LEFT, !)
+___PRO_BINARY_OP_DISPATCH_IMPL(&&)
+___PRO_BINARY_OP_DISPATCH_IMPL(||)
+___PRO_LHS_OP_DISPATCH_IMPL(LEFT, ~)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(&)
+___PRO_BINARY_OP_DISPATCH_IMPL(|)
+___PRO_BINARY_OP_DISPATCH_IMPL(^)
+___PRO_BINARY_OP_DISPATCH_IMPL(<<)
+___PRO_BINARY_OP_DISPATCH_IMPL(>>)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(+=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(-=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(*=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(/=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(&=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(|=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(^=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(<<=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
+___PRO_BINARY_OP_DISPATCH_IMPL(,)
+___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 
-#undef ___PRO_ASSIGNMENT_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL
 #undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_RHS_OP_DISPATCH_TRAITS_IMPL
+#undef ___PRO_BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_RHS_OP_DISPATCH_IMPL
 #undef ___PRO_DEF_RHS_OP_ACCESSOR
-#undef ___PRO_LHS_OP_DISPATCH_TRAITS_IMPL
-#undef ___PRO_LHS_ALL_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_BINARY_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_UNARY_OP_DISPATCH_TRAITS_BASE_IMPL
-#undef ___PRO_LHS_LEFT_OP_DISPATCH_TRAITS_BASE_IMPL
+#undef ___PRO_LHS_OP_DISPATCH_IMPL
+#undef ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL
 #undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
@@ -1458,29 +1458,25 @@ ___PRO_BINARY_OP_DISPATCH_TRAITS_IMPL(->*)
       } \
     }
 template <>
-struct op_dispatch_traits<false, "()"> {
-  struct base {
-    template <class T, class... Args>
-    decltype(auto) operator()(T&& self, Args&&... args)
-        ___PRO_DIRECT_FUNC_IMPL(
-            std::forward<T>(self)(std::forward<Args>(args)...))
-  };
+struct operator_dispatch<"()", false> {
+  template <class T, class... Args>
+  decltype(auto) operator()(T&& self, Args&&... args)
+      ___PRO_DIRECT_FUNC_IMPL(
+          std::forward<T>(self)(std::forward<Args>(args)...))
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_BRACKETS_OP_ACCESSOR, operator())
 };
 template <>
-struct op_dispatch_traits<false, "[]"> {
-  struct base {
+struct operator_dispatch<"[]", false> {
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
-    template <class T, class... Args>
-    decltype(auto) operator()(T&& self, Args&&... args)
-        ___PRO_DIRECT_FUNC_IMPL(
-            std::forward<T>(self)[std::forward<Args>(args)...])
+  template <class T, class... Args>
+  decltype(auto) operator()(T&& self, Args&&... args)
+      ___PRO_DIRECT_FUNC_IMPL(
+          std::forward<T>(self)[std::forward<Args>(args)...])
 #else
-    template <class T, class Arg>
-    decltype(auto) operator()(T&& self, Arg&& arg)
-        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
+  template <class T, class Arg>
+  decltype(auto) operator()(T&& self, Arg&& arg)
+      ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
-  };
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_BRACKETS_OP_ACCESSOR, operator[])
 };
 #undef ___PRO_DEF_BRACKETS_OP_ACCESSOR
@@ -1488,56 +1484,29 @@ struct op_dispatch_traits<false, "[]"> {
 #define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F, class C> \
     struct accessor<F, C, T() Q> { \
-      explicit __VA_ARGS__ () Q { \
-        if constexpr (C::is_direct && \
-            std::is_nothrow_default_constructible_v<T>) { \
-          if (access_proxy<F>(SELF).has_value()) { \
-            return proxy_invoke<C>(access_proxy<F>(SELF)); \
-          } else { \
-            return T{}; \
-          } \
-        } else { \
-          return proxy_invoke<C>(access_proxy<F>(SELF)); \
-        } \
-      } \
+      explicit(EXPL) __VA_ARGS__ () Q \
+          { return proxy_invoke<C>(access_proxy<F>(SELF)); } \
     }
-template <class T>
-struct conversion_dispatch_traits {
-  struct base {
-    template <class U>
-    T operator()(U&& self)
-        ___PRO_DIRECT_FUNC_IMPL(static_cast<T>(std::forward<U>(self)))
-  };
+template <class T, bool EXPL = true>
+struct conversion_dispatch {
+  template <class U>
+  T operator()(U&& value)
+      noexcept(std::conditional_t<EXPL, std::is_nothrow_constructible<T, U>,
+          std::is_nothrow_convertible<U, T>>::value)
+      requires(std::conditional_t<EXPL, std::is_constructible<T, U>,
+          std::is_convertible<U, T>>::value)
+      { return static_cast<T>(std::forward<U>(value)); }
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CONVERSION_ACCESSOR, operator T)
 };
 #undef ___PRO_DEF_CONVERSION_ACCESSOR
 
-template <bool IS_RHS, sign SIGN>
-using op_dispatch_base = typename op_dispatch_traits<IS_RHS, SIGN>::base;
-template <bool IS_RHS, sign SIGN, class F, class C, class... Os>
-using op_dispatch_accessor = typename op_dispatch_traits<IS_RHS, SIGN>
-    ::template accessor<F, C, Os...>;
-
-template <class T>
-using conversion_dispatch_base = typename conversion_dispatch_traits<T>::base;
-template <class T, class F, class C, class... Os>
-using conversion_dispatch_accessor = typename conversion_dispatch_traits<T>
-    ::template accessor<F, C, Os...>;
-
-}  // namespace details
-
 #define ___PRO_EXPAND_IMPL(__X) __X
 #define ___PRO_EXPAND_MACRO_IMPL( \
-    __MACRO, __1, __2, __3, __4, __NAME, ...) \
+    __MACRO, __1, __2, __3, __NAME, ...) \
     __MACRO##_##__NAME
 #define ___PRO_EXPAND_MACRO(__MACRO, ...) \
     ___PRO_EXPAND_IMPL(___PRO_EXPAND_MACRO_IMPL( \
-        __MACRO, __VA_ARGS__, 4, 3, 2)(__VA_ARGS__))
-
-#define ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC) \
-    template <class... __Args> \
-    decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
-        ___PRO_DIRECT_FUNC_IMPL(__DEFFUNC(::std::forward<__Args>(__args)...))
+        __MACRO, __VA_ARGS__, 3, 2)(__VA_ARGS__))
 
 #define ___PRO_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
     template <class __F, class __C, class __R, class... __Args> \
@@ -1547,22 +1516,18 @@ using conversion_dispatch_accessor = typename conversion_dispatch_traits<T>
             ::std::forward<__Args>(__args)...); \
       } \
     }
-#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, ...) \
+#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
               .__FUNC(::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
-      __VA_ARGS__ \
     }
 #define ___PRO_DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
     ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
 #define ___PRO_DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
     ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
-#define ___PRO_DEF_MEM_DISPATCH_4(__NAME, __FUNC, __FNAME, __DEFFUNC) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, \
-        ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
 #define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
@@ -1574,61 +1539,28 @@ using conversion_dispatch_accessor = typename conversion_dispatch_traits<T>
             ::std::forward<__Args>(__args)...); \
       } \
     }
-#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, ...) \
+#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
       decltype(auto) operator()(__T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_FREE_ACCESSOR, __FNAME) \
-      __VA_ARGS__ \
     }
 #define ___PRO_DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
     ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
 #define ___PRO_DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
     ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
-#define ___PRO_DEF_FREE_DISPATCH_4(__NAME, __FUNC, __FNAME, __DEFFUNC) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, \
-        ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
 #define PRO_DEF_FREE_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
 
-#define ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_RHS, __SIGN, ...) \
-    struct __NAME : ::pro::details::op_dispatch_base<__IS_RHS, __SIGN> { \
-      using ::pro::details::op_dispatch_base<__IS_RHS, __SIGN>::operator(); \
-      template <class __F, class __C, class... __Os> \
-      using accessor = ::pro::details::op_dispatch_accessor< \
-          __IS_RHS, __SIGN, __F, __C, __Os...>; \
-      __VA_ARGS__ \
-    }
-#define ___PRO_DEF_OPERATOR_DISPATCH_3(__NAME, __IS_RHS, __SIGN) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_RHS, __SIGN)
-#define ___PRO_DEF_OPERATOR_DISPATCH_4(__NAME, __IS_RHS, __SIGN, __DEFFUNC) \
-    ___PRO_DEF_OPERATOR_DISPATCH_IMPL(__NAME, __IS_RHS, __SIGN, \
-        ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-#define PRO_DEF_LHS_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, false, \
-        __VA_ARGS__)
-#define PRO_DEF_RHS_OPERATOR_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_OPERATOR_DISPATCH, __NAME, true, __VA_ARGS__)
-#define PRO_DEF_OPERATOR_DISPATCH(__NAME, ...) \
-    PRO_DEF_LHS_OPERATOR_DISPATCH(__NAME, __VA_ARGS__)
-
-#define ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __T, ...) \
-    struct __NAME : ::pro::details::conversion_dispatch_base<__T> { \
-      using ::pro::details::conversion_dispatch_base<__T>::operator(); \
-      template <class __F, class __C, class... __Os> \
-      using accessor = ::pro::details::conversion_dispatch_accessor< \
-          __T, __F, __C, __Os...>; \
-      __VA_ARGS__ \
-    }
-#define ___PRO_DEF_CONVERSION_DISPATCH_2(__NAME, __T) \
-    ___PRO_DEF_CONVERSION_DISPATCH_IMPL(__NAME, __T)
-#define ___PRO_DEF_CONVERSION_DISPATCH_3(__NAME, __T, __DEFFUNC) \
-    ___PRO_DEF_CONVERSION_DISPATCH_IMPL( \
-        __NAME, __T, ___PRO_DEFAULT_DISPATCH_CALL_IMPL(__DEFFUNC))
-#define PRO_DEF_CONVERSION_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_CONVERSION_DISPATCH, __NAME, __VA_ARGS__)
+#define PRO_DEF_WEAK_DISPATCH(__NAME, __D, __FUNC) \
+    struct __NAME : __D { \
+      using __D::operator(); \
+      template <class... __Args> \
+      decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
+          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
+    };
 
 }  // namespace pro
 

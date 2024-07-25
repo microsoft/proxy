@@ -106,11 +106,9 @@ By design, the body of a dispatch could be any code. While member function is on
 
 ```cpp
 // Specifications of abstraction
-PRO_DEF_OPERATOR_DISPATCH(OpCall, "()");
-
 template <class... Overloads>
 struct MovableCallable : pro::facade_builder
-    ::add_convention<OpCall, Overloads...>
+    ::add_convention<pro::operator_dispatch<"()">, Overloads...>
     ::build {};
 
 template <class... Overloads>
