@@ -1283,7 +1283,7 @@ sign(const char (&str)[N]) -> sign<N>;
 
 }  // namespace details
 
-template <details::sign SIGN, bool RHS = false>
+template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;
 
 #define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
@@ -1484,16 +1484,16 @@ struct operator_dispatch<"[]", false> {
 #define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F, class C> \
     struct accessor<F, C, T() Q> { \
-      explicit(EXPL) __VA_ARGS__ () Q \
+      explicit(Expl) __VA_ARGS__ () Q \
           { return proxy_invoke<C>(access_proxy<F>(SELF)); } \
     }
-template <class T, bool EXPL = true>
+template <class T, bool Expl = true>
 struct conversion_dispatch {
   template <class U>
   T operator()(U&& value)
-      noexcept(std::conditional_t<EXPL, std::is_nothrow_constructible<T, U>,
+      noexcept(std::conditional_t<Expl, std::is_nothrow_constructible<T, U>,
           std::is_nothrow_convertible<U, T>>::value)
-      requires(std::conditional_t<EXPL, std::is_constructible<T, U>,
+      requires(std::conditional_t<Expl, std::is_constructible<T, U>,
           std::is_convertible<U, T>>::value)
       { return static_cast<T>(std::forward<U>(value)); }
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CONVERSION_ACCESSOR, operator T)
