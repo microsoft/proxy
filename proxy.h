@@ -1165,6 +1165,16 @@ using merge_conv_tuple_impl_t = recursive_reduction_t<add_conv_t, Cs0, Cs1...>;
 template <class Cs0, class Cs1>
 using merge_conv_tuple_t = instantiated_t<merge_conv_tuple_impl_t, Cs1, Cs0>;
 
+template <std::size_t N>
+struct sign {
+  consteval sign(const char (&str)[N])
+      { for (std::size_t i = 0; i < N; ++i) { value[i] = str[i]; } }
+
+  char value[N];
+};
+template <std::size_t N>
+sign(const char (&str)[N]) -> sign<N>;
+
 }  // namespace details
 
 template <class Cs, class Rs, proxiable_ptr_constraints C>
@@ -1268,20 +1278,6 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
         ::std::forward<const accessor>(__self), __VA_ARGS__); \
     __MACRO(const&& noexcept, noexcept, const accessor&& __self, \
         ::std::forward<const accessor>(__self), __VA_ARGS__);
-
-namespace details {
-
-template <std::size_t N>
-struct sign {
-  consteval sign(const char (&str)[N])
-      { for (std::size_t i = 0; i < N; ++i) { value[i] = str[i]; } }
-
-  char value[N];
-};
-template <std::size_t N>
-sign(const char (&str)[N]) -> sign<N>;
-
-}  // namespace details
 
 template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;
