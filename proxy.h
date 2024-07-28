@@ -518,11 +518,13 @@ struct facade_traits<F>
       typename facade_traits::indirect_accessor, composite_accessor_impl<>>;
 };
 
+using ptr_prototype = void*[2];
+
 template <class M>
-struct meta_ptr {
-  constexpr meta_ptr() noexcept : ptr_(nullptr) {};
+struct meta_ptr_indirect_impl {
+  constexpr meta_ptr_indirect_impl() noexcept : ptr_(nullptr) {};
   template <class P>
-  constexpr explicit meta_ptr(std::in_place_type_t<P>) noexcept
+  constexpr explicit meta_ptr_indirect_impl(std::in_place_type_t<P>) noexcept
       : ptr_(&storage<P>) {}
   bool has_value() const noexcept { return ptr_ != nullptr; }
   void reset() noexcept { ptr_ = nullptr; }
@@ -532,26 +534,39 @@ struct meta_ptr {
   const M* ptr_;
   template <class P> static constexpr M storage{std::in_place_type<P>};
 };
-template <class MP, class... MPs> requires(sizeof...(MPs) <= 1u)
-struct meta_ptr<composite_meta_impl<
-    dispatcher_meta<MP>, dispatcher_meta<MPs>...>>
-    : composite_meta_impl<dispatcher_meta<MP>, dispatcher_meta<MPs>...> {
-  using M = composite_meta_impl<dispatcher_meta<MP>, dispatcher_meta<MPs>...>;
+template <class M, class DM>
+struct meta_ptr_direct_impl : private M {
   using M::M;
-  bool has_value() const noexcept
-      { return dispatcher_meta<MP>::dispatcher != nullptr; }
-  void reset() noexcept { dispatcher_meta<MP>::dispatcher = nullptr; }
+  bool has_value() const noexcept { return this->DM::dispatcher != nullptr; }
+  void reset() noexcept { this->DM::dispatcher = nullptr; }
   const M* operator->() const noexcept { return this; }
 };
 template <class M>
+struct meta_ptr_traits_impl : std::type_identity<meta_ptr_indirect_impl<M>> {};
+template <class MP, class... Ms>
+struct meta_ptr_traits_impl<composite_meta_impl<dispatcher_meta<MP>, Ms...>>
+    : std::type_identity<meta_ptr_direct_impl<composite_meta_impl<
+          dispatcher_meta<MP>, Ms...>, dispatcher_meta<MP>>> {};
+template <class M>
+struct meta_ptr_traits : std::type_identity<meta_ptr_indirect_impl<M>> {};
+template <class M>
+    requires(sizeof(M) <= sizeof(ptr_prototype) &&
+        alignof(M) <= alignof(ptr_prototype) &&
+        std::is_nothrow_default_constructible_v<M> &&
+        std::is_trivially_copyable_v<M>)
+struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
+template <class M>
+using meta_ptr = typename meta_ptr_traits<M>::type;
+
+template <class MP>
 struct meta_ptr_reset_guard {
  public:
-  explicit meta_ptr_reset_guard(meta_ptr<M>& meta) noexcept : meta_(meta) {}
+  explicit meta_ptr_reset_guard(MP& meta) noexcept : meta_(meta) {}
   meta_ptr_reset_guard(const meta_ptr_reset_guard&) = delete;
   ~meta_ptr_reset_guard() { meta_.reset(); }
 
  private:
-  meta_ptr<M>& meta_;
+  MP& meta_;
 };
 
 template <class F>
@@ -1035,9 +1050,9 @@ constexpr constraint_level invalid_cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size)
-      { value.max_size = sizeof(void*) * 2u; }
+      { value.max_size = sizeof(ptr_prototype); }
   if (value.max_align == invalid_size)
-      { value.max_align = alignof(void*); }
+      { value.max_align = alignof(ptr_prototype); }
   if (value.copyability == invalid_cl)
       { value.copyability = constraint_level::none; }
   if (value.relocatability == invalid_cl)
