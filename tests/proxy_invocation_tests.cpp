@@ -18,11 +18,9 @@ namespace {
 
 namespace spec {
 
-PRO_DEF_OPERATOR_DISPATCH(OpCall, "()");
-
 template <class... Os>
 struct MovableCallable : pro::facade_builder
-    ::add_convention<OpCall, Os...>
+    ::add_convention<pro::operator_dispatch<"()">, Os...>
     ::build {};
 
 template <class... Os>
@@ -38,7 +36,7 @@ struct Wildcard {
 
 Wildcard NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
 
-PRO_DEF_OPERATOR_DISPATCH(WeakOpCall, "()", NotImplemented);
+PRO_DEF_WEAK_DISPATCH(WeakOpCall, pro::operator_dispatch<"()">, NotImplemented);
 template <class... Os>
 struct WeakCallable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
@@ -71,7 +69,8 @@ struct Container : pro::facade_builder
     ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T) const&>
     ::build {};
 
-PRO_DEF_MEM_DISPATCH(MemAtWeak, at, at, NotImplemented);
+PRO_DEF_MEM_DISPATCH(MemAt, at, at);
+PRO_DEF_WEAK_DISPATCH(MemAtWeak, MemAt, NotImplemented);
 
 struct ResourceDictionary : pro::facade_builder
     ::add_convention<MemAtWeak, std::string(int)>
@@ -98,7 +97,9 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak, std::nullptr_t);
+PRO_DEF_FREE_DISPATCH(FreeGetWeakImpl, GetWeakImpl<F>, GetWeak);
+template <class F>
+PRO_DEF_WEAK_DISPATCH(FreeGetWeak, FreeGetWeakImpl<F>, std::nullptr_t);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
@@ -206,7 +207,7 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
 
 TEST(ProxyInvocationTests, TestOverloadResolution) {
   struct OverloadedCallable : pro::facade_builder
-      ::add_convention<spec::OpCall, void(int), void(double), void(const char*), void(char*), void(std::string, int)>
+      ::add_convention<pro::operator_dispatch<"()">, void(int), void(double), void(const char*), void(char*), void(std::string, int)>
       ::build {};
   std::vector<std::type_index> side_effect;
   auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args)
@@ -302,7 +303,7 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
 
 TEST(ProxyInvocationTests, TestQualifiedConvention) {
   struct TestFacade : pro::facade_builder
-      ::add_convention<spec::OpCall, int()&, int() const&, int()&& noexcept, int() const&&>
+      ::add_convention<pro::operator_dispatch<"()">, int()&, int() const&, int() && noexcept, int() const&&>
       ::build {};
 
   struct TestCallable {
