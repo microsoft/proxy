@@ -44,10 +44,8 @@ template <class F> class proxy;
 
 namespace details {
 
-template <bool A>
-struct conditional_traits { static constexpr bool applicable = A; };
-using applicable_traits = conditional_traits<true>;
-using inapplicable_traits = conditional_traits<false>;
+struct applicable_traits { static constexpr bool applicable = true; };
+struct inapplicable_traits { static constexpr bool applicable = false; };
 
 enum class qualifier_type { lv, const_lv, rv, const_rv };
 template <class T, qualifier_type Q> struct add_qualifier_traits;
@@ -73,15 +71,6 @@ using recursive_reduction_t = typename recursive_reduction<R, O, Is...>::type;
 template <template <class, class> class R, class O, class I, class... Is>
 struct recursive_reduction<R, O, I, Is...>
     { using type = recursive_reduction_t<R, R<O, I>, Is...>; };
-
-template <template <class> class T, class... Is> struct first_applicable {};
-template <template <class> class T, class I, class... Is>
-    requires(T<I>::applicable)
-struct first_applicable<T, I, Is...> : std::type_identity<I> {};
-template <template <class> class T, class I, class... Is>
-struct first_applicable<T, I, Is...> : first_applicable<T, Is...> {};
-template <template <class> class T, class... Is>
-using first_applicable_t = typename first_applicable<T, Is...>::type;
 
 template <class Expr>
 consteval bool is_consteval(Expr)
@@ -314,42 +303,22 @@ template <class R, class... Args>
 struct overload_traits<R(Args...) const&& noexcept>
     : overload_traits_impl<qualifier_type::const_rv, true, R, Args...> {};
 
-template <class T> struct nullable_traits : inapplicable_traits {};
-template <class T>
-    requires(
-        requires(const T& cv, T& v) {
-          { T{} } noexcept;
-          { cv.has_value() } noexcept -> std::same_as<bool>;
-          { v.reset() } noexcept;
-        })
-struct nullable_traits<T> : applicable_traits {};
-
 template <class MP>
 struct dispatcher_meta {
   constexpr dispatcher_meta() noexcept : dispatcher(nullptr) {}
   template <class P>
   constexpr explicit dispatcher_meta(std::in_place_type_t<P>) noexcept
       : dispatcher(MP::template get<P>()) {}
-  bool has_value() const noexcept { return dispatcher != nullptr; }
-  void reset() noexcept { dispatcher = nullptr; }
 
   decltype(MP::template get<void>()) dispatcher;
 };
 
 template <class... Ms>
 struct composite_meta_impl : Ms... {
-  static constexpr bool is_nullable =
-      requires { typename first_applicable_t<nullable_traits, Ms...>; };
-
-  constexpr composite_meta_impl() noexcept requires(is_nullable) = default;
+  constexpr composite_meta_impl() noexcept = default;
   template <class P>
   constexpr explicit composite_meta_impl(std::in_place_type_t<P>) noexcept
       : Ms(std::in_place_type<P>)... {}
-
-  bool has_value() const noexcept requires(is_nullable)
-      { return first_applicable_t<nullable_traits, Ms...>::has_value(); }
-  void reset() noexcept requires(is_nullable)
-      { first_applicable_t<nullable_traits, Ms...>::reset(); }
 };
 template <class O, class I> struct meta_reduction : std::type_identity<O> {};
 template <class... Ms, class I> requires(!std::is_void_v<I>)
@@ -552,10 +521,10 @@ struct facade_traits<F>
 using ptr_prototype = void*[2];
 
 template <class M>
-struct meta_ptr {
-  constexpr meta_ptr() noexcept : ptr_(nullptr) {};
+struct meta_ptr_indirect_impl {
+  constexpr meta_ptr_indirect_impl() noexcept : ptr_(nullptr) {};
   template <class P>
-  constexpr explicit meta_ptr(std::in_place_type_t<P>) noexcept
+  constexpr explicit meta_ptr_indirect_impl(std::in_place_type_t<P>) noexcept
       : ptr_(&storage<P>) {}
   bool has_value() const noexcept { return ptr_ != nullptr; }
   void reset() noexcept { ptr_ = nullptr; }
@@ -565,22 +534,39 @@ struct meta_ptr {
   const M* ptr_;
   template <class P> static constexpr M storage{std::in_place_type<P>};
 };
-template <class M>
-    requires(sizeof(M) <= sizeof(ptr_prototype) &&
-        alignof(M) <= alignof(ptr_prototype) && nullable_traits<M>::applicable)
-struct meta_ptr<M> : M {
+template <class M, class DM>
+struct meta_ptr_direct_impl : private M {
   using M::M;
+  bool has_value() const noexcept { return this->DM::dispatcher != nullptr; }
+  void reset() noexcept { this->DM::dispatcher = nullptr; }
   const M* operator->() const noexcept { return this; }
 };
 template <class M>
+struct meta_ptr_traits_impl : std::type_identity<meta_ptr_indirect_impl<M>> {};
+template <class MP, class... Ms>
+struct meta_ptr_traits_impl<composite_meta_impl<dispatcher_meta<MP>, Ms...>>
+    : std::type_identity<meta_ptr_direct_impl<composite_meta_impl<
+          dispatcher_meta<MP>, Ms...>, dispatcher_meta<MP>>> {};
+template <class M>
+struct meta_ptr_traits : std::type_identity<meta_ptr_indirect_impl<M>> {};
+template <class M>
+    requires(sizeof(M) <= sizeof(ptr_prototype) &&
+        alignof(M) <= alignof(ptr_prototype) &&
+        std::is_nothrow_default_constructible_v<M> &&
+        std::is_trivially_copyable_v<M>)
+struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
+template <class M>
+using meta_ptr = typename meta_ptr_traits<M>::type;
+
+template <class MP>
 struct meta_ptr_reset_guard {
  public:
-  explicit meta_ptr_reset_guard(meta_ptr<M>& meta) noexcept : meta_(meta) {}
+  explicit meta_ptr_reset_guard(MP& meta) noexcept : meta_(meta) {}
   meta_ptr_reset_guard(const meta_ptr_reset_guard&) = delete;
   ~meta_ptr_reset_guard() { meta_.reset(); }
 
  private:
-  meta_ptr<M>& meta_;
+  MP& meta_;
 };
 
 template <class F>
