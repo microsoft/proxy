@@ -1413,6 +1413,29 @@ ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
 ___PRO_BINARY_OP_DISPATCH_IMPL(,)
 ___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 
+template <>
+struct operator_dispatch<"()", false> {
+  template <class T, class... Args>
+  decltype(auto) operator()(T&& self, Args&&... args)
+      ___PRO_DIRECT_FUNC_IMPL(
+          std::forward<T>(self)(std::forward<Args>(args)...))
+  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
+};
+template <>
+struct operator_dispatch<"[]", false> {
+#if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
+  template <class T, class... Args>
+  decltype(auto) operator()(T&& self, Args&&... args)
+      ___PRO_DIRECT_FUNC_IMPL(
+          std::forward<T>(self)[std::forward<Args>(args)...])
+#else
+  template <class T, class Arg>
+  decltype(auto) operator()(T&& self, Arg&& arg)
+      ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
+#endif  // defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
+  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
+};
+
 #undef ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL
 #undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
@@ -1430,38 +1453,6 @@ ___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 #undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
-
-#define ___PRO_DEF_BRACKETS_OP_ACCESSOR(Q, SELF, ...) \
-    template <class F, class C, class R, class... Args> \
-    struct accessor<F, C, R(Args...) Q> { \
-      R __VA_ARGS__ (Args... args) Q { \
-        return proxy_invoke<C>(access_proxy<F>(SELF), \
-            std::forward<Args>(args)...); \
-      } \
-    }
-template <>
-struct operator_dispatch<"()", false> {
-  template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
-          std::forward<T>(self)(std::forward<Args>(args)...))
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_BRACKETS_OP_ACCESSOR, operator())
-};
-template <>
-struct operator_dispatch<"[]", false> {
-#if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
-  template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
-          std::forward<T>(self)[std::forward<Args>(args)...])
-#else
-  template <class T, class Arg>
-  decltype(auto) operator()(T&& self, Arg&& arg)
-      ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
-#endif  // defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_BRACKETS_OP_ACCESSOR, operator[])
-};
-#undef ___PRO_DEF_BRACKETS_OP_ACCESSOR
 
 #define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F, class C> \
