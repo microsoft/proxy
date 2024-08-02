@@ -1533,7 +1533,7 @@ struct conversion_dispatch {
       template <class... __Args> \
       decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
-    };
+    }
 
 }  // namespace pro
 
