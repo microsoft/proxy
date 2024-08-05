@@ -28,6 +28,8 @@
 #define ___PRO_ENFORCE_EBO
 #endif  // defined(_MSC_VER) && !defined(__clang__)
 
+#define __msft_lib_proxy 202408L
+
 namespace pro {
 
 enum class constraint_level { none, nontrivial, nothrow, trivial };
