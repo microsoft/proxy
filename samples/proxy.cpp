@@ -1,10 +1,14 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+// This file contains example code from proxy.md.
+
 #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <proxy/proxy.h>
+#include "proxy.h"
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 
@@ -22,6 +26,6 @@ int main() {
   auto container2 = std::make_shared<std::vector<const char*>>();
   container2->push_back("hello");
   container2->push_back("world");
-  PrintDictionary(&container1);  // prints: hello\n
-  PrintDictionary(container2);  // prints: world\n
+  PrintDictionary(&container1);  // Prints: "hello"
+  PrintDictionary(container2);  // Prints: "world"
 }
