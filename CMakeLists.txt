@@ -27,10 +27,11 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxyConfigVersion.cmake
 include(CTest)
 if (BUILD_TESTING)
   include(FetchContent)
-  # gtest version release-1.11.0
+  # gtest version release-1.15.2
   FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/e2239ee6043f73722e7aa812a459f54a28552929.zip
+    URL https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   )
 
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # For Windows: Prevent overriding the parent project's compiler/linker settings
