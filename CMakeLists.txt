@@ -38,4 +38,5 @@ if (BUILD_TESTING)
   FetchContent_MakeAvailable(googletest)
 
   add_subdirectory(tests)
+  add_subdirectory(samples)
 endif()

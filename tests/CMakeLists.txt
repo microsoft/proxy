@@ -9,7 +9,6 @@ add_executable(msft_proxy_tests
   proxy_traits_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
-target_compile_features(msft_proxy_tests PRIVATE cxx_std_20)
 target_link_libraries(msft_proxy_tests PRIVATE msft_proxy)
 target_link_libraries(msft_proxy_tests PRIVATE gtest_main)
 
