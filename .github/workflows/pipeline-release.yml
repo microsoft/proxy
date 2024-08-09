@@ -39,28 +39,35 @@ jobs:
 
   run-bvt-gcc:
     needs: prepare-release
-    name: run bvt with g++
+    name: Run BVT with GCC
     uses: ./.github/workflows/bvt-gcc.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
   run-bvt-clang:
     needs: prepare-release
-    name: run bvt with clang
+    name: Run BVT with Clang
     uses: ./.github/workflows/bvt-clang.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
   run-bvt-msvc:
     needs: prepare-release
-    name: run bvt with msvc
+    name: Run BVT with MSVC
     uses: ./.github/workflows/bvt-msvc.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
+
+  run-bvt-appleclang:
+    needs: prepare-release
+    name: Run BVT with AppleClang
+    uses: ./.github/workflows/bvt-appleclang.yml
     with:
       branch: release/${{ github.event.inputs.version }}
 
   draft-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc]
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
     steps:
     - uses: actions/checkout@v3
       with:

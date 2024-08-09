@@ -13,12 +13,16 @@ env:
 jobs:
   run-bvt-gcc:
     uses: ./.github/workflows/bvt-gcc.yml
-    name: run bvt with g++
+    name: Run BVT with GCC
 
   run-bvt-clang:
     uses: ./.github/workflows/bvt-clang.yml
-    name: run bvt with clang
+    name: Run BVT with Clang
 
   run-bvt-msvc:
     uses: ./.github/workflows/bvt-msvc.yml
-    name: run bvt with msvc
+    name: Run BVT with MSVC
+
+  run-bvt-appleclang:
+    uses: ./.github/workflows/bvt-appleclang.yml
+    name: Run BVT with AppleClang
