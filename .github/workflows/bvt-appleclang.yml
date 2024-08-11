@@ -20,7 +20,6 @@ jobs:
 
     - name: build and run test with AppleClang
       run: |
-        cmake . -B build
-        cmake --build ./build -j8
-        cd ./build
-        ctest -j8
+        cmake -B build
+        cmake --build build -j
+        ctest --test-dir build -j
