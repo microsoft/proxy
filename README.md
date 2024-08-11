@@ -183,10 +183,9 @@ cmake <source_dir> -B <build_dir> -DCMAKE_TOOLCHAIN_FILE=<vcpkg_dir>/scripts/bui
 ```
 git clone https://github.com/microsoft/proxy.git
 cd proxy
-cmake -S . -B build
-cmake --build ./build -j8
-cd ./build
-ctest -j8
+cmake -B build
+cmake --build build -j
+ctest --test-dir build -j8
 ```
 
 ## Contributing
