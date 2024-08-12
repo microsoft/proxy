@@ -185,7 +185,7 @@ git clone https://github.com/microsoft/proxy.git
 cd proxy
 cmake -B build
 cmake --build build -j
-ctest --test-dir build -j8
+ctest --test-dir build -j
 ```
 
 ## Contributing
