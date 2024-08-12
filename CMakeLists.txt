@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required(VERSION 3.5)
 
 project(msft_proxy
         VERSION 0.1.0 # local build version
@@ -27,11 +27,14 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/proxyConfigVersion.cmake
 include(CTest)
 if (BUILD_TESTING)
   include(FetchContent)
-  # gtest version release-1.15.2
+  # The policy uses the download time for timestamp, instead of the timestamp in the archive. This
+  # allows for proper rebuilds when a projects URL changes.
+  if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+  endif()
   FetchContent_Declare(
     googletest
-    URL https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    URL https://github.com/google/googletest/releases/download/v1.15.2/googletest-1.15.2.tar.gz
   )
 
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # For Windows: Prevent overriding the parent project's compiler/linker settings

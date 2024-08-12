@@ -15,10 +15,9 @@ jobs:
 
     - name: build with cmake
       run: |
-        cmake . -B build
-        cmake --build ./build -j8
+        cmake -B build
+        cmake --build build -j
 
     - name: run tests
       run: |
-        cd ./build
-        ctest -j8
+        ctest --test-dir build -j
