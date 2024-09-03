@@ -5,20 +5,9 @@
 #include <memory>
 #include <typeinfo>
 #include "proxy.h"
+#include "utils.h"
 
 namespace {
-
-class RttiReflection {
- public:
-  template <class T>
-  constexpr explicit RttiReflection(std::in_place_type_t<T>)
-      : type_(typeid(T)) {}
-
-  const char* GetName() const noexcept { return type_.name(); }
-
- private:
-  const std::type_info& type_;
-};
 
 struct TraitsReflection {
  public:
@@ -38,7 +27,7 @@ struct TraitsReflection {
 };
 
 struct TestRttiFacade : pro::facade_builder
-    ::add_reflection<RttiReflection>
+    ::add_reflection<utils::RttiReflection>
     ::build {};
 
 struct TestTraitsFacade : pro::facade_builder
@@ -50,12 +39,12 @@ struct TestTraitsFacade : pro::facade_builder
 TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
-  ASSERT_STREQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(int*).name());
+  ASSERT_STREQ(pro::proxy_reflect<utils::RttiReflection>(p).GetName(), typeid(int*).name());
 }
 
 TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
-  ASSERT_STREQ(pro::proxy_reflect<RttiReflection>(p).GetName(), typeid(std::unique_ptr<double>).name());
+  ASSERT_STREQ(pro::proxy_reflect<utils::RttiReflection>(p).GetName(), typeid(std::unique_ptr<double>).name());
 }
 
 TEST(ProxyReflectionTests, TestTraits_RawPtr) {
