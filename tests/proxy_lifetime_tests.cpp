@@ -21,15 +21,14 @@ struct TestTrivialFacade : pro::facade_builder
     ::support_destruction<pro::constraint_level::trivial>
     ::build {};
 
-struct TestRelocatableFacade : pro::facade_builder
-    ::add_convention<utils::spec::FreeToString, std::string()>
-    ::support_relocation<pro::constraint_level::nontrivial>
-    ::build {};
-
 struct TestRttiFacade : pro::facade_builder
     ::add_reflection<utils::RttiReflection>
     ::add_facade<TestFacade, true>
     ::build {};
+
+// Additional static asserts for upward conversion
+static_assert(!std::is_convertible_v<pro::proxy<TestTrivialFacade>, pro::proxy<utils::spec::Stringable>>);
+static_assert(std::is_convertible_v<pro::proxy<TestRttiFacade>, pro::proxy<TestFacade>>);
 
 }  // namespace
 
@@ -1037,7 +1036,6 @@ TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromNull) {
 }
 
 TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromValue) {
-
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
