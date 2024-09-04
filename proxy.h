@@ -1043,8 +1043,58 @@ proxy<F> make_proxy(T&& value) {
 }
 #endif  // __STDC_HOSTED__
 
-// The following types and macros aim to simplify definition of dispatch,
-// convention, and facade types prior to C++26
+#define ___PRO_DIRECT_FUNC_IMPL(...) \
+    noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
+    { return __VA_ARGS__; }
+
+#define ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(__MACRO, ...) \
+    template <class __F, class __C, class... __Os> \
+    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+    template <class __F, class __C, class... __Os> \
+        requires(sizeof...(__Os) > 1u && \
+            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
+    struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... \
+        { using accessor<__F, __C, __Os>:: __VA_ARGS__ ...; }; \
+    __MACRO(, *this, __VA_ARGS__); \
+    __MACRO(noexcept, *this, __VA_ARGS__); \
+    __MACRO(&, *this, __VA_ARGS__); \
+    __MACRO(& noexcept, *this, __VA_ARGS__); \
+    __MACRO(&&, ::std::forward<accessor>(*this), __VA_ARGS__); \
+    __MACRO(&& noexcept, ::std::forward<accessor>(*this), __VA_ARGS__); \
+    __MACRO(const, *this, __VA_ARGS__); \
+    __MACRO(const noexcept, *this, __VA_ARGS__); \
+    __MACRO(const&, *this, __VA_ARGS__); \
+    __MACRO(const& noexcept, *this, __VA_ARGS__); \
+    __MACRO(const&&, ::std::forward<const accessor>(*this), __VA_ARGS__); \
+    __MACRO(const&& noexcept, ::std::forward<const accessor>(*this), \
+        __VA_ARGS__);
+
+#define ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
+    template <class __F, class __C, class... __Os> \
+    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+    template <class __F, class __C, class... __Os> \
+        requires(sizeof...(__Os) > 1u && \
+            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
+    struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... {}; \
+    __MACRO(,, accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(&,, accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(& noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(&&,, accessor&& __self, \
+        ::std::forward<accessor>(__self), __VA_ARGS__); \
+    __MACRO(&& noexcept, noexcept, accessor&& __self, \
+        ::std::forward<accessor>(__self), __VA_ARGS__); \
+    __MACRO(const,, const accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(const noexcept, noexcept, const accessor& __self, \
+        __self, __VA_ARGS__); \
+    __MACRO(const&,, const accessor& __self, __self, __VA_ARGS__); \
+    __MACRO(const& noexcept, noexcept, const accessor& __self, \
+        __self, __VA_ARGS__); \
+    __MACRO(const&&,, const accessor&& __self, \
+        ::std::forward<const accessor>(__self), __VA_ARGS__); \
+    __MACRO(const&& noexcept, noexcept, const accessor&& __self, \
+        ::std::forward<const accessor>(__self), __VA_ARGS__);
+
 namespace details {
 
 constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
@@ -1112,6 +1162,29 @@ struct facade_impl {
   static constexpr proxiable_ptr_constraints constraints = C;
 };
 
+#define ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR(Q, SELF, ...) \
+    template <class F2, class C> \
+    struct accessor<F2, C, proxy<F>() Q> { \
+      __VA_ARGS__ () Q { \
+        if (access_proxy<F2>(SELF).has_value()) { \
+          return proxy_invoke<C>(access_proxy<F2>(SELF)); \
+        } \
+        return nullptr; \
+      } \
+    }
+template <class F>
+struct upward_conversion_dispatch {
+  using Base = proxy<F>;
+  template <class T>
+  Base operator()(T&& value)
+      noexcept(std::is_nothrow_convertible_v<T, Base>)
+      requires(std::is_convertible_v<T, Base>)
+      { return static_cast<Base>(std::forward<T>(value)); }
+  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(
+      ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR, operator Base)
+};
+#undef ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR
+
 template <class O, class I>
 struct add_tuple_reduction : std::type_identity<O> {};
 template <class... Os, class I> requires(!std::is_same_v<I, Os> && ...)
@@ -1148,10 +1221,39 @@ struct add_conv_reduction<std::tuple<Cs...>, std::tuple<>, C>
 template <class Cs, class C>
 using add_conv_t = typename add_conv_reduction<std::tuple<>, Cs, C>::type;
 
+template <class F, constraint_level CL>
+using copy_conversion_overload =
+    proxy<F>() const& noexcept(CL >= constraint_level::nothrow);
+template <class F, constraint_level CL>
+using move_conversion_overload =
+    proxy<F>() && noexcept(CL >= constraint_level::nothrow);
+template <class Cs, class F, constraint_level CCL, constraint_level RCL>
+struct add_upward_conversion_conv
+    : std::type_identity<add_conv_t<Cs, conv_impl<true,
+        upward_conversion_dispatch<F>, copy_conversion_overload<F, CCL>,
+        move_conversion_overload<F, RCL>>>> {};
+template <class Cs, class F, constraint_level RCL>
+struct add_upward_conversion_conv<Cs, F, constraint_level::none, RCL>
+    : std::type_identity<add_conv_t<Cs, conv_impl<true,
+          upward_conversion_dispatch<F>, move_conversion_overload<F, RCL>>>> {};
+template <class Cs, class F, constraint_level CCL>
+struct add_upward_conversion_conv<Cs, F, CCL, constraint_level::none>
+    : std::type_identity<add_conv_t<Cs, conv_impl<true,
+          upward_conversion_dispatch<F>, copy_conversion_overload<F, CCL>>>> {};
+template <class Cs, class F>
+struct add_upward_conversion_conv<
+    Cs, F, constraint_level::none, constraint_level::none>
+    : std::type_identity<Cs> {};
+
 template <class Cs0, class... Cs1>
-using merge_conv_tuple_impl_t = recursive_reduction_t<add_conv_t, Cs0, Cs1...>;
-template <class Cs0, class Cs1>
-using merge_conv_tuple_t = instantiated_t<merge_conv_tuple_impl_t, Cs1, Cs0>;
+using merge_conv_tuple_t = recursive_reduction_t<add_conv_t, Cs0, Cs1...>;
+template <class Cs, class F, bool WithUpwardConversion>
+using merge_facade_conv_t = typename add_upward_conversion_conv<
+    instantiated_t<merge_conv_tuple_t, typename F::convention_types, Cs>, F,
+    WithUpwardConversion ? F::constraints.copyability : constraint_level::none,
+    (WithUpwardConversion &&
+        F::constraints.copyability != constraint_level::trivial) ?
+        F::constraints.relocatability : constraint_level::none>::type;
 
 template <std::size_t N>
 struct sign {
@@ -1184,9 +1286,9 @@ struct basic_facade_builder {
   template <class R>
   using add_reflection = basic_facade_builder<
       Cs, details::add_tuple_t<Rs, R>, C>;
-  template <facade F>
+  template <facade F, bool WithUpwardConversion = false>
   using add_facade = basic_facade_builder<
-      details::merge_conv_tuple_t<Cs, typename F::convention_types>,
+      details::merge_facade_conv_t<Cs, F, WithUpwardConversion>,
       details::merge_tuple_t<Rs, typename F::reflection_types>,
       details::merge_constraints(C, F::constraints)>;
   template <std::size_t PtrSize,
@@ -1214,58 +1316,6 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
         .copyability = details::invalid_cl,
         .relocatability = details::invalid_cl,
         .destructibility = details::invalid_cl}>;
-
-#define ___PRO_DIRECT_FUNC_IMPL(...) \
-    noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
-    { return __VA_ARGS__; }
-
-#define ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(__MACRO, ...) \
-    template <class __F, class __C, class... __Os> \
-    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
-    template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u && \
-            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
-    struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... \
-        { using accessor<__F, __C, __Os>:: __VA_ARGS__ ...; }; \
-    __MACRO(, *this, __VA_ARGS__); \
-    __MACRO(noexcept, *this, __VA_ARGS__); \
-    __MACRO(&, *this, __VA_ARGS__); \
-    __MACRO(& noexcept, *this, __VA_ARGS__); \
-    __MACRO(&&, ::std::forward<accessor>(*this), __VA_ARGS__); \
-    __MACRO(&& noexcept, ::std::forward<accessor>(*this), __VA_ARGS__); \
-    __MACRO(const, *this, __VA_ARGS__); \
-    __MACRO(const noexcept, *this, __VA_ARGS__); \
-    __MACRO(const&, *this, __VA_ARGS__); \
-    __MACRO(const& noexcept, *this, __VA_ARGS__); \
-    __MACRO(const&&, ::std::forward<const accessor>(*this), __VA_ARGS__); \
-    __MACRO(const&& noexcept, ::std::forward<const accessor>(*this), \
-        __VA_ARGS__);
-
-#define ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
-    template <class __F, class __C, class... __Os> \
-    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
-    template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u && \
-            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
-    struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... {}; \
-    __MACRO(,, accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(&,, accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(& noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(&&,, accessor&& __self, \
-        ::std::forward<accessor>(__self), __VA_ARGS__); \
-    __MACRO(&& noexcept, noexcept, accessor&& __self, \
-        ::std::forward<accessor>(__self), __VA_ARGS__); \
-    __MACRO(const,, const accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(const noexcept, noexcept, const accessor& __self, \
-        __self, __VA_ARGS__); \
-    __MACRO(const&,, const accessor& __self, __self, __VA_ARGS__); \
-    __MACRO(const& noexcept, noexcept, const accessor& __self, \
-        __self, __VA_ARGS__); \
-    __MACRO(const&&,, const accessor&& __self, \
-        ::std::forward<const accessor>(__self), __VA_ARGS__); \
-    __MACRO(const&& noexcept, noexcept, const accessor&& __self, \
-        ::std::forward<const accessor>(__self), __VA_ARGS__);
 
 template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;

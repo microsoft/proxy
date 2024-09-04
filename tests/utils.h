@@ -92,6 +92,18 @@ struct Stringable : pro::facade_builder
 
 }  // namespace spec
 
+class RttiReflection {
+ public:
+  template <class T>
+  constexpr explicit RttiReflection(std::in_place_type_t<T>)
+      : type_(typeid(T)) {}
+
+  const char* GetName() const noexcept { return type_.name(); }
+
+ private:
+  const std::type_info& type_;
+};
+
 }  // namespace utils
 
 #endif  // _MSFT_PROXY_TEST_UTILS_
