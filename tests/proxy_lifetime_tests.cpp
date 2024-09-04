@@ -21,6 +21,15 @@ struct TestTrivialFacade : pro::facade_builder
     ::support_destruction<pro::constraint_level::trivial>
     ::build {};
 
+struct TestRttiFacade : pro::facade_builder
+    ::add_reflection<utils::RttiReflection>
+    ::add_facade<TestFacade, true>
+    ::build {};
+
+// Additional static asserts for upward conversion
+static_assert(!std::is_convertible_v<pro::proxy<TestTrivialFacade>, pro::proxy<utils::spec::Stringable>>);
+static_assert(std::is_convertible_v<pro::proxy<TestRttiFacade>, pro::proxy<TestFacade>>);
+
 }  // namespace
 
 TEST(ProxyLifetimeTests, TestDefaultConstrction) {
@@ -997,4 +1006,56 @@ TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue_Exception) {
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromValue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestRttiFacade> p1{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2 = p1;
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_EQ(ToString(*p1), "Session 1");
+    ASSERT_STREQ(pro::proxy_reflect<utils::RttiReflection>(p1).GetName(), typeid(utils::LifetimeTracker::Session).name());
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(ToString(*p2), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromNull) {
+  pro::proxy<TestRttiFacade> p1;
+  pro::proxy<TestFacade> p2 = p1;
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromValue) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestRttiFacade> p1{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    pro::proxy<TestFacade> p2 = std::move(p1);
+    ASSERT_FALSE(p1.has_value());
+    ASSERT_TRUE(p2.has_value());
+    ASSERT_EQ(ToString(*p2), "Session 2");
+    expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(2, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromNull) {
+  pro::proxy<TestRttiFacade> p1;
+  pro::proxy<TestFacade> p2 = std::move(p1);
+  ASSERT_FALSE(p1.has_value());
+  ASSERT_FALSE(p2.has_value());
 }
