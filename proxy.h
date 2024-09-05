@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 #ifndef _MSFT_PROXY_
@@ -1217,7 +1217,7 @@ struct add_conv_reduction<std::tuple<Cs0...>, std::tuple<C1, Cs2...>, C>
 template <class... Cs, class C>
 struct add_conv_reduction<std::tuple<Cs...>, std::tuple<>, C>
     : std::type_identity<std::tuple<Cs..., merge_conv_t<
-        conv_impl<C::is_direct, typename C::dispatch_type>, C>>> {};
+          conv_impl<C::is_direct, typename C::dispatch_type>, C>>> {};
 template <class Cs, class C>
 using add_conv_t = typename add_conv_reduction<std::tuple<>, Cs, C>::type;
 
@@ -1230,8 +1230,8 @@ using move_conversion_overload =
 template <class Cs, class F, constraint_level CCL, constraint_level RCL>
 struct add_upward_conversion_conv
     : std::type_identity<add_conv_t<Cs, conv_impl<true,
-        upward_conversion_dispatch<F>, copy_conversion_overload<F, CCL>,
-        move_conversion_overload<F, RCL>>>> {};
+          upward_conversion_dispatch<F>, copy_conversion_overload<F, CCL>,
+          move_conversion_overload<F, RCL>>>> {};
 template <class Cs, class F, constraint_level RCL>
 struct add_upward_conversion_conv<Cs, F, constraint_level::none, RCL>
     : std::type_identity<add_conv_t<Cs, conv_impl<true,
