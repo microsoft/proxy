@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 // This file contains example code from add_facade.md.
 
@@ -26,7 +26,7 @@ struct StringDictionary : pro::facade_builder
     ::build {};
 
 struct MutableStringDictionary : pro::facade_builder
-    ::add_facade<StringDictionary>
+    ::add_facade<StringDictionary, true>
     ::add_convention<MemEmplace, void(std::size_t key, std::string value)>
     ::build {};
 
@@ -42,9 +42,11 @@ int main() {
   p1->emplace(123, "lalala");
   auto p2 = p1;  // Performs a deep copy
   p2->emplace(456, "trivial");
+  pro::proxy<StringDictionary> p3 = std::move(p2);  // Performs an upward conversion from an rvalue reference
   std::cout << p1->size() << "\n";  // Prints "1"
   std::cout << p1->at(123) << "\n";  // Prints "lalala"
-  std::cout << p2->size() << "\n";  // Prints "2"
-  std::cout << p2->at(123) << "\n";  // Prints "lalala"
-  std::cout << p2->at(456) << "\n";  // Prints "trivial"
+  std::cout << std::boolalpha << p2.has_value() << "\n";  // Prints "false" because it is moved
+  std::cout << p3->size() << "\n";  // Prints "2"
+  std::cout << p3->at(123) << "\n";  // Prints "lalala"
+  std::cout << p3->at(456) << "\n";  // Prints "trivial"
 }
