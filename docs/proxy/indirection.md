@@ -30,7 +30,7 @@ The behavior is undefined if `*this` does not contain a value.
 
 ## Notes
 
-These operators do not check whether the `proxy` contains a value. To check whether the `proxy` contains a value, call [`has_value()`](has_value.md) or use [operator ==](friend_operator_equality.md).
+These operators do not check whether the `proxy` contains a value. To check whether the `proxy` contains a value, call [`has_value()`](operator_bool.md) or use [operator ==](friend_operator_equality.md).
 
 ## Example
 
