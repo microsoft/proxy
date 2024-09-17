@@ -21,11 +21,11 @@ proxy<F> make_proxy_inplace(T&& value)
     requires(inplace_proxiable_target<std::decay_t<T>, F>);
 ```
 
-`(1)` Creates a `proxy<F>` object containing a `sbo-ptr<T>` direct-non-list-initialized with `std::forward<Args>(args)...`.
+`(1)` Creates a `proxy<F>` object containing a value `p` of type `sbo-ptr<T>`, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
 
-`(2)` Creates a `proxy<F>` object containing a `sbo-ptr<T>` direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+`(2)` Creates a `proxy<F>` object containing a value `p` of type `sbo-ptr<T>`, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
 
-`(3)` Creates a `proxy<F>` object containing a `sbo-ptr<std::decay_t<T>>` direct-non-list-initialized with `std::forward<T>(value)`.
+`(3)` Creates a `proxy<F>` object containing a value `p` of type `sbo-ptr<std::decay_t<T>>`, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
 
 ## Return Value
 
