@@ -31,74 +31,74 @@ Type conversion expressions, although using `operator` syntax, do not have a spe
 
 Let `self` be the operand of [`proxy`](proxy.md), and `other` and `others...` be the other operand(s) in the expression of an operator. `operator_dispatch` has the following specializations for various expressions:
 
-| Specializations                    | Expressions             |
-| ---------------------------------- | ----------------------- |
-| `operator_dispatch<"+", false>`    | `+self`, `self + other` |
-| `operator_dispatch<"-", false>`    | `-self`, `self - other` |
-| `operator_dispatch<"*", false>`    | `*self`, `self * other` |
-| `operator_dispatch<"/", false>`    | `self / other`          |
-| `operator_dispatch<"%", false>`    | `self % other`          |
-| `operator_dispatch<"++", false>`   | `++self`, `self++`      |
-| `operator_dispatch<"--", false>`   | `--self`, `self--`      |
-| `operator_dispatch<"==", false>`   | `self == other`         |
-| `operator_dispatch<"!=", false>`   | `self != other`         |
-| `operator_dispatch<">", false>`    | `self > other`          |
-| `operator_dispatch<"<", false>`    | `self < other`          |
-| `operator_dispatch<">=", false>`   | `self >= other`         |
-| `operator_dispatch<"<=", false>`   | `self <= other`         |
-| `operator_dispatch<"<=>", false>`  | `self <=> other`        |
-| `operator_dispatch<"!", false>`    | `!self`                 |
-| `operator_dispatch<"&&", false>`   | `self && other`         |
-| `operator_dispatch<"\|\|", false>` | `self \|\| other`       |
-| `operator_dispatch<"~", false>`    | `!self`                 |
-| `operator_dispatch<"&", false>`    | `&self`, `self & other` |
-| `operator_dispatch<"\|", false>`   | `self \| other`         |
-| `operator_dispatch<"^", false>`    | `self ^ other`          |
-| `operator_dispatch<"<<", false>`   | `self << other`         |
-| `operator_dispatch<">>", false>`   | `self >> other`         |
-| `operator_dispatch<"+=", false>`   | `self += other`         |
-| `operator_dispatch<"-=", false>`   | `self -= other`         |
-| `operator_dispatch<"*=", false>`   | `self *= other`         |
-| `operator_dispatch<"/=", false>`   | `self /= other`         |
-| `operator_dispatch<"&=", false>`   | `self &= other`         |
-| `operator_dispatch<"\|=", false>`  | `self \|= other`        |
-| `operator_dispatch<"^=", false>`   | `self ^= other`         |
-| `operator_dispatch<"<<=", false>`  | `self <<= other`        |
-| `operator_dispatch<">>=", false>`  | `self >>= other`        |
-| `operator_dispatch<",", false>`    | `self, other`           |
-| `operator_dispatch<"->*", false>`  | `self ->* other`        |
-| `operator_dispatch<"()", false>`   | `self(others...)`       |
-| `operator_dispatch<"[]", false>`   | `self[other]` (until C++23)<br />`self[others...]` (since C++23) |
-| `operator_dispatch<"+", true>`     | `other + self`          |
-| `operator_dispatch<"-", true>`     | `other - self`          |
-| `operator_dispatch<"*", true>`     | `other * self`          |
-| `operator_dispatch<"/", true>`     | `other / self`          |
-| `operator_dispatch<"%", true>`     | `other % self`          |
-| `operator_dispatch<"==", true>`    | `other == self`         |
-| `operator_dispatch<"!=", true>`    | `other != self`         |
-| `operator_dispatch<">", true>`     | `other > self`          |
-| `operator_dispatch<"<", true>`     | `other < self`          |
-| `operator_dispatch<">=", true>`    | `other >= self`         |
-| `operator_dispatch<"<=", true>`    | `other <= self`         |
-| `operator_dispatch<"<=>", true>`   | `other <=> self`        |
-| `operator_dispatch<"&&", true>`    | `other && self`         |
-| `operator_dispatch<"\|\|", true>`  | `other \|\| self`       |
-| `operator_dispatch<"&", true>`     | `other & self`          |
-| `operator_dispatch<"\|", true>`    | `other \| self`         |
-| `operator_dispatch<"^", true>`     | `other ^ self`          |
-| `operator_dispatch<"<<", true>`    | `other << self`         |
-| `operator_dispatch<">>", true>`    | `other >> self`         |
-| `operator_dispatch<"+=", true>`    | `other += self`         |
-| `operator_dispatch<"-=", true>`    | `other -= self`         |
-| `operator_dispatch<"*=", true>`    | `other *= self`         |
-| `operator_dispatch<"/=", true>`    | `other /= self`         |
-| `operator_dispatch<"&=", true>`    | `other &= self`         |
-| `operator_dispatch<"\|=", true>`   | `other \|= self`        |
-| `operator_dispatch<"^=", true>`    | `other ^= self`         |
-| `operator_dispatch<"<<=", true>`   | `other <<= self`        |
-| `operator_dispatch<">>=", true>`   | `other >>= self`        |
-| `operator_dispatch<",", true>`     | `other, self`           |
-| `operator_dispatch<"->*", true>`   | `other ->* self`        |
+| Specializations                   | Expressions             |
+| --------------------------------- | ----------------------- |
+| `operator_dispatch<"+", false>`   | `+self`, `self + other` |
+| `operator_dispatch<"-", false>`   | `-self`, `self - other` |
+| `operator_dispatch<"*", false>`   | `*self`, `self * other` |
+| `operator_dispatch<"/", false>`   | `self / other`          |
+| `operator_dispatch<"%", false>`   | `self % other`          |
+| `operator_dispatch<"++", false>`  | `++self`, `self++`      |
+| `operator_dispatch<"--", false>`  | `--self`, `self--`      |
+| `operator_dispatch<"==", false>`  | `self == other`         |
+| `operator_dispatch<"!=", false>`  | `self != other`         |
+| `operator_dispatch<">", false>`   | `self > other`          |
+| `operator_dispatch<"<", false>`   | `self < other`          |
+| `operator_dispatch<">=", false>`  | `self >= other`         |
+| `operator_dispatch<"<=", false>`  | `self <= other`         |
+| `operator_dispatch<"<=>", false>` | `self <=> other`        |
+| `operator_dispatch<"!", false>`   | `!self`                 |
+| `operator_dispatch<"&&", false>`  | `self && other`         |
+| `operator_dispatch<"||", false>`  | `self || other`         |
+| `operator_dispatch<"~", false>`   | `!self`                 |
+| `operator_dispatch<"&", false>`   | `&self`, `self & other` |
+| `operator_dispatch<"|", false>`   | `self | other`          |
+| `operator_dispatch<"^", false>`   | `self ^ other`          |
+| `operator_dispatch<"<<", false>`  | `self << other`         |
+| `operator_dispatch<">>", false>`  | `self >> other`         |
+| `operator_dispatch<"+=", false>`  | `self += other`         |
+| `operator_dispatch<"-=", false>`  | `self -= other`         |
+| `operator_dispatch<"*=", false>`  | `self *= other`         |
+| `operator_dispatch<"/=", false>`  | `self /= other`         |
+| `operator_dispatch<"&=", false>`  | `self &= other`         |
+| `operator_dispatch<"|=", false>`  | `self |= other`         |
+| `operator_dispatch<"^=", false>`  | `self ^= other`         |
+| `operator_dispatch<"<<=", false>` | `self <<= other`        |
+| `operator_dispatch<">>=", false>` | `self >>= other`        |
+| `operator_dispatch<",", false>`   | `self, other`           |
+| `operator_dispatch<"->*", false>` | `self ->* other`        |
+| `operator_dispatch<"()", false>`  | `self(others...)`       |
+| `operator_dispatch<"[]", false>`  | `self[other]` (until C++23)<br />`self[others...]` (since C++23) |
+| `operator_dispatch<"+", true>`    | `other + self`          |
+| `operator_dispatch<"-", true>`    | `other - self`          |
+| `operator_dispatch<"*", true>`    | `other * self`          |
+| `operator_dispatch<"/", true>`    | `other / self`          |
+| `operator_dispatch<"%", true>`    | `other % self`          |
+| `operator_dispatch<"==", true>`   | `other == self`         |
+| `operator_dispatch<"!=", true>`   | `other != self`         |
+| `operator_dispatch<">", true>`    | `other > self`          |
+| `operator_dispatch<"<", true>`    | `other < self`          |
+| `operator_dispatch<">=", true>`   | `other >= self`         |
+| `operator_dispatch<"<=", true>`   | `other <= self`         |
+| `operator_dispatch<"<=>", true>`  | `other <=> self`        |
+| `operator_dispatch<"&&", true>`   | `other && self`         |
+| `operator_dispatch<"||", true>`   | `other || self`         |
+| `operator_dispatch<"&", true>`    | `other & self`          |
+| `operator_dispatch<"|", true>`    | `other | self`          |
+| `operator_dispatch<"^", true>`    | `other ^ self`          |
+| `operator_dispatch<"<<", true>`   | `other << self`         |
+| `operator_dispatch<">>", true>`   | `other >> self`         |
+| `operator_dispatch<"+=", true>`   | `other += self`         |
+| `operator_dispatch<"-=", true>`   | `other -= self`         |
+| `operator_dispatch<"*=", true>`   | `other *= self`         |
+| `operator_dispatch<"/=", true>`   | `other /= self`         |
+| `operator_dispatch<"&=", true>`   | `other &= self`         |
+| `operator_dispatch<"|=", true>`   | `other |= self`         |
+| `operator_dispatch<"^=", true>`   | `other ^= self`         |
+| `operator_dispatch<"<<=", true>`  | `other <<= self`        |
+| `operator_dispatch<">>=", true>`  | `other >>= self`        |
+| `operator_dispatch<",", true>`    | `other, self`           |
+| `operator_dispatch<"->*", true>`  | `other ->* self`        |
 
 ## Member Functions
 

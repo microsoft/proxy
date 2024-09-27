@@ -39,7 +39,7 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md)   | Defines a dispatch type for member function call expressions with accessibility |
 | [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md) | Defines a dispatch type for free function call expressions with accessibility |
 | [`PRO_DEF_WEAK_DISPATCH`](PRO_DEF_WEAK_DISPATCH.md) | Defines a weak dispatch type with a default implementation   |
-| [`__msft_lib_proxy`](__msft_lib_proxy.md)           | Feature test macro                                           |
+| [`__msft_lib_proxy`](msft_lib_proxy.md)             | Feature test macro                                           |
 
 ## Named Requirements
 
