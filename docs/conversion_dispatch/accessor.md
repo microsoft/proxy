@@ -27,4 +27,4 @@ Let `SELF` be `std::forward<accessor cv ref>(*this)`.
 
 `(2)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are trivial types, inherits all `accessor<F, C, Os>...` types and `using` their `operator T`.
 
-`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `T() cv ref noex`, provides an explicit (when `Expl` is `true`) or implicit (when `Expl` is `false`) `operator T()` with the same *cv ref noex* specifiers. `accessor::operator T()` is equivalent to `return proxy_invoke<C>(access_proxy<F>(SELF))`.
+`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `T() cv ref noex`, provides an explicit (when `Expl` is `true`) or implicit (when `Expl` is `false`) `operator T()` with the same *cv ref noex* specifiers. `accessor::operator T()` is equivalent to `return proxy_invoke<C, T() cv ref noex>(access_proxy<F>(SELF))`.

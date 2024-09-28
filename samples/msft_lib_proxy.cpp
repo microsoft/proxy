@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from __msft_lib_proxy.md.
+// This file contains example code from msft_lib_proxy.md.
 
 #include <cstdio>
 

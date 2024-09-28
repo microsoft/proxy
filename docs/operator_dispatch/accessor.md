@@ -39,7 +39,7 @@ struct accessor<F, C, R(Args...) cv ref noex> {
 }
 ```
 
-`(3)` Provides an `operator sop(Args...)` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop(Args...)` is equivalent to `return proxy_invoke<C>(access_proxy<F>(SELF), std::forward<Args>(args)...)`.
+`(3)` Provides an `operator sop(Args...)` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop(Args...)` is equivalent to `return proxy_invoke<C, R(Args...) cv ref noex>(access_proxy<F>(SELF), std::forward<Args>(args)...)`.
 
 ### `!` and `~`
 
@@ -53,7 +53,7 @@ struct accessor<F, C, R() cv ref noex> {
 }
 ```
 
-`(4)` Provides an `operator sop()` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop()` is equivalent to `return proxy_invoke<C>(access_proxy<F>(SELF))`.
+`(4)` Provides an `operator sop()` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop()` is equivalent to `return proxy_invoke<C, R() cv ref noex>(access_proxy<F>(SELF))`.
 
 ### Assignment SOPs
 
@@ -67,7 +67,7 @@ struct accessor<F, C, R(Arg) cv ref noex> {
 }
 ```
 
-`(4)` Provides an `operator sop(Arg)` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop(Arg)` calls `proxy_invoke<C>(access_proxy<F>(SELF), std::forward<Arg>(arg))` and returns `access_proxy<F>(SELF)` when `C::is_direct` is `true`, or otherwise, returns `*access_proxy<F>(SELF)` when `C::is_direct` is `false`.
+`(4)` Provides an `operator sop(Arg)` with the same *cv ref noex* specifiers as of the overload type. `accessor::operator sop(Arg)` calls `proxy_invoke<C, R(Arg) cv ref noex>(access_proxy<F>(SELF), std::forward<Arg>(arg))` and returns `access_proxy<F>(SELF)` when `C::is_direct` is `true`, or otherwise, returns `*access_proxy<F>(SELF)` when `C::is_direct` is `false`.
 
 ## Right-Hand-Side Operand Specializations
 
@@ -94,7 +94,7 @@ struct accessor<F, C, R(Arg) cv ref noex> {
 }
 ```
 
-`(7)` Provides a `friend operator sop(Arg arg, accessor cv ref)` with the same *noex* specifiers as of the overload type. `accessor::operator sop(Arg arg, accessor cv ref)` is equivalent to `return proxy_invoke<C>(access_proxy<F>(SELF), std::forward<Arg>(arg))`.
+`(7)` Provides a `friend operator sop(Arg arg, accessor cv ref)` with the same *noex* specifiers as of the overload type. `accessor::operator sop(Arg arg, accessor cv ref)` is equivalent to `return proxy_invoke<C, R(Arg) cv ref noex>(access_proxy<F>(SELF), std::forward<Arg>(arg))`.
 
 ### Assignment SOPs
 
@@ -108,4 +108,4 @@ struct accessor<F, C, R(Arg) cv ref noex> {
 }
 ```
 
-`(8)` Provides a `friend operator sop(Arg arg, accessor cv ref)` with the same *noex* specifiers as of the overload type. `accessor::operator sop(Arg arg, accessor cv ref)` calls `proxy_invoke<C>(access_proxy<F>(SELF), std::forward<Arg>(arg))` and returns `access_proxy<F>(SELF)` when `C::is_direct` is `true`, or otherwise, returns `*access_proxy<F>(SELF)` when `C::is_direct` is `false`.
+`(8)` Provides a `friend operator sop(Arg arg, accessor cv ref)` with the same *noex* specifiers as of the overload type. `accessor::operator sop(Arg arg, accessor cv ref)` calls `proxy_invoke<C, R(Arg) cv ref noex>(access_proxy<F>(SELF), std::forward<Arg>(arg))` and returns `access_proxy<F>(SELF)` when `C::is_direct` is `true`, or otherwise, returns `*access_proxy<F>(SELF)` when `C::is_direct` is `false`.
