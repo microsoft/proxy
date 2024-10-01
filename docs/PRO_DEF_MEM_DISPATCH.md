@@ -39,7 +39,7 @@ struct dispatch_name {
   template <class F, class C, class R, class... Args>
   struct accessor<F, C, R(Args...) cv ref noex> {
     R accessibility_func_name(Args... args) cv ref noex {
-      return pro::proxy_invoke<C>(pro::access_proxy<F>(SELF), std::forward<Args>(args)...);
+      return pro::proxy_invoke<C, R(Args...) cv ref noex>(pro::access_proxy<F>(SELF), std::forward<Args>(args)...);
     }
   };
 };

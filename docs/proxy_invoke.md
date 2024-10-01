@@ -1,22 +1,22 @@
 # Function template `proxy_invoke`
 
 ```cpp
-template <class C, class F, class... Args>
+template <class C, class O, class F, class... Args>
 /* see below */ proxy_invoke(proxy<F>& p, Args&&... args);
 
-template <class C, class F, class... Args>
+template <class C, class O, class F, class... Args>
 /* see below */ proxy_invoke(const proxy<F>& p, Args&&... args);
 
-template <class C, class F, class... Args>
+template <class C, class O, class F, class... Args>
 /* see below */ proxy_invoke(proxy<F>&& p, Args&&... args);
 
-template <class C, class F, class... Args>
+template <class C, class O, class F, class... Args>
 /* see below */ proxy_invoke(const proxy<F>&& p, Args&&... args);
 ```
 
-Invokes a `proxy` with a specified convention type and arguments. `C` is required to be defined in `typename F::convention_types`. Overload resolution is performed among the overload types defined in `typename C::overload_types`.
+Invokes a `proxy` with a specified convention type, an overload type, and arguments. `C` is required to be defined in `typename F::convention_types`. `O` is required to be defined in `typename C::overload_types`.
 
-Let `ptr` be the contained value of `p` with the same cv ref-qualifiers, `O` be the matched overload type among the overload types defined in `typename C::overload_types`, `Args2...` be the argument types of `O`, `R` be the return type of `O`,
+Let `ptr` be the contained value of `p` with the same cv ref-qualifiers, `Args2...` be the argument types of `O`, `R` be the return type of `O`,
 
 - if `C::is_direct` is `true`, let `v` be `std::forward<decltype(ptr)>(ptr)`, or otherwise,
 - if `C::is_direct` is `false`, let `v` be `*std::forward<decltype(ptr)>(ptr)`,
@@ -55,7 +55,7 @@ int main() {
   std::cout << ToString(*p) << "\n";  // Invokes with accessor, prints: "123"
 
   using C = std::tuple_element_t<0u, Stringable::convention_types>;
-  std::cout << pro::proxy_invoke<C>(p) << "\n";  // Invokes with proxy_invoke, also prints: "123"
+  std::cout << pro::proxy_invoke<C, std::string() const>(p) << "\n";  // Invokes with proxy_invoke, also prints: "123"
 }
 ```
 

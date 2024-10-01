@@ -55,7 +55,7 @@ int main() {
   pro::proxy<Stringable>& p2 = pro::access_proxy<Stringable>(a);
   std::cout << std::boolalpha << (&p == &p2) << "\n";  // Prints: "true" because access_proxy converts
                                                        // an accessor back to the original proxy
-  auto result = pro::proxy_invoke<Convention>(p2);
+  auto result = pro::proxy_invoke<Convention, std::string()>(p2);
   std::cout << result << "\n";  // Prints: "123"
 }
 ```

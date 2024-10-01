@@ -19,5 +19,5 @@ int main() {
   std::cout << ToString(*p) << "\n";  // Invokes with accessor, prints: "123"
 
   using C = std::tuple_element_t<0u, Stringable::convention_types>;
-  std::cout << pro::proxy_invoke<C>(p) << "\n";  // Invokes with proxy_invoke, also prints: "123"
+  std::cout << pro::proxy_invoke<C, std::string() const>(p) << "\n";  // Invokes with proxy_invoke, also prints: "123"
 }
