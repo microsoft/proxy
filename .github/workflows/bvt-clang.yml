@@ -7,7 +7,7 @@ on:
 
 jobs:
   bvt-clang:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v3
       with:
@@ -15,12 +15,6 @@ jobs:
 
     - name: install clang
       run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" -y
-        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main" -y
-        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main" -y
-        sudo apt-add-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main" -y
-        sudo apt update
         sudo apt install -y clang-15 clang-16 clang-17 clang-18
 
     - name: check compiler versions
