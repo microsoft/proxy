@@ -49,7 +49,7 @@ void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<pro::proxy<AnyCopyable>> data;
     data.reserve(TestManagedObjectCount);
-    for (int i = 0; i < TestManagedObjectCount; ++i) {
+    for (int i = 0; i < TestManagedObjectCount; i += 3) {
       data.push_back(pro::make_proxy<AnyCopyable, std::array<int, 16>>());
       data.push_back(pro::make_proxy<AnyCopyable, std::deque<double>>());
       data.push_back(pro::make_proxy<AnyCopyable, std::unordered_map<int, int>>());
@@ -62,7 +62,7 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<std::any> data;
     data.reserve(TestManagedObjectCount);
-    for (int i = 0; i < TestManagedObjectCount; ++i) {
+    for (int i = 0; i < TestManagedObjectCount; i += 3) {
       data.emplace_back(std::array<int, 16>{});
       data.emplace_back(std::deque<double>{});
       data.emplace_back(std::unordered_map<int, int>{});
