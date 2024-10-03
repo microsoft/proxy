@@ -5,7 +5,7 @@
 
 namespace {
 
-constexpr std::size_t TestDataSize = 1500000;
+constexpr std::size_t TestDataSize = 1000000;
 constexpr std::size_t TypeSeriesCount = 3;
 
 template <std::size_t TypeSeries>
