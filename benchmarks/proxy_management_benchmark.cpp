@@ -4,6 +4,7 @@
 #include <any>
 #include <array>
 #include <forward_list>
+#include <string>
 
 #include <benchmark/benchmark.h>
 
@@ -28,11 +29,18 @@ void BM_SmallObjectManagementWithProxy(benchmark::State& state) {
     std::vector<pro::proxy<AnyCopyable>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += 3) {
-      data.push_back(pro::make_proxy<AnyCopyable>(123));
-      data.push_back(pro::make_proxy<AnyCopyable, std::shared_ptr<int>>());
-      data.push_back(pro::make_proxy<AnyCopyable, std::forward_list<double>>());
+      auto p0 = pro::make_proxy<AnyCopyable>(123);
+      auto p1 = pro::make_proxy<AnyCopyable, std::shared_ptr<int>>();
+      auto p2 = pro::make_proxy<AnyCopyable, std::forward_list<double>>();
+
+      benchmark::DoNotOptimize(p0);
+      benchmark::DoNotOptimize(p1);
+      benchmark::DoNotOptimize(p2);
+
+      data.push_back(std::move(p0));
+      data.push_back(std::move(p1));
+      data.push_back(std::move(p2));
     }
-    benchmark::DoNotOptimize(data);
   }
 }
 
@@ -41,11 +49,18 @@ void BM_SmallObjectManagementWithAny(benchmark::State& state) {
     std::vector<std::any> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += 3) {
-      data.emplace_back(123);
-      data.emplace_back(std::shared_ptr<int>{});
-      data.emplace_back(std::forward_list<double>{});
+      std::any a0 = 123;
+      std::any a1 = std::shared_ptr<int>{};
+      std::any a2 = std::forward_list<double>{};
+
+      benchmark::DoNotOptimize(a0);
+      benchmark::DoNotOptimize(a1);
+      benchmark::DoNotOptimize(a2);
+
+      data.emplace_back(std::move(a0));
+      data.emplace_back(std::move(a1));
+      data.emplace_back(std::move(a2));
     }
-    benchmark::DoNotOptimize(data);
   }
 }
 
@@ -54,7 +69,9 @@ void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
     std::vector<pro::proxy<AnyCopyable>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; ++i) {
-      data.push_back(pro::make_proxy<AnyCopyable, std::array<int, 32>>());
+      auto p = pro::make_proxy<AnyCopyable, std::array<std::string, 3>>();
+      benchmark::DoNotOptimize(p);
+      data.push_back(std::move(p));
     }
     benchmark::DoNotOptimize(data);
   }
@@ -65,7 +82,9 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
     std::vector<std::any> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; ++i) {
-      data.emplace_back(std::array<int, 32>{});
+      std::any a = std::array<std::string, 3>{};
+      benchmark::DoNotOptimize(a);
+      data.emplace_back(std::move(a));
     }
     benchmark::DoNotOptimize(data);
   }
