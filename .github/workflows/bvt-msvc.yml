@@ -21,4 +21,4 @@ jobs:
 
     - name: run benchmarks
       run: |
-        .\build\benchmarks\Release\msft_proxy_benchmarks.exe
+        .\build\benchmarks\Release\msft_proxy_benchmarks.exe --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
