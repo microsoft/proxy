@@ -8,16 +8,16 @@
 
 PRO_DEF_MEM_DISPATCH(MemFun, Fun);
 
-struct TestFacade : pro::facade_builder
+struct InvocationTestFacade : pro::facade_builder
     ::add_convention<MemFun, int() const>
     ::build{};
 
-struct TestBase {
+struct InvocationTestBase {
   virtual int Fun() const = 0;
-  virtual ~TestBase() = default;
+  virtual ~InvocationTestBase() = default;
 };
 
-extern const std::vector<pro::proxy<TestFacade>> SmallObjectInvocationProxyTestData;
-extern const std::vector<std::unique_ptr<TestBase>> SmallObjectInvocationVirtualFunctionTestData;
-extern const std::vector<pro::proxy<TestFacade>> LargeObjectInvocationProxyTestData;
-extern const std::vector<std::unique_ptr<TestBase>> LargeObjectInvocationVirtualFunctionTestData;
+extern const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData;
+extern const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData;
+extern const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData;
+extern const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData;

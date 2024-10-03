@@ -32,7 +32,7 @@ class NonIntrusiveLargeImpl {
 };
 
 template <std::size_t TypeSeries>
-class IntrusiveSmallImpl : public TestBase {
+class IntrusiveSmallImpl : public InvocationTestBase {
  public:
   explicit IntrusiveSmallImpl(int seed) noexcept : seed_(seed) {}
   IntrusiveSmallImpl(const IntrusiveSmallImpl&) noexcept = default;
@@ -43,7 +43,7 @@ class IntrusiveSmallImpl : public TestBase {
 };
 
 template <std::size_t TypeSeries>
-class IntrusiveLargeImpl : public TestBase {
+class IntrusiveLargeImpl : public InvocationTestBase {
  public:
   explicit IntrusiveLargeImpl(int seed) noexcept : seed_(seed) {}
   IntrusiveLargeImpl(const IntrusiveLargeImpl&) noexcept = default;
@@ -55,24 +55,24 @@ class IntrusiveLargeImpl : public TestBase {
 };
 
 template <template <std::size_t> class T, std::size_t FromTypeSeries>
-void FillProxyTestData(std::vector<pro::proxy<TestFacade>>& data) {
+void FillProxyTestData(std::vector<pro::proxy<InvocationTestFacade>>& data) {
   if constexpr (FromTypeSeries < TypeSeriesCount) {
     for (std::size_t i = FromTypeSeries; i < data.size(); i += TypeSeriesCount) {
-      data[i] = pro::make_proxy<TestFacade, T<FromTypeSeries>>(static_cast<int>(i));
+      data[i] = pro::make_proxy<InvocationTestFacade, T<FromTypeSeries>>(static_cast<int>(i));
     }
     FillProxyTestData<T, FromTypeSeries + 1u>(data);
   }
 }
 
 template <template <std::size_t> class T>
-std::vector<pro::proxy<TestFacade>> GenerateProxyTestData() {
-  std::vector<pro::proxy<TestFacade>> result(TestDataSize);
+std::vector<pro::proxy<InvocationTestFacade>> GenerateProxyTestData() {
+  std::vector<pro::proxy<InvocationTestFacade>> result(TestDataSize);
   FillProxyTestData<T, 0u>(result);
   return result;
 }
 
 template <template <std::size_t> class T, std::size_t FromTypeSeries>
-void FillVirtualFunctionTestData(std::vector<std::unique_ptr<TestBase>>& data) {
+void FillVirtualFunctionTestData(std::vector<std::unique_ptr<InvocationTestBase>>& data) {
   if constexpr (FromTypeSeries < TypeSeriesCount) {
     for (std::size_t i = FromTypeSeries; i < data.size(); i += TypeSeriesCount) {
       data[i].reset(new T<FromTypeSeries>(static_cast<int>(i)));
@@ -82,15 +82,15 @@ void FillVirtualFunctionTestData(std::vector<std::unique_ptr<TestBase>>& data) {
 }
 
 template <template <std::size_t> class T>
-std::vector<std::unique_ptr<TestBase>> GenerateVirtualFunctionTestData() {
-  std::vector<std::unique_ptr<TestBase>> result(TestDataSize);
+std::vector<std::unique_ptr<InvocationTestBase>> GenerateVirtualFunctionTestData() {
+  std::vector<std::unique_ptr<InvocationTestBase>> result(TestDataSize);
   FillVirtualFunctionTestData<T, 0u>(result);
   return result;
 }
 
 }  // namespace
 
-const std::vector<pro::proxy<TestFacade>> SmallObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveSmallImpl>();
-const std::vector<std::unique_ptr<TestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveSmallImpl>();
-const std::vector<pro::proxy<TestFacade>> LargeObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveLargeImpl>();
-const std::vector<std::unique_ptr<TestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveLargeImpl>();
+const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveSmallImpl>();
+const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveSmallImpl>();
+const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveLargeImpl>();
+const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveLargeImpl>();
