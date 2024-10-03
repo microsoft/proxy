@@ -19,3 +19,5 @@ struct TestBase {
 
 extern const std::vector<pro::proxy<TestFacade>> ProxyTestData;
 extern const std::vector<std::unique_ptr<TestBase>> VirtualFunctionTestData;
+extern const std::vector<pro::proxy<TestFacade>> ProxyTestDataLarge;
+extern const std::vector<std::unique_ptr<TestBase>> VirtualFunctionTestDataLarge;
