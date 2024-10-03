@@ -14,24 +14,18 @@ namespace {
 
 constexpr int TestManagedObjectCount = 12000;
 
-using TestSmallObjectType1 = int;
-using TestSmallObjectType2 = std::shared_ptr<int>;
-using TestSmallObjectType3 = std::forward_list<double>;
-
 }  // namespace
 
-struct AnyCopyable : pro::facade_builder
-    ::support_copy<pro::constraint_level::nontrivial>  // Although it's not used, std::any supports copy
-    ::build {};
+struct DefaultFacade : pro::facade_builder::build {};
 
 void BM_SmallObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
-    std::vector<pro::proxy<AnyCopyable>> data;
+    std::vector<pro::proxy<DefaultFacade>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += 3) {
-      auto p0 = pro::make_proxy<AnyCopyable>(123);
-      auto p1 = pro::make_proxy<AnyCopyable, std::shared_ptr<int>>();
-      auto p2 = pro::make_proxy<AnyCopyable, std::forward_list<double>>();
+      auto p0 = pro::make_proxy<DefaultFacade>(123);
+      auto p1 = pro::make_proxy<DefaultFacade, std::shared_ptr<int>>();
+      auto p2 = pro::make_proxy<DefaultFacade, std::forward_list<double>>();
 
       benchmark::DoNotOptimize(p0);
       benchmark::DoNotOptimize(p1);
@@ -57,19 +51,19 @@ void BM_SmallObjectManagementWithAny(benchmark::State& state) {
       benchmark::DoNotOptimize(a1);
       benchmark::DoNotOptimize(a2);
 
-      data.emplace_back(std::move(a0));
-      data.emplace_back(std::move(a1));
-      data.emplace_back(std::move(a2));
+      data.push_back(std::move(a0));
+      data.push_back(std::move(a1));
+      data.push_back(std::move(a2));
     }
   }
 }
 
 void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
-    std::vector<pro::proxy<AnyCopyable>> data;
+    std::vector<pro::proxy<DefaultFacade>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; ++i) {
-      auto p = pro::make_proxy<AnyCopyable, std::array<std::string, 3>>();
+      auto p = pro::make_proxy<DefaultFacade, std::array<std::string, 3>>();
       benchmark::DoNotOptimize(p);
       data.push_back(std::move(p));
     }
@@ -84,7 +78,7 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
     for (int i = 0; i < TestManagedObjectCount; ++i) {
       std::any a = std::array<std::string, 3>{};
       benchmark::DoNotOptimize(a);
-      data.emplace_back(std::move(a));
+      data.push_back(std::move(a));
     }
     benchmark::DoNotOptimize(data);
   }
