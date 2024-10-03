@@ -26,4 +26,4 @@ jobs:
 
     - name: run benchmarks
       run: |
-        ./build/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
+        ./build/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=50 --benchmark_report_aggregates_only=true

@@ -6,7 +6,7 @@
 namespace {
 
 constexpr int TestDataSize = 1000000;
-constexpr int TypeSeriesCount = 3;
+constexpr int TypeSeriesCount = 100;
 
 template <int TypeSeries>
 class NonIntrusiveSmallImpl {

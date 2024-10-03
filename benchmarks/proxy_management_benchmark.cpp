@@ -16,7 +16,9 @@ constexpr int TestManagedObjectCount = 12000;
 
 }  // namespace
 
-struct DefaultFacade : pro::facade_builder::build {};
+struct DefaultFacade : pro::facade_builder
+    ::support_copy<pro::constraint_level::nontrivial>
+    ::build {};
 
 void BM_SmallObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
@@ -67,7 +69,6 @@ void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
       benchmark::DoNotOptimize(p);
       data.push_back(std::move(p));
     }
-    benchmark::DoNotOptimize(data);
   }
 }
 
@@ -80,7 +81,6 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
       benchmark::DoNotOptimize(a);
       data.push_back(std::move(a));
     }
-    benchmark::DoNotOptimize(data);
   }
 }
 
