@@ -5,86 +5,86 @@
 
 namespace {
 
-constexpr std::size_t TestDataSize = 1000000;
-constexpr std::size_t TypeSeriesCount = 3;
+constexpr int TestDataSize = 1000000;
+constexpr int TypeSeriesCount = 3;
 
-template <std::size_t TypeSeries>
+template <int TypeSeries>
 class NonIntrusiveSmallImpl {
  public:
   explicit NonIntrusiveSmallImpl(int seed) noexcept : seed_(seed) {}
   NonIntrusiveSmallImpl(const NonIntrusiveSmallImpl&) noexcept = default;
-  int Fun() const noexcept { return seed_ ^ (TypeSeries + 1u); }
+  int Fun() const noexcept { return seed_ ^ (TypeSeries + 1); }
 
  private:
   int seed_;
 };
 
-template <std::size_t TypeSeries>
+template <int TypeSeries>
 class NonIntrusiveLargeImpl {
  public:
   explicit NonIntrusiveLargeImpl(int seed) noexcept : seed_(seed) {}
   NonIntrusiveLargeImpl(const NonIntrusiveLargeImpl&) noexcept = default;
-  int Fun() const noexcept { return seed_ ^ (TypeSeries + 1u); }
+  int Fun() const noexcept { return seed_ ^ (TypeSeries + 1); }
 
  private:
   void* padding_[16]{};
   int seed_;
 };
 
-template <std::size_t TypeSeries>
+template <int TypeSeries>
 class IntrusiveSmallImpl : public InvocationTestBase {
  public:
   explicit IntrusiveSmallImpl(int seed) noexcept : seed_(seed) {}
   IntrusiveSmallImpl(const IntrusiveSmallImpl&) noexcept = default;
-  int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1u); }
+  int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1); }
 
  private:
   int seed_;
 };
 
-template <std::size_t TypeSeries>
+template <int TypeSeries>
 class IntrusiveLargeImpl : public InvocationTestBase {
  public:
   explicit IntrusiveLargeImpl(int seed) noexcept : seed_(seed) {}
   IntrusiveLargeImpl(const IntrusiveLargeImpl&) noexcept = default;
-  int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1u); }
+  int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1); }
 
  private:
   void* padding_[16]{};
   int seed_;
 };
 
-template <template <std::size_t> class T, std::size_t FromTypeSeries>
+template <template <int> class T, int FromTypeSeries>
 void FillProxyTestData(std::vector<pro::proxy<InvocationTestFacade>>& data) {
   if constexpr (FromTypeSeries < TypeSeriesCount) {
-    for (std::size_t i = FromTypeSeries; i < data.size(); i += TypeSeriesCount) {
+    for (int i = FromTypeSeries; i < TestDataSize; i += TypeSeriesCount) {
       data[i] = pro::make_proxy<InvocationTestFacade, T<FromTypeSeries>>(static_cast<int>(i));
     }
-    FillProxyTestData<T, FromTypeSeries + 1u>(data);
+    FillProxyTestData<T, FromTypeSeries + 1>(data);
   }
 }
 
-template <template <std::size_t> class T>
+template <template <int> class T>
 std::vector<pro::proxy<InvocationTestFacade>> GenerateProxyTestData() {
   std::vector<pro::proxy<InvocationTestFacade>> result(TestDataSize);
-  FillProxyTestData<T, 0u>(result);
+  FillProxyTestData<T, 0>(result);
   return result;
 }
 
-template <template <std::size_t> class T, std::size_t FromTypeSeries>
+template <template <int> class T, int FromTypeSeries>
 void FillVirtualFunctionTestData(std::vector<std::unique_ptr<InvocationTestBase>>& data) {
   if constexpr (FromTypeSeries < TypeSeriesCount) {
-    for (std::size_t i = FromTypeSeries; i < data.size(); i += TypeSeriesCount) {
+    for (int i = FromTypeSeries; i < TestDataSize; i += TypeSeriesCount) {
       data[i].reset(new T<FromTypeSeries>(static_cast<int>(i)));
     }
-    FillVirtualFunctionTestData<T, FromTypeSeries + 1u>(data);
+    FillVirtualFunctionTestData<T, FromTypeSeries + 1>(data);
   }
 }
 
-template <template <std::size_t> class T>
+template <template <int> class T>
 std::vector<std::unique_ptr<InvocationTestBase>> GenerateVirtualFunctionTestData() {
   std::vector<std::unique_ptr<InvocationTestBase>> result(TestDataSize);
-  FillVirtualFunctionTestData<T, 0u>(result);
+  FillVirtualFunctionTestData<T, 0>(result);
   return result;
 }
 
