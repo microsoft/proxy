@@ -3,11 +3,11 @@
 
 #include <benchmark/benchmark.h>
 
-#include "proxy_small_object_invocation_benchmark_context.h"
+#include "proxy_invocation_benchmark_context.h"
 
 void BM_SmallObjectInvocationViaProxy(benchmark::State& state) {
   for (auto _ : state) {
-    for (auto& p : ProxyTestData) {
+    for (auto& p : SmallObjectInvocationProxyTestData) {
       int result = p->Fun();
       benchmark::DoNotOptimize(result);
     }
@@ -16,7 +16,7 @@ void BM_SmallObjectInvocationViaProxy(benchmark::State& state) {
 
 void BM_SmallObjectInvocationViaVirtualFunction(benchmark::State& state) {
   for (auto _ : state) {
-    for (auto& p : VirtualFunctionTestData) {
+    for (auto& p : SmallObjectInvocationVirtualFunctionTestData) {
       int result = p->Fun();
       benchmark::DoNotOptimize(result);
     }
@@ -25,7 +25,7 @@ void BM_SmallObjectInvocationViaVirtualFunction(benchmark::State& state) {
 
 void BM_LargeObjectInvocationViaProxy(benchmark::State& state) {
   for (auto _ : state) {
-    for (auto& p : ProxyTestDataLarge) {
+    for (auto& p : LargeObjectInvocationProxyTestData) {
       int result = p->Fun();
       benchmark::DoNotOptimize(result);
     }
@@ -34,7 +34,7 @@ void BM_LargeObjectInvocationViaProxy(benchmark::State& state) {
 
 void BM_LargeObjectInvocationViaVirtualFunction(benchmark::State& state) {
   for (auto _ : state) {
-    for (auto& p : VirtualFunctionTestDataLarge) {
+    for (auto& p : LargeObjectInvocationVirtualFunctionTestData) {
       int result = p->Fun();
       benchmark::DoNotOptimize(result);
     }

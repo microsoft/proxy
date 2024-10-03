@@ -17,8 +17,8 @@ set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable google benchmark unit t
 FetchContent_MakeAvailable(benchmark)
 
 add_executable(msft_proxy_benchmarks
-  proxy_small_object_invocation_benchmark_context.cpp
-  proxy_small_object_invocation_benchmark.cpp
+  proxy_invocation_benchmark_context.cpp
+  proxy_invocation_benchmark.cpp
 )
 target_include_directories(msft_proxy_benchmarks PRIVATE .)
 target_link_libraries(msft_proxy_benchmarks PRIVATE msft_proxy benchmark::benchmark benchmark::benchmark_main)

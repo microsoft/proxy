@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "proxy_small_object_invocation_benchmark_context.h"
+#include "proxy_invocation_benchmark_context.h"
 
 namespace {
 
@@ -9,10 +9,10 @@ constexpr std::size_t TestDataSize = 1500000;
 constexpr std::size_t TypeSeriesCount = 3;
 
 template <std::size_t TypeSeries>
-class NonIntrusiveImpl {
+class NonIntrusiveSmallImpl {
  public:
-  explicit NonIntrusiveImpl(int seed) noexcept : seed_(seed) {}
-  NonIntrusiveImpl(const NonIntrusiveImpl&) noexcept = default;
+  explicit NonIntrusiveSmallImpl(int seed) noexcept : seed_(seed) {}
+  NonIntrusiveSmallImpl(const NonIntrusiveSmallImpl&) noexcept = default;
   int Fun() const noexcept { return seed_ ^ (TypeSeries + 1u); }
 
  private:
@@ -27,15 +27,15 @@ class NonIntrusiveLargeImpl {
   int Fun() const noexcept { return seed_ ^ (TypeSeries + 1u); }
 
  private:
-  void* padding_[16];
+  void* padding_[16]{};
   int seed_;
 };
 
 template <std::size_t TypeSeries>
-class IntrusiveImpl : public TestBase {
+class IntrusiveSmallImpl : public TestBase {
  public:
-  explicit IntrusiveImpl(int seed) noexcept : seed_(seed) {}
-  IntrusiveImpl(const IntrusiveImpl&) noexcept = default;
+  explicit IntrusiveSmallImpl(int seed) noexcept : seed_(seed) {}
+  IntrusiveSmallImpl(const IntrusiveSmallImpl&) noexcept = default;
   int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1u); }
 
  private:
@@ -50,7 +50,7 @@ class IntrusiveLargeImpl : public TestBase {
   int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1u); }
 
  private:
-  void* padding_[16];
+  void* padding_[16]{};
   int seed_;
 };
 
@@ -90,7 +90,7 @@ std::vector<std::unique_ptr<TestBase>> GenerateVirtualFunctionTestData() {
 
 }  // namespace
 
-const std::vector<pro::proxy<TestFacade>> ProxyTestData = GenerateProxyTestData<NonIntrusiveImpl>();
-const std::vector<std::unique_ptr<TestBase>> VirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveImpl>();
-const std::vector<pro::proxy<TestFacade>> ProxyTestDataLarge = GenerateProxyTestData<NonIntrusiveLargeImpl>();
-const std::vector<std::unique_ptr<TestBase>> VirtualFunctionTestDataLarge = GenerateVirtualFunctionTestData<IntrusiveLargeImpl>();
+const std::vector<pro::proxy<TestFacade>> SmallObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveSmallImpl>();
+const std::vector<std::unique_ptr<TestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveSmallImpl>();
+const std::vector<pro::proxy<TestFacade>> LargeObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveLargeImpl>();
+const std::vector<std::unique_ptr<TestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveLargeImpl>();
