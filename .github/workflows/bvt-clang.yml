@@ -26,24 +26,31 @@ jobs:
 
     - name: build and run test with clang 15
       run: |
-        cmake -B build-clang-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15
+        cmake -B build-clang-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-clang-15 -j
         ctest --test-dir build-clang-15 -j
 
     - name: build and run test with clang 16
       run: |
-        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16
+        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-clang-16 -j
         ctest --test-dir build-clang-16 -j
 
     - name: build and run test with clang 17
       run: |
-        cmake -B build-clang-17 -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17
+        cmake -B build-clang-17 -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-clang-17 -j
         ctest --test-dir build-clang-17 -j
 
     - name: build and run test with clang 18
       run: |
-        cmake -B build-clang-18 -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18
+        cmake -B build-clang-18 -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-clang-18 -j
         ctest --test-dir build-clang-18 -j
+
+    - name: run benchmarks
+      run: |
+        ./build-clang-15/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
+        ./build-clang-16/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
+        ./build-clang-17/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
+        ./build-clang-18/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
