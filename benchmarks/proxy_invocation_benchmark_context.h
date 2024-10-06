@@ -33,7 +33,8 @@ struct InvocationTestBase {
 
 extern const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData;
 extern const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData;
+extern const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledSmallObjectInvocationVirtualFunctionTestData;
 extern const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData;
 extern const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData;
-extern const std::vector<pro::proxy<InvocationTestFacade>> PooledObjectInvocationProxyTestData;
-extern const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledObjectInvocationVirtualFunctionTestData;
+extern const std::vector<pro::proxy<InvocationTestFacade>> PooledLargeObjectInvocationProxyTestData;
+extern const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledLargeObjectInvocationVirtualFunctionTestData;

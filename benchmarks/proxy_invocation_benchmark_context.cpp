@@ -90,6 +90,12 @@ const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirt
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
         { return std::unique_ptr<InvocationTestBase>{new IntrusiveSmallImpl<TypeSeries>(seed)}; });
 
+const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledSmallObjectInvocationVirtualFunctionTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+      return std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>{
+          std::pmr::polymorphic_allocator<>{&details::InvocationBenchmarkMemoryPool}.new_object<IntrusiveSmallImpl<TypeSeries>>(seed)};
+    });
+
 const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData = GenerateTestData(
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
         { return pro::make_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(seed); });
@@ -98,13 +104,13 @@ const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirt
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
         { return std::unique_ptr<InvocationTestBase>{new IntrusiveLargeImpl<TypeSeries>(seed)}; });
 
-const std::vector<pro::proxy<InvocationTestFacade>> PooledObjectInvocationProxyTestData = GenerateTestData(
+const std::vector<pro::proxy<InvocationTestFacade>> PooledLargeObjectInvocationProxyTestData = GenerateTestData(
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
       return pro::allocate_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(
           std::pmr::polymorphic_allocator<>{&details::InvocationBenchmarkMemoryPool}, seed);
     });
 
-const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledObjectInvocationVirtualFunctionTestData = GenerateTestData(
+const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledLargeObjectInvocationVirtualFunctionTestData = GenerateTestData(
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
       return std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>{
           std::pmr::polymorphic_allocator<>{&details::InvocationBenchmarkMemoryPool}.new_object<IntrusiveLargeImpl<TypeSeries>>(seed)};
