@@ -101,11 +101,11 @@ const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirt
 const std::vector<pro::proxy<InvocationTestFacade>> PooledObjectInvocationProxyTestData = GenerateTestData(
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
       return pro::allocate_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(
-          std::pmr::polymorphic_allocator{&details::InvocationBenchmarkMemoryPool}, seed);
+          std::pmr::polymorphic_allocator<>{&details::InvocationBenchmarkMemoryPool}, seed);
     });
 
 const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledObjectInvocationVirtualFunctionTestData = GenerateTestData(
     []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
       return std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>{
-          std::pmr::polymorphic_allocator{&details::InvocationBenchmarkMemoryPool}.new_object<IntrusiveLargeImpl<TypeSeries>>(seed)};
+          std::pmr::polymorphic_allocator<>{&details::InvocationBenchmarkMemoryPool}.new_object<IntrusiveLargeImpl<TypeSeries>>(seed)};
     });
