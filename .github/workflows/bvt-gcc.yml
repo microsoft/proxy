@@ -50,7 +50,4 @@ jobs:
 
     - name: run benchmarks
       run: |
-        ./build-gcc-11/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
-        ./build-gcc-12/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
-        ./build-gcc-13/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
         ./build-gcc-14/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true

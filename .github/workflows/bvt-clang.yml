@@ -50,7 +50,4 @@ jobs:
 
     - name: run benchmarks
       run: |
-        ./build-clang-15/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
-        ./build-clang-16/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
-        ./build-clang-17/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
         ./build-clang-18/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
