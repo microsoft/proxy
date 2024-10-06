@@ -41,7 +41,27 @@ void BM_LargeObjectInvocationViaVirtualFunction(benchmark::State& state) {
   }
 }
 
+void BM_PooledObjectInvocationViaProxy(benchmark::State& state) {
+  for (auto _ : state) {
+    for (auto& p : PooledObjectInvocationProxyTestData) {
+      int result = p->Fun();
+      benchmark::DoNotOptimize(result);
+    }
+  }
+}
+
+void BM_PooledObjectInvocationViaVirtualFunction(benchmark::State& state) {
+  for (auto _ : state) {
+    for (auto& p : PooledObjectInvocationVirtualFunctionTestData) {
+      int result = p->Fun();
+      benchmark::DoNotOptimize(result);
+    }
+  }
+}
+
 BENCHMARK(BM_SmallObjectInvocationViaProxy);
 BENCHMARK(BM_SmallObjectInvocationViaVirtualFunction);
 BENCHMARK(BM_LargeObjectInvocationViaProxy);
 BENCHMARK(BM_LargeObjectInvocationViaVirtualFunction);
+BENCHMARK(BM_PooledObjectInvocationViaProxy);
+BENCHMARK(BM_PooledObjectInvocationViaVirtualFunction);

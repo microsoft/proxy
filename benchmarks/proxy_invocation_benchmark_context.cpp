@@ -27,7 +27,7 @@ class NonIntrusiveLargeImpl {
   int Fun() const noexcept { return seed_ ^ (TypeSeries + 1); }
 
  private:
-  void* padding_[16]{};
+  void* padding_[15]{};
   int seed_;
 };
 
@@ -54,43 +54,58 @@ class IntrusiveLargeImpl : public InvocationTestBase {
   int seed_;
 };
 
-template <template <int> class T, int FromTypeSeries>
-void FillProxyTestData(std::vector<pro::proxy<InvocationTestFacade>>& data) {
+template <int V>
+struct IntConstant {};
+
+template <int FromTypeSeries, class T, class F>
+void FillTestData(std::vector<T>& data, const F& generator) {
   if constexpr (FromTypeSeries < TypeSeriesCount) {
     for (int i = FromTypeSeries; i < TestDataSize; i += TypeSeriesCount) {
-      data[i] = pro::make_proxy<InvocationTestFacade, T<FromTypeSeries>>(static_cast<int>(i));
+      data[i] = generator(IntConstant<FromTypeSeries>{}, i);
     }
-    FillProxyTestData<T, FromTypeSeries + 1>(data);
+    FillTestData<FromTypeSeries + 1>(data, generator);
   }
 }
 
-template <template <int> class T>
-std::vector<pro::proxy<InvocationTestFacade>> GenerateProxyTestData() {
-  std::vector<pro::proxy<InvocationTestFacade>> result(TestDataSize);
-  FillProxyTestData<T, 0>(result);
-  return result;
-}
-
-template <template <int> class T, int FromTypeSeries>
-void FillVirtualFunctionTestData(std::vector<std::unique_ptr<InvocationTestBase>>& data) {
-  if constexpr (FromTypeSeries < TypeSeriesCount) {
-    for (int i = FromTypeSeries; i < TestDataSize; i += TypeSeriesCount) {
-      data[i].reset(new T<FromTypeSeries>(static_cast<int>(i)));
-    }
-    FillVirtualFunctionTestData<T, FromTypeSeries + 1>(data);
-  }
-}
-
-template <template <int> class T>
-std::vector<std::unique_ptr<InvocationTestBase>> GenerateVirtualFunctionTestData() {
-  std::vector<std::unique_ptr<InvocationTestBase>> result(TestDataSize);
-  FillVirtualFunctionTestData<T, 0>(result);
+template <class F>
+auto GenerateTestData(const F& generator) {
+  std::vector<decltype(generator(IntConstant<0>{}, 0))> result(TestDataSize);
+  FillTestData<0>(result, generator);
   return result;
 }
 
 }  // namespace
 
-const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveSmallImpl>();
-const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveSmallImpl>();
-const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData = GenerateProxyTestData<NonIntrusiveLargeImpl>();
-const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateVirtualFunctionTestData<IntrusiveLargeImpl>();
+namespace details {
+
+std::pmr::unsynchronized_pool_resource InvocationBenchmarkMemoryPool;
+
+}  // namespace details
+
+const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+        { return pro::make_proxy<InvocationTestFacade, NonIntrusiveSmallImpl<TypeSeries>>(seed); });
+
+const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+        { return std::unique_ptr<InvocationTestBase>{new IntrusiveSmallImpl<TypeSeries>(seed)}; });
+
+const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+        { return pro::make_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(seed); });
+
+const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+        { return std::unique_ptr<InvocationTestBase>{new IntrusiveLargeImpl<TypeSeries>(seed)}; });
+
+const std::vector<pro::proxy<InvocationTestFacade>> PooledObjectInvocationProxyTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+      return pro::allocate_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(
+          std::pmr::polymorphic_allocator{&details::InvocationBenchmarkMemoryPool}, seed);
+    });
+
+const std::vector<std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>> PooledObjectInvocationVirtualFunctionTestData = GenerateTestData(
+    []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+      return std::unique_ptr<InvocationTestBase, details::InvocationBenchmarkPolledDeleter>{
+          std::pmr::polymorphic_allocator{&details::InvocationBenchmarkMemoryPool}.new_object<IntrusiveLargeImpl<TypeSeries>>(seed)};
+    });
