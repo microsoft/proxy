@@ -40,8 +40,9 @@ void BM_LargeObjectInvocationViaVirtualFunction(benchmark::State& state) {
     }
   }
 }
-
+/*
 BENCHMARK(BM_SmallObjectInvocationViaProxy);
 BENCHMARK(BM_SmallObjectInvocationViaVirtualFunction);
 BENCHMARK(BM_LargeObjectInvocationViaProxy);
 BENCHMARK(BM_LargeObjectInvocationViaVirtualFunction);
+*/
