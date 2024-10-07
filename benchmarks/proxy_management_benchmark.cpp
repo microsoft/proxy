@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int TestManagedObjectCount = 12000;
+constexpr int TestManagedObjectCount = 120000;
 constexpr int TypeSeriesCount = 3;
 
 using SmallObject1 = int;
