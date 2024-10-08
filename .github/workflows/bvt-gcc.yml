@@ -26,24 +26,28 @@ jobs:
 
     - name: build and run test with gcc 11
       run: |
-        cmake -B build-gcc-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11
+        cmake -B build-gcc-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-gcc-11 -j
         ctest --test-dir build-gcc-11 -j
 
     - name: build and run test with gcc 12
       run: |
-        cmake -B build-gcc-12 -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+        cmake -B build-gcc-12 -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-gcc-12 -j
         ctest --test-dir build-gcc-12 -j
 
     - name: build and run test with gcc 13
       run: |
-        cmake -B build-gcc-13 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13
+        cmake -B build-gcc-13 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-gcc-13 -j
         ctest --test-dir build-gcc-13 -j
 
     - name: build and run test with gcc 14
       run: |
-        cmake -B build-gcc-14 -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14
+        cmake -B build-gcc-14 -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=Release
         cmake --build build-gcc-14 -j
         ctest --test-dir build-gcc-14 -j
+
+    - name: run benchmarks
+      run: |
+        ./build-gcc-14/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true

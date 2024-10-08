@@ -13,11 +13,12 @@ jobs:
       with:
         ref: ${{ inputs.branch }}
 
-    - name: build with cmake
+    - name: build and run test with MSVC
       run: |
         cmake -B build
-        cmake --build build -j
-
-    - name: run tests
-      run: |
+        cmake --build build --config Release -j
         ctest --test-dir build -j
+
+    - name: run benchmarks
+      run: |
+        .\build\benchmarks\Release\msft_proxy_benchmarks.exe --benchmark_repetitions=10 --benchmark_report_aggregates_only=true
