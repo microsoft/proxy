@@ -840,14 +840,21 @@ TEST(ProxyLifetimeTests, TestOperatorBool) {
 }
 
 TEST(ProxyLifetimeTests, TestEqualsToNullptr) {
-  int foo = 123;
-  pro::proxy<TestFacade> p1;
-  ASSERT_TRUE(p1 == nullptr);
-  ASSERT_TRUE(nullptr == p1);
-  p1 = &foo;
-  ASSERT_TRUE(p1 != nullptr);
-  ASSERT_TRUE(nullptr != p1);
-  ASSERT_EQ(ToString(*p1), "123");
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    pro::proxy<TestFacade> p;
+    ASSERT_TRUE(p == nullptr);
+    ASSERT_TRUE(nullptr == p);
+    p.emplace<utils::LifetimeTracker::Session>(&tracker);
+    ASSERT_TRUE(p != nullptr);
+    ASSERT_TRUE(nullptr != p);
+    ASSERT_EQ(ToString(*p), "Session 1");
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
 TEST(ProxyLifetimeTests, TestReset_FromValue) {
