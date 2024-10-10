@@ -6,6 +6,7 @@
 #include <memory_resource>
 #include <mutex>
 #include <string>
+#include <variant>
 
 #include <benchmark/benchmark.h>
 
@@ -114,6 +115,19 @@ void BM_SmallObjectManagementWithAny(benchmark::State& state) {
   }
 }
 
+void BM_SmallObjectManagementWithVariant(benchmark::State& state) {
+  for (auto _ : state) {
+    std::vector<std::variant<SmallObject1, SmallObject2, SmallObject3>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.emplace_back(SmallObject1{});
+      data.emplace_back(SmallObject2{});
+      data.emplace_back(SmallObject3{});
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
 void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<pro::proxy<DefaultFacade>> data;
@@ -196,14 +210,29 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
   }
 }
 
+void BM_LargeObjectManagementWithVariant(benchmark::State& state) {
+  for (auto _ : state) {
+    std::vector<std::variant<LargeObject1, LargeObject2, LargeObject3>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.emplace_back(LargeObject1{});
+      data.emplace_back(LargeObject2{});
+      data.emplace_back(LargeObject3{});
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
 BENCHMARK(BM_SmallObjectManagementWithProxy);
 BENCHMARK(BM_SmallObjectManagementWithUniquePtr);
 BENCHMARK(BM_SmallObjectManagementWithSharedPtr);
 BENCHMARK(BM_SmallObjectManagementWithSharedPtr_Pooled);
 BENCHMARK(BM_SmallObjectManagementWithAny);
+BENCHMARK(BM_SmallObjectManagementWithVariant);
 BENCHMARK(BM_LargeObjectManagementWithProxy);
 BENCHMARK(BM_LargeObjectManagementWithProxy_Pooled);
 BENCHMARK(BM_LargeObjectManagementWithUniquePtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr_Pooled);
 BENCHMARK(BM_LargeObjectManagementWithAny);
+BENCHMARK(BM_LargeObjectManagementWithVariant);
