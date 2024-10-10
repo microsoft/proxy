@@ -28,7 +28,7 @@
 #define ___PRO_ENFORCE_EBO
 #endif  // defined(_MSC_VER) && !defined(__clang__)
 
-#define __msft_lib_proxy 202408L
+#define __msft_lib_proxy 202410L
 
 namespace pro {
 
