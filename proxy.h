@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_
 #define _MSFT_PROXY_
 
+#include <cassert>
 #include <cstddef>
 #include <bit>
 #include <concepts>
@@ -565,12 +566,14 @@ struct meta_ptr_reset_guard {
 
 template <class F>
 struct proxy_helper {
-  static inline const auto& get_meta(const proxy<F>& p) noexcept
-      { return *p.meta_.operator->(); }
+  static inline const auto& get_meta(const proxy<F>& p) noexcept {
+    assert(p.has_value());
+    return *p.meta_.operator->();
+  }
   template <class C, class O, qualifier_type Q, class... Args>
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    auto dispatcher = p.meta_
-        ->template dispatcher_meta<typename overload_traits<O>
+    auto dispatcher = get_meta(p)
+        .template dispatcher_meta<typename overload_traits<O>
         ::template meta_provider<C::is_direct, typename C::dispatch_type>>
         ::dispatcher;
     if constexpr (C::is_direct &&
