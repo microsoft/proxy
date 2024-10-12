@@ -791,9 +791,12 @@ class proxy : public details::facade_traits<F>::direct_accessor {
  private:
   template <class P, class... Args>
   P& initialize(Args&&... args) {
-    std::construct_at(reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
+    P& result = *std::construct_at(
+        reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
+    if constexpr (requires { (bool)result; })
+        { assert((bool)result); }
     meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
-    return *std::launder(reinterpret_cast<P*>(ptr_));
+    return result;
   }
 
   [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
