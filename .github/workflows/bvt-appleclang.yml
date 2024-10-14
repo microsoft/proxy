@@ -7,7 +7,7 @@ on:
 
 jobs:
   bvt-appleclang:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@v3
       with:
