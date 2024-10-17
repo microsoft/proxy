@@ -23,11 +23,11 @@
 #error "Proxy requires C++20 attribute no_unique_address"
 #endif
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #define ___PRO_ENFORCE_EBO __declspec(empty_bases)
 #else
 #define ___PRO_ENFORCE_EBO
-#endif  // defined(_MSC_VER)
+#endif  // _MSC_VER
 
 #define __msft_lib_proxy 202410L
 
