@@ -978,7 +978,7 @@ TEST(ProxyLifetimeTests, Test_DirectConvension_Lvalue) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
-    auto session = static_cast<utils::LifetimeTracker::Session>(p);
+    auto session = utils::LifetimeTracker::Session{p};
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_EQ(to_string(session), "Session 2");
@@ -996,7 +996,7 @@ TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue) {
   {
     pro::proxy<TestFacade> p{ std::in_place_type<utils::LifetimeTracker::Session>, &tracker };
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
-    auto session = static_cast<utils::LifetimeTracker::Session>(std::move(p));
+    auto session = utils::LifetimeTracker::Session{std::move(p)};
     ASSERT_FALSE(p.has_value());
     ASSERT_EQ(to_string(session), "Session 2");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kMoveConstruction);
