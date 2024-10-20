@@ -38,7 +38,7 @@ endif()
 include(GoogleTest)
 gtest_discover_tests(msft_proxy_tests)
 
-if(NOT (MSVC OR CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC"))
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_executable(msft_proxy_freestanding_tests freestanding/proxy_freestanding_tests.cpp)
   target_include_directories(msft_proxy_freestanding_tests PRIVATE .)
   target_compile_features(msft_proxy_freestanding_tests PRIVATE cxx_std_20)
