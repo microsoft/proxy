@@ -1,0 +1,84 @@
+{
+  "TargetName": "`proxy`",
+  "YellowIndicatorThreshold": 5.0,
+  "Environments": [
+    {
+      "Name": "msvc",
+      "Description": "MSVC on Windows Server 2022 (x64)"
+    },
+    {
+      "Name": "gcc",
+      "Description": "GCC on Ubuntu 24.04 (x64)"
+    },
+    {
+      "Name": "clang",
+      "Description": "Clang on Ubuntu 24.04 (x64)"
+    },
+    {
+      "Name": "appleclang",
+      "Description": "Apple Clang on macOS 15 (ARM64)"
+    }
+  ],
+  "Metrics": [
+    {
+      "Name": "Indirect invocation on small objects via `proxy` vs. virtual functions",
+      "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
+    },
+    {
+      "Name": "Indirect invocation on large objects via `proxy` vs. virtual functions",
+      "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy",
+      "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::unique_ptr`",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithUniquePtr"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::shared_ptr` (without memory pool)",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::shared_ptr` (with memory pool)",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr_Pooled"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::any`",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithAny"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (without memory pool) vs. `std::unique_ptr`",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithUniquePtr"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (with memory pool) vs. `std::unique_ptr`",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithUniquePtr"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` vs. `std::shared_ptr` (both without memory pool)",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` vs. `std::shared_ptr` (both with memory pool)",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr_Pooled"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (without memory pool) vs. `std::any`",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithAny"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (with memory pool) vs. `std::any`",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithAny"
+    }
+  ]
+}

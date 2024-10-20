@@ -65,6 +65,11 @@ jobs:
     with:
       branch: release/${{ github.event.inputs.version }}
 
+  report:
+    uses: ./.github/workflows/bvt-report.yml
+    name: Generate report
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
+
   draft-release:
     runs-on: windows-latest
     needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]

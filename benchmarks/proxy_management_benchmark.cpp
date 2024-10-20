@@ -87,7 +87,7 @@ void BM_SmallObjectManagementWithSharedPtr(benchmark::State& state) {
 }
 
 void BM_SmallObjectManagementWithSharedPtr_Pooled(benchmark::State& state) {
-  std::pmr::unsynchronized_pool_resource pool;
+  static std::pmr::unsynchronized_pool_resource pool;
   std::pmr::polymorphic_allocator<> alloc{&pool};
   for (auto _ : state) {
     std::vector<std::shared_ptr<void>> data;
@@ -128,7 +128,7 @@ void BM_LargeObjectManagementWithProxy(benchmark::State& state) {
 }
 
 void BM_LargeObjectManagementWithProxy_Pooled(benchmark::State& state) {
-  std::pmr::unsynchronized_pool_resource pool;
+  static std::pmr::unsynchronized_pool_resource pool;
   std::pmr::polymorphic_allocator<> alloc{&pool};
   for (auto _ : state) {
     std::vector<pro::proxy<DefaultFacade>> data;
@@ -169,7 +169,7 @@ void BM_LargeObjectManagementWithSharedPtr(benchmark::State& state) {
 }
 
 void BM_LargeObjectManagementWithSharedPtr_Pooled(benchmark::State& state) {
-  std::pmr::unsynchronized_pool_resource pool;
+  static std::pmr::unsynchronized_pool_resource pool;
   std::pmr::polymorphic_allocator<> alloc{&pool};
   for (auto _ : state) {
     std::vector<std::shared_ptr<void>> data;

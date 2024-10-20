@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main, release/** ]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   run-bvt-gcc:
     uses: ./.github/workflows/bvt-gcc.yml
@@ -26,3 +22,8 @@ jobs:
   run-bvt-appleclang:
     uses: ./.github/workflows/bvt-appleclang.yml
     name: Run BVT with AppleClang
+
+  report:
+    uses: ./.github/workflows/bvt-report.yml
+    name: Generate report
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
