@@ -1,0 +1,35 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
+
+jobs:
+  bvt-report:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
+
+    - name: download all workflow run artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: build report generator
+      run: |
+        cd tools/report_generator
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j
+
+    - name: generate report
+      run: |
+        tools/report_generator/build/report_generator tools/report_generator/report-config.json ${{ github.sha }} artifacts benchmarking-report.md
+
+    - name: archive benchmarking report
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmarking-report
+        path: benchmarking-report.md

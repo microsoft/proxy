@@ -9,7 +9,7 @@ jobs:
   bvt-clang:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.branch }}
 
@@ -50,4 +50,11 @@ jobs:
 
     - name: run benchmarks
       run: |
-        ./build-clang-18/benchmarks/msft_proxy_benchmarks --benchmark_repetitions=100 --benchmark_report_aggregates_only=true --benchmark_min_time=0.1s --benchmark_enable_random_interleaving=true
+        cd build-clang-18/benchmarks
+        ./msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_enable_random_interleaving=true --benchmark_out=benchmarking-results.json
+
+    - name: archive benchmarking results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmarking-results-clang
+        path: build-clang-18/benchmarks/benchmarking-results.json
