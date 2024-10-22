@@ -463,6 +463,7 @@ consteval bool is_reflection_type_well_formed() {
   }
   return false;
 }
+struct empty_proxy_base {};
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
 template <class F, class... Cs> requires(conv_traits<Cs>::applicable && ...)
@@ -470,6 +471,8 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   using conv_meta = composite_meta<typename conv_traits<Cs>::meta...>;
   using indirect_accessor = composite_accessor<false, F, Cs...>;
   using direct_accessor = composite_accessor<true, F, Cs...>;
+  using base = std::conditional_t<std::is_same_v<direct_accessor,
+      composite_accessor_impl<>>, empty_proxy_base, direct_accessor>;
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
@@ -616,7 +619,7 @@ concept proxiable = facade<F> && sizeof(P) <= F::constraints.max_size &&
     details::facade_traits<F>::template refl_applicable_ptr<P>;
 
 template <class F>
-class proxy : public details::facade_traits<F>::direct_accessor {
+class proxy : public details::facade_traits<F>::base {
   static_assert(facade<F>);
   friend struct details::proxy_helper<F>;
   using _Traits = details::facade_traits<F>;
@@ -1171,14 +1174,13 @@ struct facade_impl {
     }
 template <class F>
 struct upward_conversion_dispatch {
-  using Base = proxy<F>;
   template <class T>
-  Base operator()(T&& value)
-      noexcept(std::is_nothrow_convertible_v<T, Base>)
-      requires(std::is_convertible_v<T, Base>)
-      { return static_cast<Base>(std::forward<T>(value)); }
+  proxy<F> operator()(T&& value)
+      noexcept(std::is_nothrow_convertible_v<T, proxy<F>>)
+      requires(std::is_convertible_v<T, proxy<F>>)
+      { return static_cast<proxy<F>>(std::forward<T>(value)); }
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(
-      ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR, operator Base)
+      ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR, operator proxy<F>)
 };
 #undef ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR
 

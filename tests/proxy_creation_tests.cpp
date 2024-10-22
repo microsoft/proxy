@@ -46,13 +46,25 @@ struct TestMemFn0 : pro::facade_builder
     ::build {};
 struct TestMemFn0_Normal { void MemFn0(int) noexcept {} };
 static_assert(pro::proxiable<TestMemFn0_Normal*, TestMemFn0>);
+#ifdef __NVCOMPILER
+#pragma diag_suppress declared_but_not_referenced
+#endif  // __NVCOMPILER
 struct TestMemFn0_Unsupproted { void MemFn1(int) noexcept {} };
+#ifdef __NVCOMPILER
+#pragma diag_default declared_but_not_referenced
+#endif  // __NVCOMPILER
 static_assert(!pro::proxiable<TestMemFn0_Unsupproted*, TestMemFn0>);
 struct TestMemFn0_MissingNoexcept { void MemFn0(int) {} };
 static_assert(!pro::proxiable<TestMemFn0_MissingNoexcept*, TestMemFn0>);
 struct TestMemFn0_ArgumentConvertible { void MemFn0(std::int64_t&&) noexcept {} };
 static_assert(pro::proxiable<TestMemFn0_ArgumentConvertible*, TestMemFn0>);
+#ifdef __NVCOMPILER
+#pragma diag_suppress declared_but_not_referenced
+#endif  // __NVCOMPILER
 struct TestMemFn0_ArgumentNotMatch { void MemFn0(int&) noexcept {} };
+#ifdef __NVCOMPILER
+#pragma diag_default declared_but_not_referenced
+#endif  // __NVCOMPILER
 static_assert(!pro::proxiable<TestMemFn0_ArgumentNotMatch*, TestMemFn0>);
 struct TestMemFn0_ReturnTypeNotMatch { std::string MemFn0(int) noexcept { return {}; } };
 static_assert(pro::proxiable<TestMemFn0_ReturnTypeNotMatch*, TestMemFn0>);

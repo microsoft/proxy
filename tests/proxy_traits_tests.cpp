@@ -199,6 +199,8 @@ struct BadFacade_MissingConventionTypes {
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
+#elif defined(__NVCOMPILER)
+#pragma diag_suppress declared_but_not_referenced
 #endif  // __clang__
   static constexpr auto constraints = pro::proxiable_ptr_constraints{
       .max_size = 2 * sizeof(void*),
@@ -209,6 +211,8 @@ struct BadFacade_MissingConventionTypes {
   };
 #ifdef __clang__
 #pragma clang diagnostic pop
+#elif defined(__NVCOMPILER)
+#pragma diag_default declared_but_not_referenced
 #endif  // __clang__
 };
 static_assert(!pro::facade<BadFacade_MissingConventionTypes>);
@@ -242,7 +246,13 @@ static_assert(!pro::facade<BadFacade_MissingConstraints>);
 struct BadFacade_BadConstraints_UnexpectedType {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<>;
+#ifdef __NVCOMPILER
+#pragma diag_suppress declared_but_not_referenced
+#endif  // __NVCOMPILER
   static constexpr auto constraints = 0;
+#ifdef __NVCOMPILER
+#pragma diag_default declared_but_not_referenced
+#endif  // __NVCOMPILER
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_UnexpectedType>);
 
@@ -275,21 +285,24 @@ static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
 struct BadFacade_BadConstraints_NotConstant {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<>;
-  static inline const auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static const pro::proxiable_ptr_constraints constraints;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
+const pro::proxiable_ptr_constraints BadFacade_BadConstraints_NotConstant::constraints{
+    .max_size = 2 * sizeof(void*),
+    .max_align = alignof(void*),
+    .copyability = pro::constraint_level::none,
+    .relocatability = pro::constraint_level::nothrow,
+    .destructibility = pro::constraint_level::nothrow,
+};
 
 struct BadFacade_MissingReflectionTypes {
   using convention_types = std::tuple<>;
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
+#elif defined(__NVCOMPILER)
+#pragma diag_suppress declared_but_not_referenced
 #endif  // __clang__
   static constexpr auto constraints = pro::proxiable_ptr_constraints{
       .max_size = 2 * sizeof(void*),
@@ -300,6 +313,8 @@ struct BadFacade_MissingReflectionTypes {
   };
 #ifdef __clang__
 #pragma clang diagnostic pop
+#elif defined(__NVCOMPILER)
+#pragma diag_default declared_but_not_referenced
 #endif  // __clang__
 };
 static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
