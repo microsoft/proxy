@@ -27,7 +27,7 @@ class NonIntrusiveLargeImpl {
   int Fun() const noexcept { return seed_ ^ (TypeSeries + 1); }
 
  private:
-  void* padding_[7]{};
+  void* padding_[5]{};
   int seed_;
 };
 
@@ -50,7 +50,7 @@ class IntrusiveLargeImpl : public InvocationTestBase {
   int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1); }
 
  private:
-  void* padding_[7]{};
+  void* padding_[5]{};
   int seed_;
 };
 
