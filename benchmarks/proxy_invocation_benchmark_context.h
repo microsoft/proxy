@@ -17,7 +17,7 @@ struct InvocationTestBase {
   virtual ~InvocationTestBase() = default;
 };
 
-extern const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData;
-extern const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData;
-extern const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData;
-extern const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData;
+std::vector<pro::proxy<InvocationTestFacade>> GenerateSmallObjectInvocationProxyTestData();
+std::vector<std::unique_ptr<InvocationTestBase>> GenerateSmallObjectInvocationVirtualFunctionTestData();
+std::vector<pro::proxy<InvocationTestFacade>> GenerateLargeObjectInvocationProxyTestData();
+std::vector<std::unique_ptr<InvocationTestBase>> GenerateLargeObjectInvocationVirtualFunctionTestData();

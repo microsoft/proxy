@@ -5,6 +5,7 @@ on:
     branches: [ main, release/** ]
   pull_request:
     branches: [ main, release/** ]
+  workflow_dispatch:
 
 jobs:
   run-bvt-gcc:
