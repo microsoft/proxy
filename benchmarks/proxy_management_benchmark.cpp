@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr int TestManagedObjectCount = 120000;
+constexpr int TestManagedObjectCount = 600000;
 constexpr int TypeSeriesCount = 3;
 
 using SmallObject1 = int;
@@ -40,8 +40,6 @@ template <class T>
 struct PolymorphicObject : PolymorphicObjectBase {
   T Value;
 };
-
-}  // namespace
 
 struct DefaultFacade : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
@@ -207,3 +205,5 @@ BENCHMARK(BM_LargeObjectManagementWithUniquePtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr_Pooled);
 BENCHMARK(BM_LargeObjectManagementWithAny);
+
+}  // namespace

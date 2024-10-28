@@ -27,7 +27,7 @@ class NonIntrusiveLargeImpl {
   int Fun() const noexcept { return seed_ ^ (TypeSeries + 1); }
 
  private:
-  void* padding_[15]{};
+  void* padding_[5]{};
   int seed_;
 };
 
@@ -50,7 +50,7 @@ class IntrusiveLargeImpl : public InvocationTestBase {
   int Fun() const noexcept override { return seed_ ^ (TypeSeries + 1); }
 
  private:
-  void* padding_[16]{};
+  void* padding_[5]{};
   int seed_;
 };
 
@@ -76,18 +76,19 @@ auto GenerateTestData(const F& generator) {
 
 }  // namespace
 
-const std::vector<pro::proxy<InvocationTestFacade>> SmallObjectInvocationProxyTestData = GenerateTestData(
-    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
-        { return pro::make_proxy<InvocationTestFacade, NonIntrusiveSmallImpl<TypeSeries>>(seed); });
-
-const std::vector<std::unique_ptr<InvocationTestBase>> SmallObjectInvocationVirtualFunctionTestData = GenerateTestData(
-    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
-        { return std::unique_ptr<InvocationTestBase>{new IntrusiveSmallImpl<TypeSeries>(seed)}; });
-
-const std::vector<pro::proxy<InvocationTestFacade>> LargeObjectInvocationProxyTestData = GenerateTestData(
-    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
-        { return pro::make_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(seed); });
-
-const std::vector<std::unique_ptr<InvocationTestBase>> LargeObjectInvocationVirtualFunctionTestData = GenerateTestData(
-    []<int TypeSeries>(IntConstant<TypeSeries>, int seed)
-        { return std::unique_ptr<InvocationTestBase>{new IntrusiveLargeImpl<TypeSeries>(seed)}; });
+std::vector<pro::proxy<InvocationTestFacade>> GenerateSmallObjectInvocationProxyTestData() {
+  return GenerateTestData([]<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+      { return pro::make_proxy<InvocationTestFacade, NonIntrusiveSmallImpl<TypeSeries>>(seed); });
+}
+std::vector<std::unique_ptr<InvocationTestBase>> GenerateSmallObjectInvocationVirtualFunctionTestData() {
+  return GenerateTestData([]<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+      { return std::unique_ptr<InvocationTestBase>{new IntrusiveSmallImpl<TypeSeries>(seed)}; });
+}
+std::vector<pro::proxy<InvocationTestFacade>> GenerateLargeObjectInvocationProxyTestData() {
+  return GenerateTestData([]<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+      { return pro::make_proxy<InvocationTestFacade, NonIntrusiveLargeImpl<TypeSeries>>(seed); });
+}
+std::vector<std::unique_ptr<InvocationTestBase>> GenerateLargeObjectInvocationVirtualFunctionTestData() {
+  return GenerateTestData([]<int TypeSeries>(IntConstant<TypeSeries>, int seed)
+      { return std::unique_ptr<InvocationTestBase>{new IntrusiveLargeImpl<TypeSeries>(seed)}; });
+}

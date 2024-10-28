@@ -27,7 +27,7 @@ jobs:
     - name: run benchmarks
       run: |
         cd build/benchmarks
-        ./msft_proxy_benchmarks --benchmark_repetitions=10 --benchmark_report_aggregates_only=true --benchmark_enable_random_interleaving=true --benchmark_out=benchmarking-results.json
+        ./msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
