@@ -1582,6 +1582,21 @@ struct conversion_dispatch {
 #define PRO_DEF_FREE_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
 
+#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+    struct __NAME { \
+      template <class __T, class... __Args> \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
+              ::std::forward<__Args>(__args)...)) \
+      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
+    }
+#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
+    ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
+
 #define PRO_DEF_WEAK_DISPATCH(__NAME, __D, __FUNC) \
     struct __NAME : __D { \
       using __D::operator(); \
