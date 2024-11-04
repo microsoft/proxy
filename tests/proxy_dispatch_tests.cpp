@@ -32,6 +32,9 @@ public:
 private:
   int value_;
 };
+
+PRO_DEF_FREE_AS_MEM_DISPATCH(FreeMemToString, std::to_string, ToString);
+
 }  // namespace
 
 TEST(ProxyDispatchTests, TestOpPlus) {
@@ -612,4 +615,11 @@ TEST(ProxyDispatchTests, TestImplciitConversion) {
   pro::proxy<TestFacade> p = &v;
   int converted = *p;
   ASSERT_EQ(converted, 12);
+}
+
+TEST(ProxyDispatchTests, TestFreeAsMemDispatch) {
+  struct TestFacade : pro::facade_builder::add_convention<FreeMemToString, std::string() const>::build {};
+  int v = 123;
+  pro::proxy<TestFacade> p = &v;
+  ASSERT_EQ(p->ToString(), "123");
 }
