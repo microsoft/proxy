@@ -159,7 +159,7 @@ struct ReflectionOfSmallPtr {
   constexpr ReflectionOfSmallPtr(std::in_place_type_t<P>) {}
 };
 struct RelocatableFacadeWithReflection : pro::facade_builder
-    ::add_reflection<ReflectionOfSmallPtr>
+    ::add_direct_reflection<ReflectionOfSmallPtr>
     ::build {};
 static_assert(!pro::proxiable<MockMovablePtr, RelocatableFacadeWithReflection>);
 static_assert(!pro::proxiable<MockCopyablePtr, RelocatableFacadeWithReflection>);

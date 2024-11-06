@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from add_reflection.md.
+// This file contains example code from PRO_DEF_REFL_AS_MEM_ACCESSOR.md.
 
 #include <iostream>
 #include <typeinfo>
@@ -20,13 +20,10 @@ class RttiReflector {
 };
 
 struct RttiAware : pro::facade_builder
-    ::add_direct_reflection<RttiReflector>
-    ::add_indirect_reflection<RttiReflector>
+    ::add_reflection<RttiReflector>
     ::build {};
 
 int main() {
-  int a = 123;
-  pro::proxy<RttiAware> p = &a;
-  std::cout << p.ReflectRtti().GetName() << "\n";  // Prints: "Pi" (assuming GCC)
+  pro::proxy<RttiAware> p = pro::make_proxy<RttiAware>(123);
   std::cout << p->ReflectRtti().GetName() << "\n";  // Prints: "i" (assuming GCC)
 }

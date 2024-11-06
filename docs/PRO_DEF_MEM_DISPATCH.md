@@ -42,7 +42,7 @@ struct dispatch_name {
       return pro::proxy_invoke<C, R(Args...) cv ref noex>(pro::access_proxy<F>(SELF), std::forward<Args>(args)...);
     }
   };
-};
+}
 ```
 
 ## Example

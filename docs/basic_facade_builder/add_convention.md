@@ -18,12 +18,12 @@ The alias templates `add_convention`, `add_indirect_convention`, and `add_direct
   - `IC::is_direct` is `false`.
   - `typename IC::dispatch_type` is `D`.
   - `typename IC::overload_types` is a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type of distinct types in `Os`.
-  - `typename IC::template accessor<F>` is `typename D::template accessor<F, IC, Os...>`.
+  - `typename IC::template accessor<F>` is `typename D::template accessor<F, IC, Os...>` if applicable.
 - `add_direct_convention` merges an implementation-defined convention type `IC` into `Cs`, where:
   - `IC::is_direct` is `true`.
   - `typename IC::dispatch_type` is `D`.
   - `typename IC::overload_types` is a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type of distinct types in `Os`.
-  - `typename IC::template accessor<F>` is `typename D::template accessor<F, IC, Os...>`.
+  - `typename IC::template accessor<F>` is `typename D::template accessor<F, IC, Os...>` if applicable.
 
 When `Cs` already contains a convention type `IC2` where `IC2::is_direct == IC::is_direct && std::is_same_v<typename IC2::dispatch_type, typename IC::dispatch_type>` is `true`, `Os` merges with `typename IC2::overload_types` and removes duplicates, and `std::tuple_size_v<Cs>` shall not change.
 

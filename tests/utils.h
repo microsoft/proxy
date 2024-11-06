@@ -92,12 +92,12 @@ struct Stringable : pro::facade_builder
 
 }  // namespace spec
 
-class RttiReflection {
+class RttiReflector {
  public:
   template <class T>
-  constexpr explicit RttiReflection(std::in_place_type_t<T>)
-      : type_(typeid(T)) {}
+  constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
+  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectRtti);
   const char* GetName() const noexcept { return type_.name(); }
 
  private:
