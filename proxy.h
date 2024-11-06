@@ -386,11 +386,9 @@ struct refl_meta {
 template <class R, class T, bool IS_DIRECT>
 consteval bool is_reflector_well_formed() {
   if constexpr (IS_DIRECT) {
-    if constexpr (!std::is_final_v<R>) {
-      if constexpr (std::is_constructible_v<R, std::in_place_type_t<T>>) {
-        if constexpr (is_consteval([] { return R{std::in_place_type<T>}; })) {
-          return true;
-        }
+    if constexpr (std::is_constructible_v<R, std::in_place_type_t<T>>) {
+      if constexpr (is_consteval([] { return R{std::in_place_type<T>}; })) {
+        return true;
       }
     }
   } else if constexpr (requires { typename ptr_element_t<T>; }) {
