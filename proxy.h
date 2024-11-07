@@ -1672,14 +1672,6 @@ struct conversion_dispatch {
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
     }
 
-#define PRO_DEF_REFL_ACCESSOR(__FNAME) \
-    template <class __F, class __R> \
-    struct accessor { \
-      const auto& __FNAME() const noexcept { \
-        return ::pro::proxy_reflect<__R>(::pro::access_proxy<__F>(*this)); \
-      } \
-    }
-
 }  // namespace pro
 
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE

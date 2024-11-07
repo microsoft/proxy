@@ -97,8 +97,12 @@ class RttiReflector {
   template <class T>
   constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  PRO_DEF_REFL_ACCESSOR(ReflectRtti);
-  const char* GetName() const noexcept { return type_.name(); }
+  template <class F, class R>
+  struct accessor {
+    const char* GetTypeName() const noexcept {
+      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this)).type_.name();
+    }
+  };
 
  private:
   const std::type_info& type_;

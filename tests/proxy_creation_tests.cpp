@@ -20,7 +20,12 @@ struct SboReflector {
   constexpr explicit SboReflector(std::in_place_type_t<pro::details::compact_ptr<T, Alloc>>)
       : SboEnabled(false), AllocatorAllocatesForItself(true) {}
 
-  PRO_DEF_REFL_ACCESSOR(ReflectSbo);
+  template <class F, class R>
+  struct accessor {
+    const SboReflector& ReflectSbo() const noexcept {
+      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+    }
+  };
 
   bool SboEnabled;
   bool AllocatorAllocatesForItself;

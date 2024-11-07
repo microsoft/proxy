@@ -19,7 +19,12 @@ struct TraitsReflector {
         is_nothrow_destructible_(std::is_nothrow_destructible_v<T>),
         is_trivial_(std::is_trivial_v<T>) {}
 
-  PRO_DEF_REFL_ACCESSOR(ReflectTraits);
+  template <class F, class R>
+  struct accessor {
+    const TraitsReflector& ReflectTraits() const noexcept {
+      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+    }
+  };
 
   bool is_default_constructible_;
   bool is_copy_constructible_;
@@ -42,14 +47,14 @@ struct TestTraitsFacade : pro::facade_builder
 TEST(ProxyReflectionTests, TestRtti_RawPtr) {
   int foo = 123;
   pro::proxy<TestRttiFacade> p = &foo;
-  ASSERT_STREQ(p.ReflectRtti().GetName(), typeid(int*).name());
-  ASSERT_STREQ(p->ReflectRtti().GetName(), typeid(int).name());
+  ASSERT_STREQ(p.GetTypeName(), typeid(int*).name());
+  ASSERT_STREQ(p->GetTypeName(), typeid(int).name());
 }
 
 TEST(ProxyReflectionTests, TestRtti_FancyPtr) {
   pro::proxy<TestRttiFacade> p = std::make_unique<double>(1.23);
-  ASSERT_STREQ(p.ReflectRtti().GetName(), typeid(std::unique_ptr<double>).name());
-  ASSERT_STREQ(p->ReflectRtti().GetName(), typeid(double).name());
+  ASSERT_STREQ(p.GetTypeName(), typeid(std::unique_ptr<double>).name());
+  ASSERT_STREQ(p->GetTypeName(), typeid(double).name());
 }
 
 TEST(ProxyReflectionTests, TestTraits_RawPtr) {

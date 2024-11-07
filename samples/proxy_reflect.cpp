@@ -8,27 +8,31 @@
 
 #include "proxy.h"
 
-struct TraitsRefl {
-  template <class P>
-  constexpr explicit TraitsRefl(std::in_place_type_t<P>)
-      : Copyable(std::is_copy_constructible_v<P>) {}
+class CopyabilityReflector {
+ public:
+  template <class T>
+  constexpr explicit CopyabilityReflector(std::in_place_type_t<T>)
+      : copyable_(std::is_copy_constructible_v<T>) {}
 
-  PRO_DEF_REFL_ACCESSOR(ReflectTraits);
+  template <class F, class R>
+  struct accessor {
+    bool IsCopyable() const noexcept {
+      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this)).copyable_;
+    }
+  };
 
-  const bool Copyable;
+ private:
+  bool copyable_;
 };
 
-struct TestFacade : pro::facade_builder
-    ::add_direct_reflection<TraitsRefl>
+struct CopyabilityAware : pro::facade_builder
+    ::add_direct_reflection<CopyabilityReflector>
     ::build {};
 
 int main() {
-  pro::proxy<TestFacade> p1 = std::make_unique<int>();
-  std::cout << std::boolalpha << p1.ReflectTraits().Copyable << "\n";  // Reflects with accessor, prints: "false"
-  using R = std::tuple_element_t<0u, TestFacade::reflection_types>;
-  std::cout << pro::proxy_reflect<R>(p1).Copyable << "\n";  // Reflects with proxy_reflect, also prints: "false"
+  pro::proxy<CopyabilityAware> p1 = std::make_unique<int>();
+  std::cout << std::boolalpha << p1.IsCopyable() << "\n";  // Prints: "false"
 
-  pro::proxy<TestFacade> p2 = std::make_shared<int>();
-  std::cout << p2.ReflectTraits().Copyable << "\n";  // Reflects with accessor, prints: "true"
-  std::cout << pro::proxy_reflect<R>(p2).Copyable << "\n";  // Reflects with proxy_reflect, also prints: "true"
+  pro::proxy<CopyabilityAware> p2 = std::make_shared<int>();
+  std::cout << p2.IsCopyable() << "\n";  // Prints: "true"
 }
