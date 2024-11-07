@@ -31,7 +31,8 @@ class CopyabilityReflector {
   template <class F, class R>
   struct accessor {
     bool IsCopyable() const noexcept {
-      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this)).copyable_;
+      const CopyabilityReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      return self.copyable_;
     }
   };
 
