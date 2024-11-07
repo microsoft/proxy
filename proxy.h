@@ -1672,7 +1672,7 @@ struct conversion_dispatch {
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
     }
 
-#define PRO_DEF_REFL_AS_MEM_ACCESSOR(__FNAME) \
+#define PRO_DEF_REFL_ACCESSOR(__FNAME) \
     template <class __F, class __R> \
     struct accessor { \
       const auto& __FNAME() const noexcept { \

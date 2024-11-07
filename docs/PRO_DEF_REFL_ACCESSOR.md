@@ -1,13 +1,13 @@
-# Macro `PRO_DEF_REFL_AS_MEM_ACCESSOR`
+# Macro `PRO_DEF_REFL_ACCESSOR`
 
 ```cpp
-#define PRO_DEF_REFL_AS_MEM_ACCESSOR // see below
+#define PRO_DEF_REFL_ACCESSOR // see below
 ```
 
-Macro `PRO_DEF_REFL_AS_MEM_ACCESSOR` defines an accessor template within a reflector type providing [accessibility](ProAccessible.md) via a member function. It supports the following syntax:
+Macro `PRO_DEF_REFL_ACCESSOR` defines an accessor template within a reflector type providing [accessibility](ProAccessible.md) via a member function. It supports the following syntax:
 
 ```cpp
-PRO_DEF_REFL_AS_MEM_ACCESSOR(accessibility_func_name);
+PRO_DEF_REFL_ACCESSOR(accessibility_func_name);
 ```
 
 Defines a class template named `accessor` with a member function that invokes [`proxy_reflect`](proxy_reflect.md). Effectively equivalent to:
@@ -23,7 +23,7 @@ struct accessor {
 
 ## Notes
 
-When authoring a reflector type, it is recommended to define an accessor template with `PRO_DEF_REFL_AS_MEM_ACCESSOR` in its body. However, this is not required, and users may implement their own accessors (e.g. providing accessibility via an operator) on demand.
+When authoring a reflector type, it is recommended to define an accessor template with `PRO_DEF_REFL_ACCESSOR` in its body. However, this is not required, and users may implement their own accessors (e.g. providing accessibility via an operator) on demand.
 
 ## Example
 
@@ -38,7 +38,7 @@ class RttiReflector {
   template <class T>
   constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectRtti);
+  PRO_DEF_REFL_ACCESSOR(ReflectRtti);
   const char* GetName() const noexcept { return type_.name(); }
 
  private:

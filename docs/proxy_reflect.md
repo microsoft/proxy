@@ -27,7 +27,7 @@ struct TraitsRefl {
   constexpr explicit TraitsRefl(std::in_place_type_t<P>)
       : Copyable(std::is_copy_constructible_v<P>) {}
 
-  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectTraits);
+  PRO_DEF_REFL_ACCESSOR(ReflectTraits);
 
   const bool Copyable;
 };

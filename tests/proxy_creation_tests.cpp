@@ -20,7 +20,7 @@ struct SboReflector {
   constexpr explicit SboReflector(std::in_place_type_t<pro::details::compact_ptr<T, Alloc>>)
       : SboEnabled(false), AllocatorAllocatesForItself(true) {}
 
-  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectSbo);
+  PRO_DEF_REFL_ACCESSOR(ReflectSbo);
 
   bool SboEnabled;
   bool AllocatorAllocatesForItself;

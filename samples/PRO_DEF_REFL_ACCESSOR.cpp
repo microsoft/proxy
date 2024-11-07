@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from PRO_DEF_REFL_AS_MEM_ACCESSOR.md.
+// This file contains example code from PRO_DEF_REFL_ACCESSOR.md.
 
 #include <iostream>
 #include <typeinfo>
@@ -12,7 +12,7 @@ class RttiReflector {
   template <class T>
   constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectRtti);
+  PRO_DEF_REFL_ACCESSOR(ReflectRtti);
   const char* GetName() const noexcept { return type_.name(); }
 
  private:

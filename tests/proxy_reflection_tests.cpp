@@ -19,7 +19,7 @@ struct TraitsReflector {
         is_nothrow_destructible_(std::is_nothrow_destructible_v<T>),
         is_trivial_(std::is_trivial_v<T>) {}
 
-  PRO_DEF_REFL_AS_MEM_ACCESSOR(ReflectTraits);
+  PRO_DEF_REFL_ACCESSOR(ReflectTraits);
 
   bool is_default_constructible_;
   bool is_copy_constructible_;
