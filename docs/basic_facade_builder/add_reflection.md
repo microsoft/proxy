@@ -45,7 +45,8 @@ class RttiReflector {
   template <class F, class R>
   struct accessor {
     const char* GetTypeName() const noexcept {
-      return pro::proxy_reflect<R>(pro::access_proxy<F>(*this)).type_.name();
+      const RttiReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      return self.type_.name();
     }
   };
 
