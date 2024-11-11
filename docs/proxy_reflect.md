@@ -2,10 +2,10 @@
 
 ```cpp
 template <class R, class F>
-const R& proxy_reflect(const proxy<F>& p) noexcept;
+/* see below */ proxy_reflect(const proxy<F>& p) noexcept;
 ```
 
-Retrieves a value of type `R` constructed from [`std::in_place_type<P>`](https://en.cppreference.com/w/cpp/utility/in_place), where `P` is the type of the contained value of `p`. `R` is required to be defined in `typename F::reflection_types`. The behavior is undefined if `p` does not contain a value.
+Let `P` be the type of the contained value of `p`. Retrieves a value of type `const typename R::reflector_type&` constructed from [`std::in_place_type<T>`](https://en.cppreference.com/w/cpp/utility/in_place), where `T` is `P` when `R::is_direct` is `true`, or otherwise `T` is `typename std::pointer_traits<P>::element_type` when `R::is_direct` is `false`. `R` is required to be defined in `typename F::reflection_types`. The behavior is undefined if `p` does not contain a value.
 
 The reference obtained from `proxy_reflect()` may be invalidated if `p` is subsequently modified.
 
@@ -22,24 +22,34 @@ This function is useful when only metadata deduced from a type is needed. While 
 
 #include "proxy.h"
 
-struct TraitsRefl {
-  template <class P>
-  constexpr explicit TraitsRefl(std::in_place_type_t<P>)
-      : Copyable(std::is_copy_constructible_v<P>) {}
+class CopyabilityReflector {
+ public:
+  template <class T>
+  constexpr explicit CopyabilityReflector(std::in_place_type_t<T>)
+      : copyable_(std::is_copy_constructible_v<T>) {}
 
-  const bool Copyable;
+  template <class F, class R>
+  struct accessor {
+    bool IsCopyable() const noexcept {
+      const CopyabilityReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      return self.copyable_;
+    }
+  };
+
+ private:
+  bool copyable_;
 };
 
-struct TestFacade : pro::facade_builder
-    ::add_reflection<TraitsRefl>
+struct CopyabilityAware : pro::facade_builder
+    ::add_direct_reflection<CopyabilityReflector>
     ::build {};
 
 int main() {
-  pro::proxy<TestFacade> p1 = std::make_unique<int>();
-  std::cout << std::boolalpha << pro::proxy_reflect<TraitsRefl>(p1).Copyable << "\n";  // Prints: "false"
+  pro::proxy<CopyabilityAware> p1 = std::make_unique<int>();
+  std::cout << std::boolalpha << p1.IsCopyable() << "\n";  // Prints: "false"
 
-  pro::proxy<TestFacade> p2 = std::make_shared<int>();
-  std::cout << pro::proxy_reflect<TraitsRefl>(p2).Copyable << "\n";  // Prints: "true"
+  pro::proxy<CopyabilityAware> p2 = std::make_shared<int>();
+  std::cout << p2.IsCopyable() << "\n";  // Prints: "true"
 }
 ```
 

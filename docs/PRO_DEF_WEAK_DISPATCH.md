@@ -21,7 +21,7 @@ struct dispatch_name : existing_dispatch {
       requires(requires { default_func_name(std::forward<Args>(args)...); }) {
     return default_func_name(std::forward<Args>(args)...);
   }
-};
+}
 ```
 
 ## Notes

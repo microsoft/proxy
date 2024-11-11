@@ -22,7 +22,7 @@ struct TestTrivialFacade : pro::facade_builder
     ::build {};
 
 struct TestRttiFacade : pro::facade_builder
-    ::add_reflection<utils::RttiReflection>
+    ::add_direct_reflection<utils::RttiReflector>
     ::add_facade<TestFacade, true>
     ::build {};
 
@@ -1038,7 +1038,7 @@ TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromValue) {
     pro::proxy<TestFacade> p2 = p1;
     ASSERT_TRUE(p1.has_value());
     ASSERT_EQ(ToString(*p1), "Session 1");
-    ASSERT_STREQ(pro::proxy_reflect<utils::RttiReflection>(p1).GetName(), typeid(utils::LifetimeTracker::Session).name());
+    ASSERT_STREQ(p1.GetTypeName(), typeid(utils::LifetimeTracker::Session).name());
     ASSERT_TRUE(p2.has_value());
     ASSERT_EQ(ToString(*p2), "Session 2");
     expected_ops.emplace_back(2, utils::LifetimeOperationType::kCopyConstruction);

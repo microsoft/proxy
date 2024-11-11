@@ -36,7 +36,7 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
 | Name                                                         | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | [`add_convention`<br />`add_indirect_convention`<br />`add_direct_convention`](basic_facade_builder/add_convention.md) | Adds a convention to the template parameters                 |
-| [`add_reflection`](basic_facade_builder/add_reflection.md)   | Adds a reflection to the template parameters                 |
+| [`add_reflection`<br />`add_indirect_reflection`<br />`add_direct_reflection`](basic_facade_builder/add_reflection.md) | Adds a reflection to the template parameters                 |
 | [`add_facade`](basic_facade_builder/add_facade.md)           | Adds a facade to the template parameters                     |
 | [`restrict_layout`](basic_facade_builder/restrict_layout.md) | Specifies maximum `max_size` and `max_align` of `C` in the template parameters |
 | [`support_copy`](basic_facade_builder/support_copy.md)       | Specifies minimum `copyability` of `C` in the template parameters |

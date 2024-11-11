@@ -39,7 +39,7 @@ struct dispatch_name {
       return pro::proxy_invoke<C, R(Args...) cv ref noex>(pro::access_proxy<F>(SELF), std::forward<Args>(args)...);
     }
   };
-};
+}
 ```
 
 ## Example
@@ -65,4 +65,5 @@ int main() {
 ## See Also
 
 - [macro `PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md)
+- [macro `PRO_DEF_FREE_AS_MEM_DISPATCH`](PRO_DEF_FREE_AS_MEM_DISPATCH.md)
 - [alias template `basic_facade_builder::add_convention`](basic_facade_builder/add_convention.md)

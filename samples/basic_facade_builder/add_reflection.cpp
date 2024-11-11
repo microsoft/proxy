@@ -7,34 +7,31 @@
 
 #include "proxy.h"
 
-class DebugReflection {
+class RttiReflector {
  public:
-  template <class P>
-  constexpr explicit DebugReflection(std::in_place_type_t<P>)
-      : pointer_type_(typeid(P)),
-        element_type_(typeid(typename std::pointer_traits<P>::element_type)) {}
+  template <class T>
+  constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  void PrintDebugInfo() const {
-    std::cout << "Pointer type: " << pointer_type_.name() << "\n";
-    std::cout << "Element type: " << element_type_.name() << "\n";
-  }
+  template <class F, class R>
+  struct accessor {
+    const char* GetTypeName() const noexcept {
+      const RttiReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      return self.type_.name();
+    }
+  };
 
  private:
-  const std::type_info& pointer_type_;
-  const std::type_info& element_type_;
+  const std::type_info& type_;
 };
 
-struct TestFacade : pro::facade_builder
-    ::add_reflection<DebugReflection>
+struct RttiAware : pro::facade_builder
+    ::add_direct_reflection<RttiReflector>
+    ::add_indirect_reflection<RttiReflector>
     ::build {};
 
 int main() {
-  pro::proxy<TestFacade> p1 = std::make_shared<int>(123);
-  pro::proxy_reflect<DebugReflection>(p1).PrintDebugInfo();  // Prints: "Pointer type: St10shared_ptrIiE"
-                                                             //         "Element type: i" (assuming GCC)
-
-  double v = 3.14;
-  pro::proxy<TestFacade> p2 = &v;
-  pro::proxy_reflect<DebugReflection>(p2).PrintDebugInfo();  // Prints: "Pointer type: Pd"
-                                                             //         "Element type: d" (assuming GCC)
+  int a = 123;
+  pro::proxy<RttiAware> p = &a;
+  std::cout << p.GetTypeName() << "\n";  // Prints: "Pi" (assuming GCC)
+  std::cout << p->GetTypeName() << "\n";  // Prints: "i" (assuming GCC)
 }

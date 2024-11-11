@@ -34,12 +34,13 @@ This document provides the API specifications for the C++ library Proxy (version
 
 ## Macros
 
-| Name                                                | Description                                                  |
-| --------------------------------------------------- | ------------------------------------------------------------ |
-| [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md)   | Defines a dispatch type for member function call expressions with accessibility |
-| [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md) | Defines a dispatch type for free function call expressions with accessibility |
-| [`PRO_DEF_WEAK_DISPATCH`](PRO_DEF_WEAK_DISPATCH.md) | Defines a weak dispatch type with a default implementation   |
-| [`__msft_lib_proxy`](msft_lib_proxy.md)             | Feature test macro                                           |
+| Name                                                         | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md)            | Defines a dispatch type for member function call expressions with accessibility |
+| [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md)          | Defines a dispatch type for free function call expressions with accessibility |
+| [`PRO_DEF_FREE_AS_MEM_DISPATCH`](PRO_DEF_FREE_AS_MEM_DISPATCH.md) | Defines a dispatch type for free function call expressions with accessibility via a member function |
+| [`PRO_DEF_WEAK_DISPATCH`](PRO_DEF_WEAK_DISPATCH.md)          | Defines a weak dispatch type with a default implementation   |
+| [`__msft_lib_proxy`](msft_lib_proxy.md)                      | Feature test macro                                           |
 
 ## Named Requirements
 
@@ -47,6 +48,7 @@ This document provides the API specifications for the C++ library Proxy (version
 | --------------------------------------------- | ------------------------------------------------------------ |
 | [*ProBasicFacade*](ProBasicFacade.md)         | Specifies that a type potentially models a "facade" of `proxy` |
 | [*ProBasicConvention*](ProBasicConvention.md) | Specifies that a type potentially models a "convention"      |
+| [*ProBasicReflection*](ProBasicReflection.md) | Specifies that a type potentially models a "reflection"      |
 | [*ProFacade*](ProFacade.md)                   | Specifies that a type models a "facade" of `proxy`           |
 | [*ProConvention*](ProConvention.md)           | Specifies that a type models a "convention"                  |
 | [*ProReflection*](ProReflection.md)           | Specifies that a type models a "reflection"                  |
