@@ -164,11 +164,12 @@ The "Proxy" library is a self-contained solution for runtime polymorphism in C++
 
 ## <a name="compiler-req">Minimum Requirements for Compilers</a>
 
-| Family | Minimum version | Required flags |
-| ------ | --------------- | -------------- |
-| clang  | 15.0.0          | -std=c++20     |
-| gcc    | 11.2            | -std=c++20     |
-| MSVC   | 19.30           | /std:c++20     |
+| Family     | Minimum version | Required flags |
+| ---------- | --------------- | -------------- |
+| GCC        | 11.2            | -std=c++20     |
+| Clang      | 15.0.0          | -std=c++20     |
+| MSVC       | 19.30           | /std:c++20     |
+| NVIDIA HPC | 24.1            | -std=c++20     |
 
 ## Build and Run Tests with CMake
 
@@ -182,9 +183,10 @@ ctest --test-dir build -j
 
 ## Related Resources
 
+- November, 2024: [Analyzing the Performance of the “Proxy” Library](https://devblogs.microsoft.com/cppblog/analyzing-the-performance-of-the-proxy-library/)
+- September, 2024: [Announcing the Proxy 3 Library for Dynamic Polymorphism](https://devblogs.microsoft.com/cppblog/announcing-the-proxy-3-library-for-dynamic-polymorphism/)
 - April, 2024: [Published ISO C++ proposal P3086R2: Proxy: A Pointer-Semantics-Based Polymorphism Library](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3086r2.pdf)
 - August, 2022: [proxy: Runtime Polymorphism Made Easier Than Ever](https://devblogs.microsoft.com/cppblog/proxy-runtime-polymorphism-made-easier-than-ever/)
-- September, 2024: [Announcing the Proxy 3 Library for Dynamic Polymorphism](https://devblogs.microsoft.com/cppblog/announcing-the-proxy-3-library-for-dynamic-polymorphism/)
 
 ## Contributing
 

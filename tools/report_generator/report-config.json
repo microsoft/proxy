@@ -1,22 +1,27 @@
 {
   "TargetName": "`proxy`",
   "YellowIndicatorThreshold": 5.0,
+  "OutputPath": "benchmarking-report.md",
   "Environments": [
     {
-      "Name": "msvc",
-      "Description": "MSVC on Windows Server 2022 (x64)"
+      "Description": "MSVC on Windows Server 2022 (x64)",
+      "Path": "artifacts/benchmarking-results-msvc/benchmarking-results.json"
     },
     {
-      "Name": "gcc",
-      "Description": "GCC on Ubuntu 24.04 (x64)"
+      "Description": "GCC on Ubuntu 24.04 (x64)",
+      "Path": "artifacts/benchmarking-results-gcc/benchmarking-results.json"
     },
     {
-      "Name": "clang",
-      "Description": "Clang on Ubuntu 24.04 (x64)"
+      "Description": "Clang on Ubuntu 24.04 (x64)",
+      "Path": "artifacts/benchmarking-results-clang/benchmarking-results.json"
     },
     {
-      "Name": "appleclang",
-      "Description": "Apple Clang on macOS 15 (ARM64)"
+      "Description": "Apple Clang on macOS 15 (ARM64)",
+      "Path": "artifacts/benchmarking-results-appleclang/benchmarking-results.json"
+    },
+    {
+      "Description": "Nvidia HPC on Ubuntu 24.04 (x64)",
+      "Path": "artifacts/benchmarking-results-nvhpc/benchmarking-results.json"
     }
   ],
   "Metrics": [

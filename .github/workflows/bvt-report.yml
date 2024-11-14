@@ -26,7 +26,15 @@ jobs:
 
     - name: generate report
       run: |
-        tools/report_generator/build/report_generator tools/report_generator/report-config.json ${{ github.sha }} artifacts benchmarking-report.md
+        cat <<EOF > benchmarking-report.md
+        ## Benchmarking Report
+
+        - Generated for: [Microsoft "Proxy" library](https://github.com/microsoft/proxy)
+        - Commit ID: [${{ github.sha }}](https://github.com/microsoft/proxy/commit/${{ github.sha }})
+        - Generated at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+        EOF
+        tools/report_generator/build/report_generator tools/report_generator/report-config.json
 
     - name: archive benchmarking report
       uses: actions/upload-artifact@v4
