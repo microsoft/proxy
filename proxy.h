@@ -460,20 +460,25 @@ class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
       = default;
 };
 
+template <class T>
+struct accessor_traits_impl : std::type_identity<void> {};
+template <class T>
+    requires(std::is_nothrow_default_constructible_v<T> &&
+        std::is_trivially_copyable_v<T> && !std::is_final_v<T>)
+struct accessor_traits_impl<T> : std::type_identity<T> {};
 template <class SFINAE, class T, class... Args>
 struct sfinae_accessor_traits : std::type_identity<void> {};
 template <class T, class... Args>
 struct sfinae_accessor_traits<
     std::void_t<typename T::template accessor<Args...>>, T, Args...>
-    : std::type_identity<typename T::template accessor<Args...>> {};
+    : accessor_traits_impl<typename T::template accessor<Args...>> {};
 template <class T, class... Args>
 using accessor_t = typename sfinae_accessor_traits<void, T, Args...>::type;
 
 template <bool IS_DIRECT, class F, class O, class I>
 struct composite_accessor_reduction : std::type_identity<O> {};
 template <bool IS_DIRECT, class F, class... As, class I>
-    requires(IS_DIRECT == I::is_direct && std::is_trivial_v<accessor_t<I, F>> &&
-        !std::is_final_v<accessor_t<I, F>>)
+    requires(IS_DIRECT == I::is_direct && !std::is_void_v<accessor_t<I, F>>)
 struct composite_accessor_reduction<
     IS_DIRECT, F, composite_accessor_impl<As...>, I>
     { using type = composite_accessor_impl<As..., accessor_t<I, F>>; };
@@ -678,8 +683,17 @@ class proxy : public details::facade_traits<F>::base {
   using _Traits = details::facade_traits<F>;
 
  public:
-  proxy() noexcept = default;
-  proxy(std::nullptr_t) noexcept {}
+  proxy() noexcept {
+    if constexpr (_Traits::has_indirection) {
+      std::ignore = **this;
+      std::ignore = *std::as_const(*this);
+      std::ignore = (*this).operator->();
+      std::ignore = (std::move(*this)).operator->();
+      std::ignore = (std::as_const(*this)).operator->();
+      std::ignore = (std::forward<const proxy&&>(*this)).operator->();
+    }
+  }
+  proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept requires(F::constraints.copyability ==
       constraint_level::trivial) = default;
   proxy(const proxy& rhs)
@@ -709,12 +723,12 @@ class proxy : public details::facade_traits<F>::base {
   template <class P>
   proxy(P&& ptr) noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
       requires(proxiable<std::decay_t<P>, F> &&
-          std::is_constructible_v<std::decay_t<P>, P>)
+          std::is_constructible_v<std::decay_t<P>, P>) : proxy()
       { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
   template <proxiable<F> P, class... Args>
   explicit proxy(std::in_place_type_t<P>, Args&&... args)
       noexcept(std::is_nothrow_constructible_v<P, Args...>)
-      requires(std::is_constructible_v<P, Args...>)
+      requires(std::is_constructible_v<P, Args...>) : proxy()
       { initialize<P>(std::forward<Args>(args)...); }
   template <proxiable<F> P, class U, class... Args>
   explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
@@ -722,7 +736,7 @@ class proxy : public details::facade_traits<F>::base {
       noexcept(std::is_nothrow_constructible_v<
           P, std::initializer_list<U>&, Args...>)
       requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...>)
-      { initialize<P>(il, std::forward<Args>(args)...); }
+      : proxy() { initialize<P>(il, std::forward<Args>(args)...); }
   proxy& operator=(std::nullptr_t)
       noexcept(F::constraints.destructibility >= constraint_level::nothrow)
       requires(F::constraints.destructibility >= constraint_level::nontrivial)
@@ -1106,10 +1120,9 @@ proxy<F> make_proxy(T&& value) {
     template <class __F, class __C, class... __Os> \
     struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u && \
-            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
+        requires(sizeof...(__Os) > 1u) \
     struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... \
-        { using accessor<__F, __C, __Os>:: __VA_ARGS__ ...; }; \
+        { using accessor<__F, __C, __Os>::__VA_ARGS__...; }; \
     __MACRO(, *this, __VA_ARGS__); \
     __MACRO(noexcept, *this, __VA_ARGS__); \
     __MACRO(&, *this, __VA_ARGS__); \
@@ -1128,8 +1141,7 @@ proxy<F> make_proxy(T&& value) {
     template <class __F, class __C, class... __Os> \
     struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u && \
-            (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
+        requires(sizeof...(__Os) > 1u) \
     struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... {}; \
     __MACRO(,, accessor& __self, __self, __VA_ARGS__); \
     __MACRO(noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
@@ -1227,6 +1239,7 @@ struct facade_impl {
 #define ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F2, class C> \
     struct accessor<F2, C, proxy<F>() Q> { \
+      accessor() noexcept { std::ignore = &accessor::__VA_ARGS__; } \
       __VA_ARGS__ () Q { \
         if (access_proxy<F2>(SELF).has_value()) { \
           return proxy_invoke<C, proxy<F>() Q>(access_proxy<F2>(SELF)); \
@@ -1389,12 +1402,14 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R> \
     struct accessor<F, C, R() Q> { \
+      accessor() noexcept { std::ignore = &accessor::__VA_ARGS__; } \
       R __VA_ARGS__ () Q \
           { return proxy_invoke<C, R() Q>(access_proxy<F>(SELF)); } \
     }
 #define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class... Args> \
     struct accessor<F, C, R(Args...) Q> { \
+      accessor() noexcept { std::ignore = &accessor::__VA_ARGS__; } \
       R __VA_ARGS__ (Args... args) Q { \
         return proxy_invoke<C, R(Args...) Q>( \
             access_proxy<F>(SELF), std::forward<Args>(args)...); \
@@ -1460,6 +1475,7 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class Arg> \
     struct accessor<F, C, R(Arg) Q> { \
+      accessor() noexcept { std::ignore = &accessor::__VA_ARGS__; } \
       decltype(auto) __VA_ARGS__ (Arg arg) Q { \
         proxy_invoke<C, R(Arg) Q>( \
             access_proxy<F>(SELF), std::forward<Arg>(arg)); \
@@ -1577,6 +1593,7 @@ struct operator_dispatch<"[]", false> {
 #define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F, class C> \
     struct accessor<F, C, T() Q> { \
+      accessor() noexcept { std::ignore = &accessor::__VA_ARGS__; } \
       explicit(Expl) __VA_ARGS__ () Q \
           { return proxy_invoke<C, T() Q>(access_proxy<F>(SELF)); } \
     }
@@ -1604,6 +1621,7 @@ struct conversion_dispatch {
 #define ___PRO_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
     template <class __F, class __C, class __R, class... __Args> \
     struct accessor<__F, __C, __R(__Args...) __Q> { \
+      accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; } \
       __R __VA_ARGS__ (__Args... __args) __Q { \
         return ::pro::proxy_invoke<__C, __R(__Args...) __Q>( \
             ::pro::access_proxy<__F>(__SELF), \
