@@ -498,6 +498,31 @@ using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
 
 template <class F>
+struct indirection_accessor {
+  auto operator->() noexcept
+      { return std::addressof(static_cast<proxy<F>*>(this)->ia_); }
+  auto operator->() const noexcept
+      { return std::addressof(static_cast<const proxy<F>*>(this)->ia_); }
+  auto& operator*() & noexcept
+      { return static_cast<proxy<F>*>(this)->ia_; }
+  auto& operator*() const& noexcept
+      { return static_cast<const proxy<F>*>(this)->ia_; }
+  auto&& operator*() && noexcept {
+    return std::move(static_cast<proxy<F>*>(this)->ia_);
+  }
+  auto&& operator*() const&& noexcept {
+    return std::move(static_cast<const proxy<F>*>(this)->ia_);
+  }
+};
+template <class F, class IA, class DA>
+struct proxy_base_traits : std::type_identity<DA> {};
+template <class F, class... IAs, class... DAs> requires(sizeof...(IAs) > 0u)
+struct proxy_base_traits<F, composite_accessor_impl<IAs...>,
+    composite_accessor_impl<DAs...>>
+    : std::type_identity<composite_accessor_impl<
+          indirection_accessor<F>, DAs...>> {};
+
+template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (requires {
       { F::constraints } -> std::same_as<const proxiable_ptr_constraints&>; }) {
@@ -508,7 +533,6 @@ consteval bool is_facade_constraints_well_formed() {
   }
   return false;
 }
-struct empty_proxy_base {};
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
 template <class F, class... Cs> requires(conv_traits<Cs>::applicable && ...)
@@ -560,13 +584,10 @@ struct facade_traits<F>
   using indirect_accessor = merged_composite_accessor<
       typename facade_traits::conv_indirect_accessor,
       typename facade_traits::refl_indirect_accessor>;
-  using direct_accessor = merged_composite_accessor<
-      typename facade_traits::conv_direct_accessor,
-      typename facade_traits::refl_direct_accessor>;
-  using base = std::conditional_t<std::is_same_v<direct_accessor,
-      composite_accessor_impl<>>, empty_proxy_base, direct_accessor>;
-  static constexpr bool has_indirection = !std::is_same_v<
-      typename facade_traits::indirect_accessor, composite_accessor_impl<>>;
+  using base = typename proxy_base_traits<
+      F, indirect_accessor, merged_composite_accessor<
+          typename facade_traits::conv_direct_accessor,
+          typename facade_traits::refl_direct_accessor>>::type;
 };
 
 using ptr_prototype = void*[2];
@@ -675,6 +696,7 @@ template <class F>
 class proxy : public details::facade_traits<F>::base {
   static_assert(facade<F>);
   friend struct details::proxy_helper<F>;
+  friend struct details::indirection_accessor<F>;
   using _Traits = details::facade_traits<F>;
 
  public:
@@ -826,18 +848,6 @@ class proxy : public details::facade_traits<F>::base {
       requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
           F::constraints.destructibility >= constraint_level::nontrivial)
       { reset(); return initialize<P>(il, std::forward<Args>(args)...); }
-  auto operator->() noexcept requires(_Traits::has_indirection)
-      { return std::addressof(ia_); }
-  auto operator->() const noexcept requires(_Traits::has_indirection)
-      { return std::addressof(ia_); }
-  auto& operator*() & noexcept requires(_Traits::has_indirection)
-      { return ia_; }
-  auto& operator*() const& noexcept requires(_Traits::has_indirection)
-      { return ia_; }
-  auto&& operator*() && noexcept requires(_Traits::has_indirection)
-      { return std::forward<typename _Traits::indirect_accessor>(ia_); }
-  auto&& operator*() const&& noexcept requires(_Traits::has_indirection)
-      { return std::forward<const typename _Traits::indirect_accessor>(ia_); }
 
   friend void swap(proxy& lhs, proxy& rhs) noexcept(noexcept(lhs.swap(rhs)))
       { lhs.swap(rhs); }
