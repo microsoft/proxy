@@ -532,13 +532,18 @@ struct indirection_accessor {
       &indirection_accessor::operator*, &indirection_accessor::operator*};
 #endif  // NODEBUG
 };
+struct empty_proxy_base {};
 template <class F, class IA, class DA>
-struct proxy_base_traits : std::type_identity<DA> {};
+struct proxy_base_traits : std::type_identity<empty_proxy_base> {};
 template <class F, class... IAs, class... DAs> requires(sizeof...(IAs) > 0u)
 struct proxy_base_traits<F, composite_accessor_impl<IAs...>,
     composite_accessor_impl<DAs...>>
     : std::type_identity<composite_accessor_impl<
           indirection_accessor<F, composite_accessor_impl<IAs...>>, DAs...>> {};
+template <class F, class... DAs> requires(sizeof...(DAs) > 0u)
+struct proxy_base_traits<F, composite_accessor_impl<>,
+    composite_accessor_impl<DAs...>>
+    : std::type_identity<composite_accessor_impl<DAs...>> {};
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
