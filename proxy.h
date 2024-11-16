@@ -47,6 +47,13 @@ template <class F> class proxy;
 
 namespace details {
 
+#ifndef NODEBUG
+// `symbol_guard` provides the capability to generate symbols for Ts... when
+// NODEBUG is not defined, i.e., the binary is not optimized.
+template <class... Ts>
+struct symbol_guard { explicit symbol_guard(Ts...) noexcept {} };
+#endif  // NODEBUG
+
 struct applicable_traits { static constexpr bool applicable = true; };
 struct inapplicable_traits { static constexpr bool applicable = false; };
 
@@ -497,22 +504,33 @@ template <class A1, class A2>
 using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
 
-template <class F>
+template <class F, class A>
 struct indirection_accessor {
-  auto operator->() noexcept
+  A* operator->() noexcept
       { return std::addressof(static_cast<proxy<F>*>(this)->ia_); }
-  auto operator->() const noexcept
+  const A* operator->() const noexcept
       { return std::addressof(static_cast<const proxy<F>*>(this)->ia_); }
-  auto& operator*() & noexcept
+  A& operator*() & noexcept
       { return static_cast<proxy<F>*>(this)->ia_; }
-  auto& operator*() const& noexcept
+  const A& operator*() const& noexcept
       { return static_cast<const proxy<F>*>(this)->ia_; }
-  auto&& operator*() && noexcept {
-    return std::move(static_cast<proxy<F>*>(this)->ia_);
-  }
-  auto&& operator*() const&& noexcept {
-    return std::move(static_cast<const proxy<F>*>(this)->ia_);
-  }
+  A&& operator*() && noexcept
+      { return std::move(static_cast<proxy<F>*>(this)->ia_); }
+  const A&& operator*() const&& noexcept
+      { return std::move(static_cast<const proxy<F>*>(this)->ia_); }
+
+#ifndef NODEBUG
+ private:
+  static inline symbol_guard<A* (indirection_accessor::*)() noexcept,
+      const A* (indirection_accessor::*)() const noexcept,
+      A& (indirection_accessor::*)() & noexcept,
+      const A& (indirection_accessor::*)() const& noexcept,
+      A&& (indirection_accessor::*)() && noexcept,
+      const A&& (indirection_accessor::*)() const&& noexcept> _Sym{
+      &indirection_accessor::operator->, &indirection_accessor::operator->,
+      &indirection_accessor::operator*, &indirection_accessor::operator*,
+      &indirection_accessor::operator*, &indirection_accessor::operator*};
+#endif  // NODEBUG
 };
 template <class F, class IA, class DA>
 struct proxy_base_traits : std::type_identity<DA> {};
@@ -520,7 +538,7 @@ template <class F, class... IAs, class... DAs> requires(sizeof...(IAs) > 0u)
 struct proxy_base_traits<F, composite_accessor_impl<IAs...>,
     composite_accessor_impl<DAs...>>
     : std::type_identity<composite_accessor_impl<
-          indirection_accessor<F>, DAs...>> {};
+          indirection_accessor<F, composite_accessor_impl<IAs...>>, DAs...>> {};
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
@@ -695,9 +713,10 @@ concept proxiable = facade<F> && sizeof(P) <= F::constraints.max_size &&
 template <class F>
 class proxy : public details::facade_traits<F>::base {
   static_assert(facade<F>);
-  friend struct details::proxy_helper<F>;
-  friend struct details::indirection_accessor<F>;
   using _Traits = details::facade_traits<F>;
+  friend struct details::proxy_helper<F>;
+  friend struct details::indirection_accessor<
+      F, typename _Traits::indirect_accessor>;
 
  public:
   proxy() noexcept = default;
@@ -1119,7 +1138,7 @@ proxy<F> make_proxy(T&& value) {
         requires(sizeof...(__Os) > 1u && \
             (::std::is_trivial_v<accessor<__F, __C, __Os>> && ...)) \
     struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... \
-        { using accessor<__F, __C, __Os>:: __VA_ARGS__ ...; }; \
+        { using accessor<__F, __C, __Os>::__VA_ARGS__...; }; \
     __MACRO(, *this, __VA_ARGS__); \
     __MACRO(noexcept, *this, __VA_ARGS__); \
     __MACRO(&, *this, __VA_ARGS__); \
