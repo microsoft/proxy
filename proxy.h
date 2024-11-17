@@ -572,16 +572,21 @@ struct facade_traits<F>
   using direct_accessor = merged_composite_accessor<
       typename facade_traits::conv_direct_accessor,
       typename facade_traits::refl_direct_accessor>;
-  static constexpr bool has_indirection =
+  static constexpr bool has_indirect_accessor =
       !std::is_same_v<indirect_accessor, composite_accessor_impl<>>;
+  static constexpr bool has_direct_accessor =
+      !std::is_same_v<direct_accessor, composite_accessor_impl<>>;
 };
 
 template <class F>
 struct proxy_indirect_accessor : facade_traits<F>::indirect_accessor {};
 
+template <class F> class proxy_base {};
 template <class F>
-class proxy_base : public facade_traits<F>::direct_accessor {};
-template <class F> requires(facade_traits<F>::has_indirection)
+    requires(facade_traits<F>::has_direct_accessor &&
+        !facade_traits<F>::has_indirect_accessor)
+class proxy_base<F> : public facade_traits<F>::direct_accessor {};
+template <class F> requires(facade_traits<F>::has_indirect_accessor)
 class proxy_base<F> : public facade_traits<F>::direct_accessor {
   using _IA = proxy_indirect_accessor<F>;
 
