@@ -457,9 +457,12 @@ struct lifetime_meta_traits<MP, constraint_level::nontrivial>
 template <template <bool> class MP, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
 
+template <class F> struct proxy_indirect_accessor;
+template <class F> class proxy_base;
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <class> friend class pro::proxy;
+  template <class> friend struct proxy_indirect_accessor;
+  template <class> friend class proxy_base;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -503,47 +506,6 @@ struct composite_accessor_merge_traits<
 template <class A1, class A2>
 using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
-
-template <class F, class A>
-struct indirection_accessor {
-  A* operator->() noexcept
-      { return std::addressof(static_cast<proxy<F>*>(this)->ia_); }
-  const A* operator->() const noexcept
-      { return std::addressof(static_cast<const proxy<F>*>(this)->ia_); }
-  A& operator*() & noexcept
-      { return static_cast<proxy<F>*>(this)->ia_; }
-  const A& operator*() const& noexcept
-      { return static_cast<const proxy<F>*>(this)->ia_; }
-  A&& operator*() && noexcept
-      { return std::move(static_cast<proxy<F>*>(this)->ia_); }
-  const A&& operator*() const&& noexcept
-      { return std::move(static_cast<const proxy<F>*>(this)->ia_); }
-
-#ifndef NODEBUG
- private:
-  static inline symbol_guard<A* (indirection_accessor::*)() noexcept,
-      const A* (indirection_accessor::*)() const noexcept,
-      A& (indirection_accessor::*)() & noexcept,
-      const A& (indirection_accessor::*)() const& noexcept,
-      A&& (indirection_accessor::*)() && noexcept,
-      const A&& (indirection_accessor::*)() const&& noexcept> _Sym{
-      &indirection_accessor::operator->, &indirection_accessor::operator->,
-      &indirection_accessor::operator*, &indirection_accessor::operator*,
-      &indirection_accessor::operator*, &indirection_accessor::operator*};
-#endif  // NODEBUG
-};
-struct empty_proxy_base {};
-template <class F, class IA, class DA>
-struct proxy_base_traits : std::type_identity<empty_proxy_base> {};
-template <class F, class... IAs, class... DAs> requires(sizeof...(IAs) > 0u)
-struct proxy_base_traits<F, composite_accessor_impl<IAs...>,
-    composite_accessor_impl<DAs...>>
-    : std::type_identity<composite_accessor_impl<
-          indirection_accessor<F, composite_accessor_impl<IAs...>>, DAs...>> {};
-template <class F, class... DAs> requires(sizeof...(DAs) > 0u)
-struct proxy_base_traits<F, composite_accessor_impl<>,
-    composite_accessor_impl<DAs...>>
-    : std::type_identity<composite_accessor_impl<DAs...>> {};
 
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
@@ -607,10 +569,47 @@ struct facade_traits<F>
   using indirect_accessor = merged_composite_accessor<
       typename facade_traits::conv_indirect_accessor,
       typename facade_traits::refl_indirect_accessor>;
-  using base = typename proxy_base_traits<
-      F, indirect_accessor, merged_composite_accessor<
-          typename facade_traits::conv_direct_accessor,
-          typename facade_traits::refl_direct_accessor>>::type;
+  using direct_accessor = merged_composite_accessor<
+      typename facade_traits::conv_direct_accessor,
+      typename facade_traits::refl_direct_accessor>;
+  static constexpr bool has_indirection =
+      !std::is_same_v<indirect_accessor, composite_accessor_impl<>>;
+};
+
+template <class F>
+struct proxy_indirect_accessor : facade_traits<F>::indirect_accessor {};
+
+template <class F>
+class proxy_base : public facade_traits<F>::direct_accessor {};
+template <class F> requires(facade_traits<F>::has_indirection)
+class proxy_base<F> : public facade_traits<F>::direct_accessor {
+  using _IA = proxy_indirect_accessor<F>;
+
+ public:
+  _IA* operator->() noexcept
+      { return std::addressof(static_cast<proxy<F>*>(this)->ia_); }
+  const _IA* operator->() const noexcept
+      { return std::addressof(static_cast<const proxy<F>*>(this)->ia_); }
+  _IA& operator*() & noexcept
+      { return static_cast<proxy<F>*>(this)->ia_; }
+  const _IA& operator*() const& noexcept
+      { return static_cast<const proxy<F>*>(this)->ia_; }
+  _IA&& operator*() && noexcept
+      { return std::move(static_cast<proxy<F>*>(this)->ia_); }
+  const _IA&& operator*() const&& noexcept
+      { return std::move(static_cast<const proxy<F>*>(this)->ia_); }
+#ifndef NODEBUG
+
+ private:
+  static inline symbol_guard<_IA* (proxy_base::*)() noexcept,
+      const _IA* (proxy_base::*)() const noexcept,
+      _IA& (proxy_base::*)() & noexcept,
+      const _IA& (proxy_base::*)() const& noexcept,
+      _IA&& (proxy_base::*)() && noexcept,
+      const _IA&& (proxy_base::*)() const&& noexcept> sym_{
+      &proxy_base::operator->, &proxy_base::operator->, &proxy_base::operator*,
+      &proxy_base::operator*, &proxy_base::operator*, &proxy_base::operator*};
+#endif  // NODEBUG
 };
 
 using ptr_prototype = void*[2];
@@ -716,12 +715,11 @@ concept proxiable = facade<F> && sizeof(P) <= F::constraints.max_size &&
     details::facade_traits<F>::template refl_applicable_ptr<P>;
 
 template <class F>
-class proxy : public details::facade_traits<F>::base {
+class proxy : public details::proxy_base<F> {
   static_assert(facade<F>);
-  using _Traits = details::facade_traits<F>;
   friend struct details::proxy_helper<F>;
-  friend struct details::indirection_accessor<
-      F, typename _Traits::indirect_accessor>;
+  friend class details::proxy_base<F>;
+  using _Traits = details::facade_traits<F>;
 
  public:
   proxy() noexcept = default;
@@ -890,7 +888,7 @@ class proxy : public details::facade_traits<F>::base {
   }
 
   [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
-  typename _Traits::indirect_accessor ia_;
+  typename details::proxy_indirect_accessor<F> ia_;
   details::meta_ptr<typename _Traits::meta> meta_;
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
@@ -1184,6 +1182,14 @@ proxy<F> make_proxy(T&& value) {
     __MACRO(const&& noexcept, noexcept, const accessor&& __self, \
         ::std::forward<const accessor>(__self), __VA_ARGS__);
 
+#ifdef NODEBUG
+#define ___PRO_GEN_MEM_ACCESSOR_SYMBOL(...)
+#else
+#define ___PRO_GEN_MEM_ACCESSOR_SYMBOL(...) \
+     private: \
+      static inline ::pro::details::symbol_guard sym_{&accessor::__VA_ARGS__};
+#endif  // NODEBUG
+
 namespace details {
 
 constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
@@ -1267,6 +1273,7 @@ struct facade_impl {
         } \
         return nullptr; \
       } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 template <class F>
 struct upward_conversion_dispatch {
@@ -1425,6 +1432,7 @@ struct operator_dispatch;
     struct accessor<F, C, R() Q> { \
       R __VA_ARGS__ () Q \
           { return proxy_invoke<C, R() Q>(access_proxy<F>(SELF)); } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 #define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class... Args> \
@@ -1433,6 +1441,7 @@ struct operator_dispatch;
         return proxy_invoke<C, R(Args...) Q>( \
             access_proxy<F>(SELF), std::forward<Args>(args)...); \
       } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 #define ___PRO_DEF_LHS_UNARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
@@ -1494,7 +1503,10 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class Arg> \
     struct accessor<F, C, R(Arg) Q> { \
-      decltype(auto) __VA_ARGS__ (Arg arg) Q { \
+      auto __VA_ARGS__ (Arg arg) Q -> details::add_qualifier_t< \
+          std::conditional_t<C::is_direct, proxy<F>, \
+              details::proxy_indirect_accessor<F>>, \
+          details::overload_traits<R(Arg) Q>::qualifier> { \
         proxy_invoke<C, R(Arg) Q>( \
             access_proxy<F>(SELF), std::forward<Arg>(arg)); \
         if constexpr (C::is_direct) { \
@@ -1503,6 +1515,7 @@ struct operator_dispatch;
           return *access_proxy<F>(SELF); \
         } \
       } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 #define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF, FW_SELF, ...) \
     template <class F, class C, class R, class Arg> \
@@ -1613,6 +1626,7 @@ struct operator_dispatch<"[]", false> {
     struct accessor<F, C, T() Q> { \
       explicit(Expl) __VA_ARGS__ () Q \
           { return proxy_invoke<C, T() Q>(access_proxy<F>(SELF)); } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 template <class T, bool Expl = true>
 struct conversion_dispatch {
@@ -1643,6 +1657,7 @@ struct conversion_dispatch {
             ::pro::access_proxy<__F>(__SELF), \
             ::std::forward<__Args>(__args)...); \
       } \
+      ___PRO_GEN_MEM_ACCESSOR_SYMBOL(__VA_ARGS__) \
     }
 #define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
