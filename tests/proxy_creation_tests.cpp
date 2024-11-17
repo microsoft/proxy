@@ -6,7 +6,7 @@
 #include "proxy.h"
 #include "utils.h"
 
-namespace {
+namespace proxy_creation_tests_details {
 
 struct SboReflector {
  public:
@@ -31,8 +31,6 @@ struct SboReflector {
   bool AllocatorAllocatesForItself;
 };
 
-namespace spec {
-
 struct TestLargeStringable : pro::facade_builder
     ::add_convention<utils::spec::FreeToString, std::string()>
     ::support_relocation<pro::constraint_level::nontrivial>
@@ -44,8 +42,6 @@ struct TestSmallStringable : pro::facade_builder
     ::add_facade<TestLargeStringable>
     ::restrict_layout<sizeof(void*)>
     ::build {};
-
-}  // namespace spec
 
 PRO_DEF_MEM_DISPATCH(MemFn0, MemFn0);
 struct TestMemFn0 : pro::facade_builder
@@ -91,12 +87,14 @@ static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotConvertible*, TestMemFn1>)
 struct TestMemFn1_ReturnTypeNotExist { void MemFn1(double) {} };
 static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotExist*, TestMemFn1>);
 
-static_assert(pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestLargeStringable>);
-static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, spec::TestSmallStringable>);
-static_assert(!noexcept(pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
-static_assert(noexcept(pro::make_proxy_inplace<spec::TestLargeStringable, int>(123)));
+static_assert(pro::inplace_proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>);
+static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, TestSmallStringable>);
+static_assert(!noexcept(pro::make_proxy_inplace<TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
+static_assert(noexcept(pro::make_proxy_inplace<TestLargeStringable, int>(123)));
 
-}  // namespace
+}  // namespace proxy_creation_tests_details
+
+namespace details = proxy_creation_tests_details;
 
 TEST(ProxyCreationTests, TestMakeProxyInplace_FromValue) {
   utils::LifetimeTracker tracker;
@@ -104,7 +102,7 @@ TEST(ProxyCreationTests, TestMakeProxyInplace_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::make_proxy_inplace<spec::TestLargeStringable>(session);
+    auto p = pro::make_proxy_inplace<details::TestLargeStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 2");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -119,7 +117,7 @@ TEST(ProxyCreationTests, TestMakeProxyInplace_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p = pro::make_proxy_inplace<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -134,7 +132,7 @@ TEST(ProxyCreationTests, TestMakeProxyInplace_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy_inplace<details::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -149,7 +147,7 @@ TEST(ProxyCreationTests, TestMakeProxyInplace_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy_inplace<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -170,7 +168,7 @@ TEST(ProxyCreationTests, TestMakeProxyInplace_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy_inplace<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy_inplace<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
@@ -191,7 +189,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::allocate_proxy<spec::TestSmallStringable>(std::allocator<void>{}, session);
+    auto p = pro::allocate_proxy<details::TestSmallStringable>(std::allocator<void>{}, session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 2");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -207,7 +205,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -223,7 +221,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_InPlaceInitializerLis
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, { 1, 2, 3 }, & tracker);
+    auto p = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, { 1, 2, 3 }, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -239,7 +237,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p1 = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -262,7 +260,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_DirectAllocator_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
+    auto p1 = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::allocator<void>{}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
@@ -283,7 +281,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_FromValue) {
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<spec::TestSmallStringable>(std::pmr::polymorphic_allocator<>{&memory_pool}, session);
+    auto p = pro::allocate_proxy<details::TestSmallStringable>(std::pmr::polymorphic_allocator<>{&memory_pool}, session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 2");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -300,7 +298,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_InPlace) {
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
+    auto p = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -317,7 +315,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_InPlaceInitializerL
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, { 1, 2, 3 }, & tracker);
+    auto p = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, { 1, 2, 3 }, & tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -334,7 +332,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_Lifetime_Copy) {
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p1 = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
+    auto p1 = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -358,7 +356,7 @@ TEST(ProxyCreationTests, TestAllocateProxy_IndirectAllocator_Lifetime_Move) {
   std::vector<utils::LifetimeOperation> expected_ops;
   {
     std::pmr::unsynchronized_pool_resource memory_pool;
-    auto p1 = pro::allocate_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
+    auto p1 = pro::allocate_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(std::pmr::polymorphic_allocator<>{&memory_pool}, & tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
@@ -378,7 +376,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::make_proxy<spec::TestLargeStringable>(session);
+    auto p = pro::make_proxy<details::TestLargeStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 2");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -393,7 +391,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p = pro::make_proxy<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -408,7 +406,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy<details::TestLargeStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_TRUE(p.ReflectSbo().SboEnabled);
@@ -423,7 +421,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -444,7 +442,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithSBO_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<spec::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<details::TestLargeStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());
@@ -465,7 +463,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_FromValue) {
   utils::LifetimeTracker::Session session{ &tracker };
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
   {
-    auto p = pro::make_proxy<spec::TestSmallStringable>(session);
+    auto p = pro::make_proxy<details::TestSmallStringable>(session);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 2");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -481,7 +479,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_InPlace) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p = pro::make_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -497,7 +495,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_InPlaceInitializerList) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p = pro::make_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
+    auto p = pro::make_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>({ 1, 2, 3 }, &tracker);
     ASSERT_TRUE(p.has_value());
     ASSERT_EQ(ToString(*p), "Session 1");
     ASSERT_FALSE(p.ReflectSbo().SboEnabled);
@@ -513,7 +511,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_Lifetime_Copy) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = p1;
     ASSERT_TRUE(p1.has_value());
@@ -536,7 +534,7 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_Lifetime_Move) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
-    auto p1 = pro::make_proxy<spec::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
+    auto p1 = pro::make_proxy<details::TestSmallStringable, utils::LifetimeTracker::Session>(&tracker);
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
     auto p2 = std::move(p1);
     ASSERT_FALSE(p1.has_value());

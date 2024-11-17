@@ -7,7 +7,7 @@
 #include "proxy.h"
 #include "utils.h"
 
-namespace {
+namespace proxy_traits_tests_details {
 
 template <bool kNothrowRelocatable, bool kCopyable, bool kTrivial, std::size_t kSize, std::size_t kAlignment>
 struct MockPtr {
@@ -352,4 +352,4 @@ static_assert(pro::facade<FacadeWithSizeOfNonPowerOfTwo>);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_size == 6u);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_align == 2u);
 
-}  // namespace
+}  // namespace proxy_traits_tests_details
