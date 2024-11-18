@@ -688,12 +688,14 @@ class proxy : public details::facade_traits<F>::base {
 #else
   proxy() noexcept {
     if constexpr (_Traits::has_indirection) {
-      std::ignore = **this;
-      std::ignore = *std::as_const(*this);
-      std::ignore = (*this).operator->();
-      std::ignore = (std::move(*this)).operator->();
-      std::ignore = (std::as_const(*this)).operator->();
-      std::ignore = (std::forward<const proxy&&>(*this)).operator->();
+      if (false) {
+        std::ignore = **this;
+        std::ignore = *std::as_const(*this);
+        std::ignore = (*this).operator->();
+        std::ignore = (std::move(*this)).operator->();
+        std::ignore = (std::as_const(*this)).operator->();
+        std::ignore = (std::forward<const proxy&&>(*this)).operator->();
+      }
     }
   }
 #endif  // NODEBUG
@@ -1167,9 +1169,9 @@ proxy<F> make_proxy(T&& value) {
         ::std::forward<const accessor>(__self), __VA_ARGS__);
 
 #ifdef NODEBUG
-#define ___PRO_DEF_MEM_ACCESSOR_CTOR(...)
+#define ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(...)
 #else
-#define ___PRO_DEF_MEM_ACCESSOR_CTOR(...) \
+#define ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(...) \
     accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; }
 #endif  // NODEBUG
 
@@ -1250,7 +1252,7 @@ struct facade_impl {
 #define ___PRO_DEF_UPWARD_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F2, class C> \
     struct accessor<F2, C, proxy<F>() Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       __VA_ARGS__ () Q { \
         if (access_proxy<F2>(SELF).has_value()) { \
           return proxy_invoke<C, proxy<F>() Q>(access_proxy<F2>(SELF)); \
@@ -1413,14 +1415,14 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R> \
     struct accessor<F, C, R() Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__ () Q \
           { return proxy_invoke<C, R() Q>(access_proxy<F>(SELF)); } \
     }
 #define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class... Args> \
     struct accessor<F, C, R(Args...) Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__ (Args... args) Q { \
         return proxy_invoke<C, R(Args...) Q>( \
             access_proxy<F>(SELF), std::forward<Args>(args)...); \
@@ -1486,7 +1488,7 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class F, class C, class R, class Arg> \
     struct accessor<F, C, R(Arg) Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       decltype(auto) __VA_ARGS__ (Arg arg) Q { \
         proxy_invoke<C, R(Arg) Q>( \
             access_proxy<F>(SELF), std::forward<Arg>(arg)); \
@@ -1604,7 +1606,7 @@ struct operator_dispatch<"[]", false> {
 #define ___PRO_DEF_CONVERSION_ACCESSOR(Q, SELF, ...) \
     template <class F, class C> \
     struct accessor<F, C, T() Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       explicit(Expl) __VA_ARGS__ () Q \
           { return proxy_invoke<C, T() Q>(access_proxy<F>(SELF)); } \
     }
@@ -1632,7 +1634,7 @@ struct conversion_dispatch {
 #define ___PRO_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
     template <class __F, class __C, class __R, class... __Args> \
     struct accessor<__F, __C, __R(__Args...) __Q> { \
-      ___PRO_DEF_MEM_ACCESSOR_CTOR(__VA_ARGS__) \
+      ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       __R __VA_ARGS__ (__Args... __args) __Q { \
         return ::pro::proxy_invoke<__C, __R(__Args...) __Q>( \
             ::pro::access_proxy<__F>(__SELF), \
