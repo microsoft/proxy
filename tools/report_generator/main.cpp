@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 #include <cstdio>
-#include <chrono>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -15,19 +14,19 @@
 #include <nlohmann/json.hpp>
 
 struct EnvironmentInfo {
-  std::string Name;
   std::string Description;
+  std::string Path;
 
   friend void to_json(nlohmann::json& j, const EnvironmentInfo& e) {
     j = nlohmann::json{
-        {"Name", e.Name},
-        {"Description", e.Description}
+        {"Description", e.Description},
+        {"Path", e.Path}
     };
   }
 
   friend void from_json(const nlohmann::json& j, EnvironmentInfo& e) {
-    j.at("Name").get_to(e.Name);
     j.at("Description").get_to(e.Description);
+    j.at("Path").get_to(e.Path);
   }
 };
 
@@ -54,6 +53,7 @@ struct MetricInfo {
 struct ReportConfig {
   std::string TargetName;
   double YellowIndicatorThreshold;
+  std::string OutputPath;
   std::vector<EnvironmentInfo> Environments;
   std::vector<MetricInfo> Metrics;
 
@@ -61,6 +61,7 @@ struct ReportConfig {
     j = nlohmann::json{
         {"TargetName", rc.TargetName},
         {"YellowIndicatorThreshold", rc.YellowIndicatorThreshold},
+        {"OutputPath", rc.OutputPath},
         {"Environments", rc.Environments},
         {"Metrics", rc.Metrics}
     };
@@ -69,6 +70,7 @@ struct ReportConfig {
   friend void from_json(const nlohmann::json& j, ReportConfig& rc) {
     j.at("TargetName").get_to(rc.TargetName);
     j.at("YellowIndicatorThreshold").get_to(rc.YellowIndicatorThreshold);
+    j.at("OutputPath").get_to(rc.OutputPath);
     j.at("Environments").get_to(rc.Environments);
     j.at("Metrics").get_to(rc.Metrics);
   }
@@ -96,7 +98,7 @@ std::unordered_map<std::string, double> Parse(const std::filesystem::path& file)
   return result;
 }
 
-void GenerateReport(const std::filesystem::path& config_path, const std::string& commit_id, const std::filesystem::path& source, const std::filesystem::path& output) {
+void GenerateReport(const std::filesystem::path& config_path) {
   ReportConfig config;
   {
     nlohmann::json obj;
@@ -109,17 +111,11 @@ void GenerateReport(const std::filesystem::path& config_path, const std::string&
   std::vector<std::unordered_map<std::string, double>> benchmarks;
   benchmarks.reserve(config.Environments.size());
   for (auto& environment : config.Environments) {
-    benchmarks.push_back(Parse(source / std::format("benchmarking-results-{}", environment.Name) / "benchmarking-results.json"));
+    benchmarks.push_back(Parse(environment.Path));
   }
   std::ofstream out;
   out.exceptions(std::ios_base::failbit | std::ios_base::badbit);
-  out.open(output, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-  out << "## Benchmarking Report\n";
-  out << "\n";
-  out << "- Generated for: [Microsoft \"Proxy\" library](https://github.com/microsoft/proxy)\n";
-  out << "- Commit ID: [" << commit_id << "](https://github.com/microsoft/proxy/commit/" << commit_id << ")\n";
-  out << "- Generated at: " << std::format("{:%FT%TZ}", std::chrono::utc_clock::now()) << "\n";
-  out << "\n";
+  out.open(config.OutputPath, std::ios_base::out | std::ios_base::app | std::ios_base::binary);
   out << "| |";
   for (auto& environment : config.Environments) {
     out << " " << environment.Description << " |";
@@ -162,12 +158,12 @@ void GenerateReport(const std::filesystem::path& config_path, const std::string&
 }
 
 int main(int argc, char** argv) {
-  if (argc != 5) {
-    puts("Usage: report_generator <config file path> <commit ID> <benchmarking results directory> <output file path>");
+  if (argc != 2) {
+    puts("Usage: report_generator <config file path>");
     return 0;
   }
   try {
-    GenerateReport(argv[1], argv[2], argv[3], argv[4]);
+    GenerateReport(argv[1]);
   } catch (const std::exception& e) {
     fprintf(stderr, "An error occurred: %s\n", e.what());
     return 1;

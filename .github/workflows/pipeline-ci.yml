@@ -24,7 +24,11 @@ jobs:
     uses: ./.github/workflows/bvt-appleclang.yml
     name: Run BVT with AppleClang
 
+  run-bvt-nvhpc:
+    uses: ./.github/workflows/bvt-nvhpc.yml
+    name: Run BVT with NVHPC
+
   report:
     uses: ./.github/workflows/bvt-report.yml
     name: Generate report
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc]
