@@ -450,9 +450,11 @@ struct lifetime_meta_traits<MP, constraint_level::nontrivial>
 template <template <bool> class MP, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
 
+template <class F> struct proxy_indirect_accessor;
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
   template <class> friend class pro::proxy;
+  template <class F> friend struct proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -513,7 +515,6 @@ consteval bool is_facade_constraints_well_formed() {
   }
   return false;
 }
-struct empty_proxy_base {};
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
 template <class F, class... Cs> requires(conv_traits<Cs>::applicable && ...)
@@ -568,11 +569,13 @@ struct facade_traits<F>
   using direct_accessor = merged_composite_accessor<
       typename facade_traits::conv_direct_accessor,
       typename facade_traits::refl_direct_accessor>;
-  using base = std::conditional_t<std::is_same_v<direct_accessor,
-      composite_accessor_impl<>>, empty_proxy_base, direct_accessor>;
   static constexpr bool has_indirection = !std::is_same_v<
       typename facade_traits::indirect_accessor, composite_accessor_impl<>>;
 };
+
+template <class F> struct proxy_indirect_accessor {};
+template <class F> requires(facade_traits<F>::has_indirection)
+struct proxy_indirect_accessor<F> : facade_traits<F>::indirect_accessor {};
 
 using ptr_prototype = void*[2];
 
@@ -677,28 +680,30 @@ concept proxiable = facade<F> && sizeof(P) <= F::constraints.max_size &&
     details::facade_traits<F>::template refl_applicable_ptr<P>;
 
 template <class F>
-class proxy : public details::facade_traits<F>::base {
+class proxy : public details::facade_traits<F>::direct_accessor {
   static_assert(facade<F>);
   friend struct details::proxy_helper<F>;
   using _Traits = details::facade_traits<F>;
+  using _IA = details::proxy_indirect_accessor<F>;
 
  public:
-#ifdef NODEBUG
+#ifdef NDEBUG
   proxy() noexcept = default;
 #else
   proxy() noexcept {
     if constexpr (_Traits::has_indirection) {
-      if (false) {
-        std::ignore = **this;
-        std::ignore = *std::as_const(*this);
-        std::ignore = (*this).operator->();
-        std::ignore = (std::move(*this)).operator->();
-        std::ignore = (std::as_const(*this)).operator->();
-        std::ignore = (std::forward<const proxy&&>(*this)).operator->();
-      }
+      std::ignore = static_cast<_IA* (proxy::*)() noexcept>(&proxy::operator->);
+      std::ignore = static_cast<const _IA* (proxy::*)() const noexcept>(
+          &proxy::operator->);
+      std::ignore = static_cast<_IA& (proxy::*)() &>(&proxy::operator*);
+      std::ignore = static_cast<const _IA& (proxy::*)() const&>(
+          &proxy::operator*);
+      std::ignore = static_cast<_IA&& (proxy::*)() &&>(&proxy::operator*);
+      std::ignore = static_cast<const _IA&& (proxy::*)() const&&>(
+          &proxy::operator*);
     }
   }
-#endif  // NODEBUG
+#endif  // NDEBUG
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept requires(F::constraints.copyability ==
       constraint_level::trivial) = default;
@@ -846,18 +851,18 @@ class proxy : public details::facade_traits<F>::base {
       requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
           F::constraints.destructibility >= constraint_level::nontrivial)
       { reset(); return initialize<P>(il, std::forward<Args>(args)...); }
-  auto operator->() noexcept requires(_Traits::has_indirection)
+  _IA* operator->() noexcept requires(_Traits::has_indirection)
       { return std::addressof(ia_); }
-  auto operator->() const noexcept requires(_Traits::has_indirection)
+  const _IA* operator->() const noexcept requires(_Traits::has_indirection)
       { return std::addressof(ia_); }
-  auto& operator*() & noexcept requires(_Traits::has_indirection)
+  _IA& operator*() & noexcept requires(_Traits::has_indirection)
       { return ia_; }
-  auto& operator*() const& noexcept requires(_Traits::has_indirection)
+  const _IA& operator*() const& noexcept requires(_Traits::has_indirection)
       { return ia_; }
-  auto&& operator*() && noexcept requires(_Traits::has_indirection)
-      { return std::forward<typename _Traits::indirect_accessor>(ia_); }
-  auto&& operator*() const&& noexcept requires(_Traits::has_indirection)
-      { return std::forward<const typename _Traits::indirect_accessor>(ia_); }
+  _IA&& operator*() && noexcept requires(_Traits::has_indirection)
+      { return std::forward<_IA>(ia_); }
+  const _IA&& operator*() const&& noexcept requires(_Traits::has_indirection)
+      { return std::forward<const _IA>(ia_); }
 
   friend void swap(proxy& lhs, proxy& rhs) noexcept(noexcept(lhs.swap(rhs)))
       { lhs.swap(rhs); }
@@ -876,7 +881,7 @@ class proxy : public details::facade_traits<F>::base {
   }
 
   [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
-  typename _Traits::indirect_accessor ia_;
+  _IA ia_;
   details::meta_ptr<typename _Traits::meta> meta_;
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
@@ -1126,7 +1131,8 @@ proxy<F> make_proxy(T&& value) {
     template <class __F, class __C, class... __Os> \
     struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u) \
+        requires(sizeof...(__Os) > 1u && \
+            (::std::is_constructible_v<accessor<__F, __C, __Os>> && ...)) \
     struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... \
         { using accessor<__F, __C, __Os>::__VA_ARGS__...; }; \
     __MACRO(, *this, __VA_ARGS__); \
@@ -1147,7 +1153,8 @@ proxy<F> make_proxy(T&& value) {
     template <class __F, class __C, class... __Os> \
     struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, class __C, class... __Os> \
-        requires(sizeof...(__Os) > 1u) \
+        requires(sizeof...(__Os) > 1u && \
+            (::std::is_constructible_v<accessor<__F, __C, __Os>> && ...)) \
     struct accessor<__F, __C, __Os...> : accessor<__F, __C, __Os>... {}; \
     __MACRO(,, accessor& __self, __self, __VA_ARGS__); \
     __MACRO(noexcept, noexcept, accessor& __self, __self, __VA_ARGS__); \
@@ -1168,12 +1175,12 @@ proxy<F> make_proxy(T&& value) {
     __MACRO(const&& noexcept, noexcept, const accessor&& __self, \
         ::std::forward<const accessor>(__self), __VA_ARGS__);
 
-#ifdef NODEBUG
+#ifdef NDEBUG
 #define ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(...)
 #else
 #define ___PRO_GEN_SYMBOL_FOR_MEM_ACCESSOR(...) \
     accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; }
-#endif  // NODEBUG
+#endif  // NDEBUG
 
 namespace details {
 
