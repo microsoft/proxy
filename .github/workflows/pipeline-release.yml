@@ -65,14 +65,21 @@ jobs:
     with:
       branch: release/${{ github.event.inputs.version }}
 
+  run-bvt-nvhpc:
+    needs: prepare-release
+    name: Run BVT with NVHPC
+    uses: ./.github/workflows/bvt-nvhpc.yml
+    with:
+      branch: release/${{ github.event.inputs.version }}
+
   report:
     uses: ./.github/workflows/bvt-report.yml
     name: Generate report
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc]
 
   draft-release:
     runs-on: windows-latest
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang]
+    needs: report
     steps:
     - uses: actions/checkout@v3
       with:
