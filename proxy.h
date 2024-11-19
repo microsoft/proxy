@@ -695,11 +695,12 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       std::ignore = static_cast<_IA* (proxy::*)() noexcept>(&proxy::operator->);
       std::ignore = static_cast<const _IA* (proxy::*)() const noexcept>(
           &proxy::operator->);
-      std::ignore = static_cast<_IA& (proxy::*)() &>(&proxy::operator*);
-      std::ignore = static_cast<const _IA& (proxy::*)() const&>(
+      std::ignore = static_cast<_IA& (proxy::*)() & noexcept>(&proxy::operator*);
+      std::ignore = static_cast<const _IA& (proxy::*)() const& noexcept>(
           &proxy::operator*);
-      std::ignore = static_cast<_IA&& (proxy::*)() &&>(&proxy::operator*);
-      std::ignore = static_cast<const _IA&& (proxy::*)() const&&>(
+      std::ignore = static_cast<_IA&& (proxy::*)() && noexcept>(
+          &proxy::operator*);
+      std::ignore = static_cast<const _IA&& (proxy::*)() const&& noexcept>(
           &proxy::operator*);
     }
   }
