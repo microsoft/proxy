@@ -1466,14 +1466,30 @@ struct operator_dispatch;
           operator __VA_ARGS__) \
     };
 
+#ifdef NDEBUG
 #define ___PRO_DEF_RHS_OP_ACCESSOR(Q, NE, SELF, FW_SELF, ...) \
     template <class F, class C, class R, class Arg> \
     struct accessor<F, C, R(Arg) Q> { \
-      friend R __VA_ARGS__ (Arg arg, SELF) NE { \
+      friend R operator __VA_ARGS__ (Arg arg, SELF) NE { \
         return proxy_invoke<C, R(Arg) Q>( \
             access_proxy<F>(FW_SELF), std::forward<Arg>(arg)); \
       } \
     }
+#else
+#define ___PRO_DEF_RHS_OP_ACCESSOR(Q, NE, SELF, FW_SELF, ...) \
+    template <class F, class C, class R, class Arg> \
+    struct accessor<F, C, R(Arg) Q> { \
+      accessor() noexcept { std::ignore = &accessor::_symbol_guard; } \
+      friend R operator __VA_ARGS__ (Arg arg, SELF) NE { \
+        return proxy_invoke<C, R(Arg) Q>( \
+            access_proxy<F>(FW_SELF), std::forward<Arg>(arg)); \
+      } \
+    \
+     private: \
+      static inline R _symbol_guard(Arg arg, SELF) NE \
+          { return std::forward<Arg>(arg) __VA_ARGS__ FW_SELF; } \
+    }
+#endif  // NDEBUG
 #define ___PRO_RHS_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
@@ -1482,7 +1498,7 @@ struct operator_dispatch;
           ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
               std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_OP_ACCESSOR, \
-          operator __VA_ARGS__) \
+          __VA_ARGS__) \
     };
 
 #define ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
@@ -1507,14 +1523,30 @@ struct operator_dispatch;
         } \
       } \
     }
+#ifdef NDEBUG
 #define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF, FW_SELF, ...) \
     template <class F, class C, class R, class Arg> \
     struct accessor<F, C, R(Arg&) Q> { \
-      friend Arg& __VA_ARGS__ (Arg& arg, SELF) NE { \
+      friend Arg& operator __VA_ARGS__ (Arg& arg, SELF) NE { \
         proxy_invoke<C, R(Arg&) Q>(access_proxy<F>(FW_SELF), arg); \
         return arg; \
       } \
     }
+#else
+#define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF, FW_SELF, ...) \
+    template <class F, class C, class R, class Arg> \
+    struct accessor<F, C, R(Arg&) Q> { \
+      accessor() noexcept { std::ignore = &accessor::_symbol_guard; } \
+      friend Arg& operator __VA_ARGS__ (Arg& arg, SELF) NE { \
+        proxy_invoke<C, R(Arg&) Q>(access_proxy<F>(FW_SELF), arg); \
+        return arg; \
+      } \
+    \
+     private: \
+      static inline Arg& _symbol_guard(Arg& arg, SELF) NE \
+          { return arg __VA_ARGS__ FW_SELF; } \
+    }
+#endif  // NDEBUG
 #define ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
@@ -1532,7 +1564,7 @@ struct operator_dispatch;
           ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
               std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
-          operator __VA_ARGS__) \
+          __VA_ARGS__) \
     };
 
 ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
@@ -1664,6 +1696,7 @@ struct conversion_dispatch {
 #define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
+#ifdef NDEBUG
 #define ___PRO_DEF_FREE_ACCESSOR(__Q, __NE, __SELF, __FW_SELF, ...) \
     template <class __F, class __C, class __R, class... __Args> \
     struct accessor<__F, __C, __R(__Args...) __Q> { \
@@ -1673,6 +1706,23 @@ struct conversion_dispatch {
             ::std::forward<__Args>(__args)...); \
       } \
     }
+#else
+#define ___PRO_DEF_FREE_ACCESSOR(__Q, __NE, __SELF, __FW_SELF, ...) \
+    template <class __F, class __C, class __R, class... __Args> \
+    struct accessor<__F, __C, __R(__Args...) __Q> { \
+      accessor() noexcept { ::std::ignore = &accessor::_symbol_guard; } \
+      friend __R __VA_ARGS__(__SELF, __Args... __args) __NE { \
+        return ::pro::proxy_invoke<__C, __R(__Args...) __Q>( \
+            ::pro::access_proxy<__F>(__FW_SELF), \
+            ::std::forward<__Args>(__args)...); \
+      } \
+    \
+     private: \
+      static inline __R _symbol_guard(__SELF, __Args... __args) __NE { \
+        return __VA_ARGS__(__FW_SELF, ::std::forward<__Args>(__args)...); \
+      } \
+    }
+#endif  // NDEBUG
 #define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
