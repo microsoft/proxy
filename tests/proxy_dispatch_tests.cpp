@@ -12,7 +12,7 @@
 #pragma warning(pop)
 #endif  // defined(_MSC_VER) && !defined(__clang__)
 
-namespace {
+namespace proxy_dispatch_tests_details {
 
 struct CommaTester {
 public:
@@ -35,7 +35,9 @@ private:
 
 PRO_DEF_FREE_AS_MEM_DISPATCH(FreeMemToString, std::to_string, ToString);
 
-}  // namespace
+}  // namespace proxy_dispatch_tests_details
+
+namespace details = proxy_dispatch_tests_details;
 
 TEST(ProxyDispatchTests, TestOpPlus) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<"+">, int(), int(int val)>::build {};
@@ -297,7 +299,7 @@ TEST(ProxyDispatchTests, TestOpRightShiftAssignment) {
 
 TEST(ProxyDispatchTests, TestOpComma) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<",">, int(int val)>::build {};
-  CommaTester v{3};
+  details::CommaTester v{3};
   pro::proxy<TestFacade> p = &v;
   ASSERT_EQ((*p, 6), 9);
 }
@@ -572,14 +574,14 @@ TEST(ProxyDispatchTests, TestRhsOpRightShiftAssignment) {
 
 TEST(ProxyDispatchTests, TestRhsOpComma) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<",", true>, int(int val)>::build {};
-  CommaTester v{3};
+  details::CommaTester v{3};
   pro::proxy<TestFacade> p = &v;
   ASSERT_EQ((7, *p), 21);
 }
 
 TEST(ProxyDispatchTests, TestRhsOpPtrToMem) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<"->*", true>, int(int val)>::build {};
-  PtrToMemTester v{3};
+  details::PtrToMemTester v{3};
   pro::proxy<TestFacade> p = &v;
   ASSERT_EQ(2->**p, 6);
 }
@@ -618,7 +620,7 @@ TEST(ProxyDispatchTests, TestImplciitConversion) {
 }
 
 TEST(ProxyDispatchTests, TestFreeAsMemDispatch) {
-  struct TestFacade : pro::facade_builder::add_convention<FreeMemToString, std::string() const>::build {};
+  struct TestFacade : pro::facade_builder::add_convention<details::FreeMemToString, std::string() const>::build {};
   int v = 123;
   pro::proxy<TestFacade> p = &v;
   ASSERT_EQ(p->ToString(), "123");
