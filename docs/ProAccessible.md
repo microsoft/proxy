@@ -4,7 +4,7 @@ Given that `F` is a type meeting the [*ProBasicFacade* requirements](ProBasicFac
 
 | Expressions                                 | Semantics                                                    |
 | ------------------------------------------- | ------------------------------------------------------------ |
-| `typename T::template accessor<F, Args...>` | A type that provides accessibility to `proxy`. It shall be a trivial class type and not [final](https://en.cppreference.com/w/cpp/language/final). |
+| `typename T::template accessor<F, Args...>` | A type that provides accessibility to `proxy`. It shall be a *nothrow-default-constructible*, *trivially-copyable* type, and shall not be [final](https://en.cppreference.com/w/cpp/language/final). |
 
 ## See Also
 
