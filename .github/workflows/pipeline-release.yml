@@ -9,68 +9,25 @@ on:
         default: '0.0.0'
 
 jobs:
-  prepare-release:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: create release branch
-      run: |
-        git checkout -b release/${{ github.event.inputs.version }}
-
-    - name: assign cmake version
-      run: "((Get-Content -Path CMakeLists.txt -Raw) -Replace 'VERSION 0.1.0 # local build version','VERSION ${{ github.event.inputs.version }}') | Set-Content -Path CMakeLists.txt -NoNewLine"
-
-    - name: commit changes
-      run: |
-        git config --local user.email "release-bot@no.email.com"
-        git config --local user.name "release bot"
-        git add CMakeLists.txt
-        git commit -m 'assign a release version'
-
-    - name: new git tag
-      run: |
-        git tag ${{ github.event.inputs.version }}
-
-    - name: push git objects
-      run: |
-        git push origin release/${{ github.event.inputs.version }}
-        git push origin ${{ github.event.inputs.version }}
-
   run-bvt-gcc:
-    needs: prepare-release
     name: Run BVT with GCC
     uses: ./.github/workflows/bvt-gcc.yml
-    with:
-      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-clang:
-    needs: prepare-release
     name: Run BVT with Clang
     uses: ./.github/workflows/bvt-clang.yml
-    with:
-      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-msvc:
-    needs: prepare-release
     name: Run BVT with MSVC
     uses: ./.github/workflows/bvt-msvc.yml
-    with:
-      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-appleclang:
-    needs: prepare-release
     name: Run BVT with AppleClang
     uses: ./.github/workflows/bvt-appleclang.yml
-    with:
-      branch: release/${{ github.event.inputs.version }}
 
   run-bvt-nvhpc:
-    needs: prepare-release
     name: Run BVT with NVHPC
     uses: ./.github/workflows/bvt-nvhpc.yml
-    with:
-      branch: release/${{ github.event.inputs.version }}
 
   report:
     uses: ./.github/workflows/bvt-report.yml
@@ -78,33 +35,31 @@ jobs:
     needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc]
 
   draft-release:
-    runs-on: windows-latest
+    name: Draft release
+    runs-on: ubuntu-24.04
     needs: report
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: release/${{ github.event.inputs.version }}
+    - uses: actions/checkout@v4
 
-    - name: create zip archive
-      run: Compress-Archive -Path ".\proxy.h" -DestinationPath ".\proxy-${{ github.event.inputs.version }}.zip"
+    - name: create tag
+      run: |
+        git checkout -b release/${{ github.event.inputs.version }}
+        sed -i 's/VERSION 0\.1\.0 # local build version/VERSION ${{ github.event.inputs.version }}/' CMakeLists.txt
+        git config --local user.email "release-bot@no.email.com"
+        git config --local user.name "release bot"
+        git add CMakeLists.txt
+        git commit -m "Release version ${{ github.event.inputs.version }}"
+        git tag ${{ github.event.inputs.version }}
+        git push origin ${{ github.event.inputs.version }}
 
-    - uses: actions/create-release@v1
-      name: create release draft
-      id: release_draft
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: create tgz archive
+      run: tar -czf "proxy-${{ github.event.inputs.version }}.tgz" "proxy.h"
+
+    - name: create release draft
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.event.inputs.version }}
-        release_name: Proxy ${{ github.event.inputs.version }} Release
         draft: true
-        prerelease: true
-
-    - name: upload artifacts
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.release_draft.outputs.upload_url }}
-        asset_path: ./proxy-${{ github.event.inputs.version }}.zip
-        asset_name: proxy-${{ github.event.inputs.version }}.zip
-        asset_content_type: application/zip
+        files: proxy-${{ github.event.inputs.version }}.tgz
+        name: Proxy ${{ github.event.inputs.version }} Release
+        tag_name: ${{ github.event.inputs.version }}
+        generate_release_notes: true
