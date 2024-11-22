@@ -36,6 +36,8 @@ jobs:
 
   draft-release:
     name: Draft release
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     needs: report
     steps:
