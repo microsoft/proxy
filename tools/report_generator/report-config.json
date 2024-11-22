@@ -20,7 +20,7 @@
       "Path": "artifacts/benchmarking-results-appleclang/benchmarking-results.json"
     },
     {
-      "Description": "Nvidia HPC on Ubuntu 24.04 (x64)",
+      "Description": "NVIDIA HPC on Ubuntu 24.04 (x64)",
       "Path": "artifacts/benchmarking-results-nvhpc/benchmarking-results.json"
     }
   ],
