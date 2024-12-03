@@ -2,66 +2,31 @@ name: Proxy-Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version: 
-        description: 'Release version (x.x.x)'
-        required: true
-        default: '0.0.0'
 
 jobs:
-  run-bvt-gcc:
-    name: Run BVT with GCC
-    uses: ./.github/workflows/bvt-gcc.yml
-
-  run-bvt-clang:
-    name: Run BVT with Clang
-    uses: ./.github/workflows/bvt-clang.yml
-
-  run-bvt-msvc:
-    name: Run BVT with MSVC
-    uses: ./.github/workflows/bvt-msvc.yml
-
-  run-bvt-appleclang:
-    name: Run BVT with AppleClang
-    uses: ./.github/workflows/bvt-appleclang.yml
-
-  run-bvt-nvhpc:
-    name: Run BVT with NVHPC
-    uses: ./.github/workflows/bvt-nvhpc.yml
-
-  report:
-    uses: ./.github/workflows/bvt-report.yml
-    name: Generate report
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc]
-
   draft-release:
     name: Draft release
     permissions:
       contents: write
     runs-on: ubuntu-24.04
-    needs: report
     steps:
     - uses: actions/checkout@v4
-
-    - name: create tag
+    - name: pack source
+      id: run-pack
       run: |
-        git checkout -b release/${{ github.event.inputs.version }}
-        sed -i 's/VERSION 0\.1\.0 # local build version/VERSION ${{ github.event.inputs.version }}/' CMakeLists.txt
-        git config --local user.email "release-bot@no.email.com"
-        git config --local user.name "release bot"
-        git add CMakeLists.txt
-        git commit -m "Release version ${{ github.event.inputs.version }}"
-        git tag ${{ github.event.inputs.version }}
-        git push origin ${{ github.event.inputs.version }}
-
-    - name: create tgz archive
-      run: tar -czf "proxy-${{ github.event.inputs.version }}.tgz" "proxy.h"
+        file="CMakeLists.txt"
+        version=$(grep -oP 'msft_proxy\s+VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' "$file")
+        git tag "$version"
+        git push origin "$version"
+        tar -czf "proxy-$version.tgz" "proxy.h"
+        echo "PRO_VER=$version" >> $GITHUB_OUTPUT
+      shell: bash
 
     - name: create release draft
       uses: softprops/action-gh-release@v2
       with:
         draft: true
-        files: proxy-${{ github.event.inputs.version }}.tgz
-        name: Proxy ${{ github.event.inputs.version }} Release
-        tag_name: ${{ github.event.inputs.version }}
+        tag_name: ${{ steps.run-pack.outputs.PRO_VER }}
+        files: proxy-*.tgz
+        name: Proxy ${{ steps.run-pack.outputs.PRO_VER }} Release
         generate_release_notes: true
