@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: pack source
-      id: run_pack
+      id: run-pack
       run: |
         file="CMakeLists.txt"
         version=$(grep -oP 'msft_proxy\s+VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' "$file")
@@ -26,7 +26,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         draft: true
-        tag_name: ${{ steps.run_pack.outputs.PRO_VER }}
+        tag_name: ${{ steps.run-pack.outputs.PRO_VER }}
         files: proxy-*.tgz
-        name: Proxy ${{ steps.run_pack.outputs.PRO_VER }} Release
+        name: Proxy ${{ steps.run-pack.outputs.PRO_VER }} Release
         generate_release_notes: true
