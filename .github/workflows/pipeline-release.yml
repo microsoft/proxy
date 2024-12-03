@@ -23,5 +23,5 @@ jobs:
         draft: true
         tag_name: ${{ steps.run_pack.outputs.PRO_VER }}
         files: proxy-*.tgz
-        name: Proxy Release
+        name: Proxy ${{ steps.run_pack.outputs.PRO_VER }} Release
         generate_release_notes: true
