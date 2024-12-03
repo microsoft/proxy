@@ -21,7 +21,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         draft: true
-        tag: ${{ steps.run_pack.outputs.PRO_VER }}
+        tag_name: ${{ steps.run_pack.outputs.PRO_VER }}
         files: proxy-*.tgz
         name: Proxy Release
         generate_release_notes: true
