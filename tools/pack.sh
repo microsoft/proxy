@@ -4,4 +4,4 @@ version=$(grep -oP 'msft_proxy\s+VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' "$file")
 git tag "$version"
 git push origin "$version"
 tar -czf "proxy-$version.tgz" "proxy.h"
-echo "PRO_VER=$version\n" >> $GITHUB_OUTPUT
+echo "PRO_VER=$version" >> $GITHUB_OUTPUT
