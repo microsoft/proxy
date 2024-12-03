@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
-    - name: pack and tag
+    - name: pack source
+      id: run_pack
       run: |
         chmod 555 ./tools/pack.sh
         ./tools/pack.sh
@@ -20,6 +21,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         draft: true
+        tag: ${{ steps.run_pack.outputs.PRO_VER }}
         files: proxy-*.tgz
         name: Proxy Release
         generate_release_notes: true
