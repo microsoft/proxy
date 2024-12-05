@@ -24,7 +24,6 @@ Class `explicit_conversion_dispatch` modals a [dispatch](ProDispatch.md) type fo
 ## Example
 
 ```cpp
-#include <iomanip>
 #include <iostream>
 
 #include "proxy.h"
@@ -35,7 +34,7 @@ struct IntConvertible : pro::facade_builder
 
 int main() {
   pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);  // p holds an short
-  std::cout << std::fixed << std::setprecision(10) << static_cast<int>(*p) << "\n";  // Prints: "123"
+  std::cout << static_cast<int>(*p) << "\n";  // Prints: "123"
 }
 ```
 

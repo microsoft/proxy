@@ -1,7 +1,7 @@
 # `implicit_conversion_dispatch::operator()`
 
 ```cpp
-template <class T&&>
+template <class T>
 T&& operator()(T&& value) noexcept;
 ```
 
