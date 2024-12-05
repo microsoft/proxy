@@ -49,8 +49,7 @@ struct BasicStringable : pro::facade_builder
 struct Stringable : pro::facade_builder
     ::add_facade<BasicStringable>
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_direct_convention<pro::conversion_dispatch<pro::proxy<BasicStringable>>,
-        pro::proxy<BasicStringable>() &&>
+    ::add_direct_convention<pro::conversion_dispatch, pro::proxy<BasicStringable>() &&>
     ::build {};
 
 int main() {

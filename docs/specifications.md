@@ -19,7 +19,8 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`constraint_level`](constraint_level.md)                    | Defines the 4 constraint levels of a special member function |
 | [`proxiable_ptr_constraints`](proxiable_ptr_constraints.md)  | Defines the constraints of a pointer type to instantiate a `proxy` |
 | [`operator_dispatch`](operator_dispatch.md)                  | Dispatch type for operator expressions with accessibility    |
-| [`conversion_dispatch`](conversion_dispatch.md)              | Dispatch type for conversion expressions with accessibility  |
+| [`explicit_conversion_dispatch`<br />`conversion_dispatch`](explicit_conversion_dispatch.md) | Dispatch type for explicit conversion expressions with accessibility |
+| [`implicit_conversion_dispatch`](implicit_conversion_dispatch.md) | Dispatch type for implicit conversion expressions with accessibility |
 
 ## Functions
 

@@ -104,7 +104,7 @@ Let `self` be the operand of [`proxy`](proxy.md), and `other` and `others...` be
 
 | Name                                               | Description                              |
 | -------------------------------------------------- | ---------------------------------------- |
-| (constructor) [trivial]                            | constructs an `operator_dispatch` object |
+| (constructor) [nothrow]                            | constructs an `operator_dispatch` object |
 | [`operator()`](operator_dispatch/operator_call.md) | invokes the dispatch                     |
 
 ## Member Types
