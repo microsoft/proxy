@@ -11,7 +11,7 @@ struct TestFacade : pro::facade_builder
     ::add_convention<utils::spec::FreeToString, std::string()>
     ::support_relocation<pro::constraint_level::nontrivial>
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_direct_convention<pro::conversion_dispatch<utils::LifetimeTracker::Session>, utils::LifetimeTracker::Session() const&, utils::LifetimeTracker::Session()&&>
+    ::add_direct_convention<pro::conversion_dispatch, utils::LifetimeTracker::Session() const&, utils::LifetimeTracker::Session()&&>
     ::build {};
 
 struct TestTrivialFacade : pro::facade_builder
