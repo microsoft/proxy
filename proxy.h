@@ -656,11 +656,40 @@ struct proxy_helper {
       return static_cast<add_qualifier_t<proxy<F>, Q>>(
           std::forward<add_qualifier_t<A, Q>>(a));
     } else {
+      // Note: The use of offsetof below is technically undefined until C++20
+      // because proxy may not be a standard layout type. However, all compilers
+      // currently provide well-defined behavior as an extension (which is
+      // demonstrated since constexpr evaluation must diagnose all undefined
+      // behavior). However, various compilers also warn about this use of
+      // offsetof, which must be suppressed.
+#if defined(__INTEL_COMPILER)
+#pragma warning push
+#pragma warning(disable : 1875)
+#elif defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#elif defined(__NVCC__)
+#pragma nv_diagnostic push
+#pragma nv_diag_suppress 1427
+#elif defined(__NVCOMPILER)
+#pragma diagnostic push
+#pragma diag_suppress offset_in_non_POD_nonstandard
+#endif  // defined(__INTEL_COMPILER)
+      constexpr std::size_t offset = offsetof(proxy<F>, ia_);
+#if defined(__INTEL_COMPILER)
+#pragma warning pop
+#elif defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(__NVCC__)
+#pragma nv_diagnostic pop
+#elif defined(__NVCOMPILER)
+#pragma diagnostic pop
+#endif  // defined(__INTEL_COMPILER)
       return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(
           *(reinterpret_cast<add_qualifier_ptr_t<std::byte, Q>>(
               static_cast<add_qualifier_ptr_t<
                   typename facade_traits<F>::indirect_accessor, Q>>(
-                      std::addressof(a))) - offsetof(proxy<F>, ia_)));
+                      std::addressof(a))) - offset));
     }
   }
 };
