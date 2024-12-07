@@ -23,6 +23,7 @@ add_executable(msft_proxy_tests
   proxy_invocation_tests.cpp
   proxy_lifetime_tests.cpp
   proxy_reflection_tests.cpp
+  proxy_regression_tests.cpp
   proxy_traits_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
