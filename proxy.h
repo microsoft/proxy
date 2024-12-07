@@ -668,23 +668,27 @@ struct proxy_helper {
 #elif defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#elif defined(__NVCC__)
+#endif  // defined(__INTEL_COMPILER)
+#if defined(__NVCC__)
 #pragma nv_diagnostic push
 #pragma nv_diag_suppress 1427
-#elif defined(__NVCOMPILER)
+#endif  // defined(__NVCC__)
+#if defined(__NVCOMPILER)
 #pragma diagnostic push
 #pragma diag_suppress offset_in_non_POD_nonstandard
-#endif  // defined(__INTEL_COMPILER)
+#endif  // defined(__NVCOMPILER)
       constexpr std::size_t offset = offsetof(proxy<F>, ia_);
 #if defined(__INTEL_COMPILER)
 #pragma warning pop
 #elif defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
-#elif defined(__NVCC__)
-#pragma nv_diagnostic pop
-#elif defined(__NVCOMPILER)
-#pragma diagnostic pop
 #endif  // defined(__INTEL_COMPILER)
+#if defined(__NVCC__)
+#pragma nv_diagnostic pop
+#endif  // defined(__NVCC__)
+#if defined(__NVCOMPILER)
+#pragma diagnostic pop
+#endif  // defined(__NVCOMPILER)
       return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(
           *(reinterpret_cast<add_qualifier_ptr_t<std::byte, Q>>(
               static_cast<add_qualifier_ptr_t<
