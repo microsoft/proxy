@@ -4,7 +4,7 @@
 class explicit_conversion_dispatch;
 ```
 
-Class `implicit_conversion_dispatch` modals a [dispatch](ProDispatch.md) type for implicit  type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types.
+Class `implicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type for implicit type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types.
 
 ## Member Functions
 

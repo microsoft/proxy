@@ -6,7 +6,7 @@ class explicit_conversion_dispatch;
 using conversion_dispatch = explicit_conversion_dispatch;
 ```
 
-Class `explicit_conversion_dispatch` modals a [dispatch](ProDispatch.md) type for explicit  type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types. `conversion_dispatch` is an alias of `explicit_conversion_dispatch`.
+Class `explicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type for explicit type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types. `conversion_dispatch` is an alias of `explicit_conversion_dispatch`.
 
 ## Member Functions
 
@@ -33,7 +33,7 @@ struct IntConvertible : pro::facade_builder
     ::build {};
 
 int main() {
-  pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);  // p holds an short
+  pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);  // p holds a short
   std::cout << static_cast<int>(*p) << "\n";  // Prints: "123"
 }
 ```

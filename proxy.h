@@ -1216,7 +1216,7 @@ struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
 
 template <class T>
 struct explicit_conversion_adapter {
-  explicit explicit_conversion_adapter(T&& value)
+  explicit explicit_conversion_adapter(T&& value) noexcept
       : value_(std::forward<T>(value)) {}
   explicit_conversion_adapter(const explicit_conversion_adapter&) = delete;
 
