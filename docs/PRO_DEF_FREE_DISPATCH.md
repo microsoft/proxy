@@ -31,7 +31,7 @@ struct dispatch_name {
     accessor() = delete;
   };
   template <class F, class C, class... Os>
-      requires(sizeof...(Os) > 1u && (std::is_trivial_v<accessor<F, C, Os>> && ...))
+      requires(sizeof...(Os) > 1u && (std::is_constructible_v<accessor<F, C, Os>> && ...))
   struct accessor<F, C, Os...> : accessor<F, C, Os>... {};
   template <class F, class C, class R, class... Args>
   struct accessor<F, C, R(Args...) cv ref noex> {

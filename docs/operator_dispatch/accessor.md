@@ -17,13 +17,13 @@ For different `Sign` and `Rhs`, `operator_dispatch<Sign, Rhs>::accessor` has dif
 ```cpp
 // (2)
 template <class F, class C, class... Os>
-    requires(sizeof...(Os) > 1u && (std::is_trivial_v<accessor<F, C, Os>> && ...))
+    requires(sizeof...(Os) > 1u && (std::is_constructible_v<accessor<F, C, Os>> && ...))
 struct accessor<F, C, Os...> : accessor<F, C, Os>... {
   using accessor<F, C, Os>::operator sop...;
 };
 ```
 
-`(2)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are trivial types, inherits all `accessor<F, C, Os>...` types and `using` their `operator sop`.
+`(2)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are default-constructible types, inherits all `accessor<F, C, Os>...` types and `using` their `operator sop`.
 
 When `Rhs` is `false`, the other specializations are defined as follows, where `sizeof...(Os)` is `1` and the only type `O` qualified with `cv ref noex` (let `SELF` be `std::forward<accessor cv ref>(*this)`):
 
@@ -74,11 +74,11 @@ struct accessor<F, C, R(Arg) cv ref noex> {
 ```cpp
 // (6)
 template <class F, class C, class... Os>
-    requires(sizeof...(Os) > 1u && (std::is_trivial_v<accessor<F, C, Os>> && ...))
+    requires(sizeof...(Os) > 1u && (std::is_constructible_v<accessor<F, C, Os>> && ...))
 struct accessor<F, C, Os...> : accessor<F, C, Os>... {};
 ```
 
-`(6)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are trivial types, inherits all `accessor<F, C, Os>...` types.
+`(6)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are default-constructible types, inherits all `accessor<F, C, Os>...` types.
 
 When `Rhs` is `true`, the other specializations are defined as follows, where `sizeof...(Os)` is `1` and the only type `O` qualified with `cv ref noex` (let `SELF` be `std::forward<accessor cv ref>(self)`):
 

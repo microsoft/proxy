@@ -587,10 +587,10 @@ TEST(ProxyDispatchTests, TestRhsOpPtrToMem) {
 }
 
 TEST(ProxyDispatchTests, TestIndirectConversion) {
-  struct TestFacade : pro::facade_builder::add_convention<pro::conversion_dispatch<int>, int()>::build {};
-  double v = 12.3;
+  struct TestFacade : pro::facade_builder::add_convention<pro::conversion_dispatch, int()>::build {};
+  short v = 123;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(static_cast<int>(*p), 12);
+  ASSERT_EQ(static_cast<int>(*p), 123);
 }
 
 TEST(ProxyDispatchTests, TestDirectConversion) {
@@ -600,7 +600,7 @@ TEST(ProxyDispatchTests, TestDirectConversion) {
   struct TestFacade : pro::facade_builder
       ::add_facade<TestFacadeBase>
       ::add_convention<pro::operator_dispatch<"+=">, void(int val)>
-      ::add_direct_convention<pro::conversion_dispatch<pro::proxy<TestFacadeBase>>, pro::proxy<TestFacadeBase>() &&>
+      ::add_direct_convention<pro::conversion_dispatch, pro::proxy<TestFacadeBase>() &&>
       ::build {};
   pro::proxy<TestFacade> p1 = std::make_unique<int>(123);
   *p1 += 3;
@@ -612,11 +612,11 @@ TEST(ProxyDispatchTests, TestDirectConversion) {
 }
 
 TEST(ProxyDispatchTests, TestImplciitConversion) {
-  struct TestFacade : pro::facade_builder::add_convention<pro::conversion_dispatch<int, false>, int()>::build {};
-  double v = 12.3;
+  struct TestFacade : pro::facade_builder::add_convention<pro::implicit_conversion_dispatch, int()>::build {};
+  short v = 123;
   pro::proxy<TestFacade> p = &v;
   int converted = *p;
-  ASSERT_EQ(converted, 12);
+  ASSERT_EQ(converted, 123);
 }
 
 TEST(ProxyDispatchTests, TestFreeAsMemDispatch) {
