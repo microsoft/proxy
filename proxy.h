@@ -15,6 +15,14 @@
 #include <type_traits>
 #include <utility>
 
+#ifdef __cpp_rtti
+#ifndef __cpp_exceptions
+#include <cstdlib>  // For std::abort() when "throw" is not available
+#endif  // __cpp_exceptions
+#include <optional>
+#include <typeinfo>
+#endif  // __cpp_rtti
+
 #if __has_cpp_attribute(msvc::no_unique_address)
 #define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE msvc::no_unique_address
 #elif __has_cpp_attribute(no_unique_address)
@@ -1233,6 +1241,10 @@ proxy<F> make_proxy(T&& value) {
     ___PRO_DEBUG( \
         accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; })
 
+#ifdef __cpp_rtti
+struct bad_proxy_cast : std::bad_cast {};
+#endif  // __cpp_rtti
+
 namespace details {
 
 template <class F, class C>
@@ -1431,6 +1443,111 @@ struct sign {
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
+#ifdef __cpp_rtti
+#ifdef __cpp_exceptions
+#define ___PRO_THROW(...) throw __VA_ARGS__
+#else
+#define ___PRO_THROW(...) std::abort()
+#endif  // __cpp_exceptions
+
+struct proxy_cast_context {
+  const std::type_info* type_ptr;
+  bool is_ref;
+  bool is_const;
+  void* result_ptr;
+};
+
+template <class F, class C, class O>
+struct proxy_cast_accessor_impl {
+  using _Self = add_qualifier_t<
+      proxy_cast_accessor_impl, overload_traits<O>::qualifier>;
+  template <class T>
+  friend T proxy_cast(_Self self) {
+    static_assert(!std::is_rvalue_reference_v<T>);
+    if (!access_proxy<F>(self).has_value()) { ___PRO_THROW(bad_proxy_cast{}); }
+    if constexpr (std::is_lvalue_reference_v<T>) {
+      using U = std::remove_reference_t<T>;
+      void* result = nullptr;
+      proxy_cast_context ctx{.type_ptr = &typeid(T), .is_ref = true,
+          .is_const = std::is_const_v<U>, .result_ptr = &result};
+      proxy_invoke<C, O>(access_proxy<F>(std::forward<_Self>(self)), ctx);
+      if (result == nullptr) { ___PRO_THROW(bad_proxy_cast{}); }
+      return *static_cast<U*>(result);
+    } else {
+      std::optional<std::remove_const_t<T>> result;
+      proxy_cast_context ctx{.type_ptr = &typeid(T), .is_ref = false,
+          .is_const = false, .result_ptr = &result};
+      proxy_invoke<C, O>(access_proxy<F>(std::forward<_Self>(self)), ctx);
+      if (!result.has_value()) { ___PRO_THROW(bad_proxy_cast{}); }
+      return std::move(*result);
+    }
+  }
+  template <class T>
+  friend T* proxy_cast(std::remove_reference_t<_Self>* self) noexcept
+      requires(std::is_lvalue_reference_v<_Self>) {
+    if (!access_proxy<F>(*self).has_value()) { return nullptr; }
+    void* result = nullptr;
+    proxy_cast_context ctx{.type_ptr = &typeid(T), .is_ref = true,
+        .is_const = std::is_const_v<T>, .result_ptr = &result};
+    proxy_invoke<C, O>(access_proxy<F>(*self), ctx);
+    return static_cast<T*>(result);
+  }
+};
+
+#define ___PRO_DEF_PROXY_CAST_ACCESSOR(Q, ...) \
+    template <class F, class C> \
+    struct accessor<F, C, void(proxy_cast_context) Q> \
+        : proxy_cast_accessor_impl<F, C, void(proxy_cast_context) Q> {}
+struct proxy_cast_dispatch {
+  template <class T>
+  void operator()(T&& self, proxy_cast_context ctx) {
+    if (typeid(T) == *ctx.type_ptr) {
+      if (ctx.is_ref) {
+        if constexpr (std::is_lvalue_reference_v<T>) {
+          if (ctx.is_const || !std::is_const_v<T>) {
+            *static_cast<void**>(ctx.result_ptr) = (void*)&self;
+          }
+        }
+      } else {
+        if constexpr (std::is_constructible_v<std::decay_t<T>, T>) {
+          static_cast<std::optional<std::decay_t<T>>*>(ctx.result_ptr)
+              ->emplace(std::forward<T>(self));
+        }
+      }
+    }
+  }
+  ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_PROXY_CAST_ACCESSOR)
+};
+#undef ___PRO_DEF_PROXY_CAST_ACCESSOR
+
+class proxy_typeid_reflector {
+ public:
+  template <class T>
+  constexpr explicit proxy_typeid_reflector(std::in_place_type_t<T>)
+      : type_(typeid(T)) {}
+
+  template <class F, class R>
+  struct accessor {
+    friend const std::type_info& proxy_typeid(const accessor& self) noexcept {
+      const proxy<F>& p = access_proxy<F>(self);
+      if (!p.has_value()) { return typeid(void); }
+      const proxy_typeid_reflector& refl = proxy_reflect<R>(p);
+      return refl.type_;
+    }
+___PRO_DEBUG(
+    accessor() noexcept { std::ignore = &accessor::_symbol_guard; }
+
+   private:
+    static inline const std::type_info& _symbol_guard(const accessor& self)
+        noexcept { return proxy_typeid(self); }
+)
+  };
+
+  const std::type_info& type_;
+};
+#undef ___PRO_THROW
+#endif  // __cpp_rtti
+
 }  // namespace details
 
 template <class Cs, class Rs, proxiable_ptr_constraints C>
@@ -1476,6 +1593,21 @@ struct basic_facade_builder {
   template <constraint_level CL>
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
+#ifdef __cpp_rtti
+  using support_indirect_rtti = add_indirect_convention<
+      details::proxy_cast_dispatch,
+      void(details::proxy_cast_context) &,
+      //void(details::proxy_cast_context) const&,
+      void(details::proxy_cast_context) &&>
+      ::template add_indirect_reflection<details::proxy_typeid_reflector>;
+  using support_direct_rtti = add_direct_convention<
+      details::proxy_cast_dispatch,
+      void(details::proxy_cast_context) &,
+      //void(details::proxy_cast_context) const&,
+      void(details::proxy_cast_context) &&>
+      ::template add_direct_reflection<details::proxy_typeid_reflector>;
+  using support_rtti = support_indirect_rtti;
+#endif  // __cpp_rtti
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
   basic_facade_builder() = delete;
 };
