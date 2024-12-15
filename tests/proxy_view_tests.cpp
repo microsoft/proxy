@@ -76,13 +76,13 @@ TEST(ProxyViewTests, TestViewOfNonOwning) {
 
 TEST(ProxyViewTests, TestConstViewOfNull) {
   pro::proxy<details::TestFacade> p1;
-  pro::proxy_view<const details::TestFacade> p2 = p1;
+  pro::proxy_view<const details::TestFacade> p2 = std::as_const(p1);
   ASSERT_FALSE(p2.has_value());
 }
 
 TEST(ProxyViewTests, TestConstViewOfOwning) {
   pro::proxy<details::TestFacade> p1 = pro::make_proxy<details::TestFacade>(123);
-  pro::proxy_view<const details::TestFacade> p2 = p1;
+  pro::proxy_view<const details::TestFacade> p2 = std::as_const(p1);
   ASSERT_TRUE(p1.has_value());
   ASSERT_TRUE(p2.has_value());
   *p1 += 3;
@@ -95,7 +95,7 @@ TEST(ProxyViewTests, TestConstViewOfOwning) {
 TEST(ProxyViewTests, TestConstViewOfNonOwning) {
   int a = 123;
   pro::proxy<details::TestFacade> p1 = &a;
-  pro::proxy_view<const details::TestFacade> p2 = &a;
+  pro::proxy_view<const details::TestFacade> p2 = &std::as_const(a);
   ASSERT_TRUE(p1.has_value());
   ASSERT_TRUE(p2.has_value());
   *p1 += 3;
@@ -117,7 +117,7 @@ TEST(ProxyViewTests, TestOverloadShadowing) {
   };
   pro::proxy<TestFacade> p1 = pro::make_proxy<TestFacade, TestImpl>();
   pro::proxy_view<TestFacade> p2 = p1;
-  pro::proxy_view<const TestFacade> p3 = p1;
+  pro::proxy_view<const TestFacade> p3 = std::as_const(p1);
   ASSERT_EQ((*p1)(), 0);
   ASSERT_EQ((std::as_const(*p1))(), 1);
   ASSERT_EQ((*p2)(), 0);
@@ -150,9 +150,9 @@ TEST(ProxyViewTests, TestUpwardConversion_FromValue) {
       ::build {};
   pro::proxy<TestFacade2> p1 = pro::make_proxy<TestFacade2>(123);
   pro::proxy_view<TestFacade2> p2 = p1;
-  pro::proxy_view<const TestFacade2> p3 = p1;
+  pro::proxy_view<const TestFacade2> p3 = std::as_const(p1);
   pro::proxy_view<TestFacade1> p4 = p2;
-  pro::proxy_view<const TestFacade1> p5 = p3;
+  pro::proxy_view<const TestFacade1> p5 = std::as_const(p3);
   ASSERT_EQ(ToString(*p1), "123");
   ASSERT_EQ(ToString(*p3), "123");
   std::ignore = p4;
