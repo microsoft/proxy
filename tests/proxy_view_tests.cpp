@@ -51,6 +51,13 @@ TEST(ProxyViewTests, TestViewOfNull) {
   ASSERT_FALSE(p2.has_value());
 }
 
+TEST(ProxyViewTests, TestViewIndependentUse) {
+  int a = 123;
+  pro::proxy_view<details::TestFacade> p = &a;
+  *p += 3;
+  ASSERT_EQ(a, 126);
+}
+
 TEST(ProxyViewTests, TestViewOfOwning) {
   pro::proxy<details::TestFacade> p1 = pro::make_proxy<details::TestFacade>(123);
   pro::proxy_view<details::TestFacade> p2 = p1;
@@ -78,6 +85,13 @@ TEST(ProxyViewTests, TestConstViewOfNull) {
   pro::proxy<details::TestFacade> p1;
   pro::proxy_view<const details::TestFacade> p2 = std::as_const(p1);
   ASSERT_FALSE(p2.has_value());
+}
+
+TEST(ProxyViewTests, TestConstViewIndependentUse) {
+  int a = 123;
+  pro::proxy_view<const details::TestFacade> p = &std::as_const(a);
+  a += 3;
+  ASSERT_EQ(ToString(*p), "126");
 }
 
 TEST(ProxyViewTests, TestConstViewOfOwning) {
