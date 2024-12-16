@@ -21,10 +21,8 @@ struct accessor<F, C, T() cv ref noex> {
 };
 ```
 
-Let `SELF` be `std::forward<accessor cv ref>(*this)`.
-
 `(1)` The default implementation of `accessor` is not constructible.
 
 `(2)` When `sizeof...(Os)` is greater than `1`, and `accessor<F, C, Os>...` are default-constructible, inherits all `accessor<F, C, Os>...` types and `using` their `operator return-type-of<Os>`. `return-type-of<O>` denotes the *return type* of the overload type `O`.
 
-`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `T() cv ref noex`, provides an explicit  `operator T()` with the same *cv ref noex* specifiers. `accessor::operator T()` is equivalent to `return proxy_invoke<C, T() cv ref noex>(access_proxy<F>(SELF))`.
+`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `T() cv ref noex`, provides an explicit  `operator T()` with the same *cv ref noex* specifiers. `accessor::operator T()` is equivalent to `return proxy_invoke<C, T() cv ref noex>(access_proxy<F>(std::forward<accessor cv ref>(*this)))`.

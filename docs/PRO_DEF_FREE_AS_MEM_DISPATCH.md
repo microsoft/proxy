@@ -16,7 +16,7 @@ PRO_DEF_FREE_AS_MEM_DISPATCH(dispatch_name, func_name, accessibility_func_name);
 
 `(1)` Equivalent to `PRO_DEF_FREE_AS_MEM_DISPATCH(dispatch_name, func_name, func_name);`
 
-`(2)` Defines a class named `dispatch_name` of free function call expressions of `func_name` with accessibility via a member function. `dispatch_name` meets the [*ProAccessible*](ProAccessible.md) requirements of types `F`, `C`, and `Os...`, where `F` models concept [`facade`](facade.md), `C` is a tuple element type defined in `typename F::convention_types`, and each type `O` (possibly qualified with *cv ref noex*) in `Os...` is a tuple element type defined in `typename C::overload_types`. The member functions provided by `typename dispatch_name::template accessor<F, C, Os...>` are named `accessibility_func_name`. Let `SELF` be `std::forward<accessor cv ref>(*this)`, effectively equivalent to:
+`(2)` Defines a class named `dispatch_name` of free function call expressions of `func_name` with accessibility via a member function. `dispatch_name` meets the [*ProAccessible*](ProAccessible.md) requirements of types `F`, `C`, and `Os...`, where `F` models concept [`facade`](facade.md), `C` is a tuple element type defined in `typename F::convention_types`, and each type `O` (possibly qualified with *cv ref noex*) in `Os...` is a tuple element type defined in `typename C::overload_types`. The member functions provided by `typename dispatch_name::template accessor<F, C, Os...>` are named `accessibility_func_name`. Effectively equivalent to:
 
 ```cpp
 struct dispatch_name {
@@ -39,7 +39,7 @@ struct dispatch_name {
   template <class F, class C, class R, class... Args>
   struct accessor<F, C, R(Args...) cv ref noex> {
     R accessibility_func_name(Args... args) cv ref noex {
-      return pro::proxy_invoke<C, R(Args...) cv ref noex>(pro::access_proxy<F>(SELF), std::forward<Args>(args)...);
+      return pro::proxy_invoke<C, R(Args...) cv ref noex>(pro::access_proxy<F>(std::forward<accessor cv ref>(*this)), std::forward<Args>(args)...);
     }
   };
 }

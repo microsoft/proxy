@@ -21,6 +21,7 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`operator_dispatch`](operator_dispatch.md)                  | Dispatch type for operator expressions with accessibility    |
 | [`explicit_conversion_dispatch`<br />`conversion_dispatch`](explicit_conversion_dispatch.md) | Dispatch type for explicit conversion expressions with accessibility |
 | [`implicit_conversion_dispatch`](implicit_conversion_dispatch.md) | Dispatch type for implicit conversion expressions with accessibility |
+| [`proxy_indirect_accessor`](proxy_indirect_accessor.md)      | Provides indirection accessibility for `proxy`               |
 
 ## Functions
 
