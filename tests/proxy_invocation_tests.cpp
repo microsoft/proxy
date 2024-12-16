@@ -4,9 +4,11 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <functional>
+#include <iomanip>
 #include <list>
 #include <map>
 #include <ranges>
+#include <sstream>
 #include <string>
 #include <typeindex>
 #include <typeinfo>
@@ -127,6 +129,15 @@ static_assert(CallableFacade<Callable<int(double), void(int) noexcept>, false, d
 template <class... Args>
 std::vector<std::type_index> GetTypeIndices()
     { return {std::type_index{typeid(Args)}...}; }
+
+template <class T>
+std::string Dump(T&& value) noexcept {
+  std::ostringstream out;
+  out << std::boolalpha << "is_const=" << std::is_const_v<std::remove_reference_t<T>> << ", is_ref=" << std::is_lvalue_reference_v<T> << ", value=" << value;
+  return std::move(out).str();
+}
+
+PRO_DEF_FREE_DISPATCH(FreeDump, Dump);
 
 }  // namespace proxy_invocation_tests_details
 
@@ -306,7 +317,7 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   ASSERT_EQ(ToString(*p), "123");
 }
 
-TEST(ProxyInvocationTests, TestQualifiedConvention) {
+TEST(ProxyInvocationTests, TestQualifiedConvention_Member) {
   struct TestFacade : pro::facade_builder
       ::add_convention<pro::operator_dispatch<"()">, int()&, int() const&, int() && noexcept, int() const&&>
       ::build {};
@@ -325,4 +336,18 @@ TEST(ProxyInvocationTests, TestQualifiedConvention) {
   ASSERT_EQ((*std::as_const(p))(), 1);
   ASSERT_EQ((*std::move(p))(), 2);
   ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
+}
+
+TEST(ProxyInvocationTests, TestQualifiedConvention_Free) {
+  struct TestFacade : pro::facade_builder
+      ::add_convention<details::FreeDump, std::string() &, std::string() const&, std::string() && noexcept, std::string() const&&>
+      ::build {};
+
+  pro::proxy<TestFacade> p = pro::make_proxy<TestFacade>(123);
+  static_assert(!noexcept(Dump(*p)));
+  static_assert(noexcept(Dump(*std::move(p))));
+  ASSERT_EQ(Dump(*p), "is_const=false, is_ref=true, value=123");
+  ASSERT_EQ(Dump(*std::as_const(p)), "is_const=true, is_ref=true, value=123");
+  ASSERT_EQ(Dump(*std::move(p)), "is_const=false, is_ref=false, value=123");
+  ASSERT_EQ(Dump(*std::move(std::as_const(p))), "is_const=true, is_ref=false, value=123");
 }
