@@ -1520,11 +1520,10 @@ struct proxy_cast_dispatch {
 };
 #undef ___PRO_DEF_PROXY_CAST_ACCESSOR
 
-class proxy_typeid_reflector {
- public:
+struct proxy_typeid_reflector {
   template <class T>
   constexpr explicit proxy_typeid_reflector(std::in_place_type_t<T>)
-      : type_(&typeid(T)) {}
+      : info(&typeid(T)) {}
   constexpr proxy_typeid_reflector(const proxy_typeid_reflector&) = default;
 
   template <class F, class R>
@@ -1534,7 +1533,7 @@ class proxy_typeid_reflector {
       const proxy<F>& p = access_proxy<F>(self);
       if (!p.has_value()) { return typeid(void); }
       const proxy_typeid_reflector& refl = proxy_reflect<R>(p);
-      return *refl.type_;
+      return *refl.info;
     }
 ___PRO_DEBUG(
     accessor() noexcept { std::ignore = &accessor::_symbol_guard; }
@@ -1546,7 +1545,7 @@ ___PRO_DEBUG(
 )
   };
 
-  const std::type_info* type_;
+  const std::type_info* info;
 };
 #undef ___PRO_THROW
 #endif  // __cpp_rtti
@@ -1597,18 +1596,22 @@ struct basic_facade_builder {
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
 #ifdef __cpp_rtti
-  using support_indirect_rtti = add_indirect_convention<
-      details::proxy_cast_dispatch,
-      void(details::proxy_cast_context) &,
-      void(details::proxy_cast_context) const&,
-      void(details::proxy_cast_context) &&>
-      ::template add_indirect_reflection<details::proxy_typeid_reflector>;
-  using support_direct_rtti = add_direct_convention<
-      details::proxy_cast_dispatch,
-      void(details::proxy_cast_context) &,
-      void(details::proxy_cast_context) const&,
-      void(details::proxy_cast_context) &&>
-      ::template add_direct_reflection<details::proxy_typeid_reflector>;
+  using support_indirect_rtti =
+      basic_facade_builder<
+          details::add_conv_t<Cs, details::conv_impl<false,
+              details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
+              void(details::proxy_cast_context) const&,
+              void(details::proxy_cast_context) &&>>,
+          details::add_tuple_t<Rs, details::refl_impl<false,
+              details::proxy_typeid_reflector>>, C>;
+  using support_direct_rtti =
+      basic_facade_builder<
+          details::add_conv_t<Cs, details::conv_impl<true,
+              details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
+              void(details::proxy_cast_context) const&,
+              void(details::proxy_cast_context) &&>>,
+          details::add_tuple_t<Rs, details::refl_impl<true,
+              details::proxy_typeid_reflector>>, C>;
   using support_rtti = support_indirect_rtti;
 #endif  // __cpp_rtti
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
