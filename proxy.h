@@ -1459,8 +1459,8 @@ struct proxy_cast_context {
 
 template <class F, class C, class O>
 struct proxy_cast_accessor_impl {
-  using _Self = add_qualifier_t<
-      proxy_cast_accessor_impl, overload_traits<O>::qualifier>;
+  using _Self =
+      add_qualifier_t<adl_accessor_arg_t<F, C>, overload_traits<O>::qualifier>;
   template <class T>
   friend T proxy_cast(_Self self) {
     static_assert(!std::is_rvalue_reference_v<T>);
@@ -1524,26 +1524,29 @@ class proxy_typeid_reflector {
  public:
   template <class T>
   constexpr explicit proxy_typeid_reflector(std::in_place_type_t<T>)
-      : type_(typeid(T)) {}
+      : type_(&typeid(T)) {}
+  constexpr proxy_typeid_reflector(const proxy_typeid_reflector&) = default;
 
   template <class F, class R>
   struct accessor {
-    friend const std::type_info& proxy_typeid(const accessor& self) noexcept {
+    friend const std::type_info& proxy_typeid(
+        const adl_accessor_arg_t<F, R>& self) noexcept {
       const proxy<F>& p = access_proxy<F>(self);
       if (!p.has_value()) { return typeid(void); }
       const proxy_typeid_reflector& refl = proxy_reflect<R>(p);
-      return refl.type_;
+      return *refl.type_;
     }
 ___PRO_DEBUG(
     accessor() noexcept { std::ignore = &accessor::_symbol_guard; }
 
    private:
-    static inline const std::type_info& _symbol_guard(const accessor& self)
-        noexcept { return proxy_typeid(self); }
+    static inline const std::type_info& _symbol_guard(
+        const adl_accessor_arg_t<F, R>& self) noexcept
+        { return proxy_typeid(self); }
 )
   };
 
-  const std::type_info& type_;
+  const std::type_info* type_;
 };
 #undef ___PRO_THROW
 #endif  // __cpp_rtti
@@ -1597,13 +1600,13 @@ struct basic_facade_builder {
   using support_indirect_rtti = add_indirect_convention<
       details::proxy_cast_dispatch,
       void(details::proxy_cast_context) &,
-      //void(details::proxy_cast_context) const&,
+      void(details::proxy_cast_context) const&,
       void(details::proxy_cast_context) &&>
       ::template add_indirect_reflection<details::proxy_typeid_reflector>;
   using support_direct_rtti = add_direct_convention<
       details::proxy_cast_dispatch,
       void(details::proxy_cast_context) &,
-      //void(details::proxy_cast_context) const&,
+      void(details::proxy_cast_context) const&,
       void(details::proxy_cast_context) &&>
       ::template add_direct_reflection<details::proxy_typeid_reflector>;
   using support_rtti = support_indirect_rtti;
