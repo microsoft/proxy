@@ -31,8 +31,18 @@
       "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
     },
     {
+      "Name": "Indirect invocation on small objects via `proxy_view` vs. virtual functions",
+      "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxyView",
+      "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
+    },
+    {
       "Name": "Indirect invocation on large objects via `proxy` vs. virtual functions",
       "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy",
+      "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
+    },
+    {
+      "Name": "Indirect invocation on large objects via `proxy_view` vs. virtual functions",
+      "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxyView",
       "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
     },
     {
