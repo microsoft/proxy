@@ -9,7 +9,7 @@ namespace proxy_view_tests_details {
 
 struct TestFacade : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"+=">, void(int)>
-    ::add_convention<utils::spec::FreeToString, std::string() const>
+    ::add_convention<utils::spec::FreeToString, std::string(), std::string() const>
     ::add_view<TestFacade>
     ::add_view<const TestFacade>
     ::build {};
@@ -32,8 +32,8 @@ static_assert(sizeof(pro::proxy<TestFacade>) == 3 * sizeof(void*));
 static_assert(std::is_trivially_copy_constructible_v<pro::proxy_view<TestFacade>>);
 static_assert(std::is_trivially_destructible_v<pro::proxy_view<TestFacade>>);
 static_assert(SupportsIntPlusEqual<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
-static_assert(!SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
-static_assert(sizeof(pro::proxy_view<TestFacade>) == 2 * sizeof(void*));
+static_assert(SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
+static_assert(sizeof(pro::proxy_view<TestFacade>) == 3 * sizeof(void*));
 
 static_assert(std::is_trivially_copy_constructible_v<pro::proxy_view<const TestFacade>>);
 static_assert(std::is_trivially_destructible_v<pro::proxy_view<const TestFacade>>);
@@ -55,6 +55,7 @@ TEST(ProxyViewTests, TestViewIndependentUse) {
   int a = 123;
   pro::proxy_view<details::TestFacade> p = &a;
   *p += 3;
+  ASSERT_EQ(ToString(*p), "126");
   ASSERT_EQ(a, 126);
 }
 
@@ -78,6 +79,7 @@ TEST(ProxyViewTests, TestViewOfNonOwning) {
   *p2 += 3;
   ASSERT_EQ(ToString(*p1), "126");
   p1.reset();
+  ASSERT_EQ(ToString(*p2), "126");
   ASSERT_EQ(a, 126);
 }
 
