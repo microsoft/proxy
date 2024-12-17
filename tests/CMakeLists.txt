@@ -26,6 +26,7 @@ add_executable(msft_proxy_tests
   proxy_regression_tests.cpp
   proxy_rtti_tests.cpp
   proxy_traits_tests.cpp
+  proxy_view_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
 target_link_libraries(msft_proxy_tests PRIVATE msft_proxy)
