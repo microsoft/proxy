@@ -520,6 +520,12 @@ template <class A1, class A2>
 using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
 
+template <class T> struct in_place_type_traits : inapplicable_traits {};
+template <class T>
+struct in_place_type_traits<std::in_place_type_t<T>> : applicable_traits {};
+template <class T>
+constexpr bool is_in_place_type = in_place_type_traits<T>::applicable;
+
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (requires {
@@ -782,14 +788,15 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   }
   template <class P>
   proxy(P&& ptr) noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
-      requires(proxiable<std::decay_t<P>, F> &&
-          std::is_constructible_v<std::decay_t<P>, P>) : proxy()
-      { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
+      requires(!details::is_in_place_type<std::decay_t<P>> &&
+          proxiable<std::decay_t<P>, F> &&
+          std::is_constructible_v<std::decay_t<P>, P>)
+      : proxy() { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
   template <proxiable<F> P, class... Args>
   explicit proxy(std::in_place_type_t<P>, Args&&... args)
       noexcept(std::is_nothrow_constructible_v<P, Args...>)
-      requires(std::is_constructible_v<P, Args...>) : proxy()
-      { initialize<P>(std::forward<Args>(args)...); }
+      requires(std::is_constructible_v<P, Args...>)
+      : proxy() { initialize<P>(std::forward<Args>(args)...); }
   template <proxiable<F> P, class U, class... Args>
   explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
           Args&&... args)
@@ -1468,11 +1475,10 @@ struct observer_overload_mapping_traits<F, IS_DIRECT, D, O>
     : observer_overload_mapping_traits_impl<F, IS_DIRECT, D, O> {};
 template <class F, class O>
 struct observer_overload_mapping_traits<F, true, upward_conversion_dispatch, O>
-    : std::type_identity<proxy_view<
-          std::conditional_t<std::is_const_v<F>,
-              const facade_of_t<typename overload_traits<O>::return_type>,
-              facade_of_t<typename overload_traits<O>::return_type>
-          >>() const noexcept> {};
+    : std::type_identity<proxy_view<std::conditional_t<std::is_const_v<F>,
+          const facade_of_t<typename overload_traits<O>::return_type>,
+          facade_of_t<typename overload_traits<O>::return_type>>>()
+          const noexcept> {};
 
 template <class D>
 struct observer_dispatch_reduction : std::type_identity<D> {};
@@ -1702,22 +1708,20 @@ struct basic_facade_builder {
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
 #ifdef __cpp_rtti
-  using support_indirect_rtti =
-      basic_facade_builder<
-          details::add_conv_t<Cs, details::conv_impl<false,
-              details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
-              void(details::proxy_cast_context) const&,
-              void(details::proxy_cast_context) &&>>,
-          details::add_tuple_t<Rs, details::refl_impl<false,
-              details::proxy_typeid_reflector>>, C>;
-  using support_direct_rtti =
-      basic_facade_builder<
-          details::add_conv_t<Cs, details::conv_impl<true,
-              details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
-              void(details::proxy_cast_context) const&,
-              void(details::proxy_cast_context) &&>>,
-          details::add_tuple_t<Rs, details::refl_impl<true,
-              details::proxy_typeid_reflector>>, C>;
+  using support_indirect_rtti = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<false,
+          details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
+          void(details::proxy_cast_context) const&,
+          void(details::proxy_cast_context) &&>>,
+      details::add_tuple_t<Rs, details::refl_impl<false,
+          details::proxy_typeid_reflector>>, C>;
+  using support_direct_rtti = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<true,
+          details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
+          void(details::proxy_cast_context) const&,
+          void(details::proxy_cast_context) &&>>,
+      details::add_tuple_t<Rs, details::refl_impl<true,
+          details::proxy_typeid_reflector>>, C>;
   using support_rtti = support_indirect_rtti;
 #endif  // __cpp_rtti
   template <class F>
@@ -1783,8 +1787,8 @@ struct operator_dispatch;
 #define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T, class Arg> \
     decltype(auto) operator()(T&& self, Arg&& arg) \
-        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
-            std::forward<Arg>(arg))
+        ___PRO_DIRECT_FUNC_IMPL( \
+            std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
 #define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
     ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
     ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
@@ -1792,8 +1796,8 @@ struct operator_dispatch;
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       ___PRO_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, \
-          operator __VA_ARGS__) \
+      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE( \
+          ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
     };
 
 #define ___PRO_DEF_RHS_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
@@ -1817,10 +1821,10 @@ ___PRO_DEBUG( \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
       decltype(auto) operator()(T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
-              std::forward<T>(self)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_OP_ACCESSOR, \
-          __VA_ARGS__) \
+          ___PRO_DIRECT_FUNC_IMPL( \
+              std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
+      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE( \
+          ___PRO_DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
     };
 
 #define ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
@@ -1873,8 +1877,8 @@ ___PRO_DEBUG( \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
       decltype(auto) operator()(T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL(std::forward<Arg>(arg) __VA_ARGS__ \
-              std::forward<T>(self)) \
+          ___PRO_DIRECT_FUNC_IMPL( \
+              std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
           __VA_ARGS__) \
     };
@@ -1960,8 +1964,7 @@ struct implicit_conversion_dispatch
   template <class T>
   T&& operator()(T&& self) noexcept { return std::forward<T>(self); }
 };
-struct explicit_conversion_dispatch
-    : details::cast_dispatch_base<true, false> {
+struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
   template <class T>
   auto operator()(T&& self) noexcept
       { return details::explicit_conversion_adapter<T>{std::forward<T>(self)}; }
