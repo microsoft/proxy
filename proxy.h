@@ -1265,8 +1265,6 @@ template <class F, class C>
 using adl_accessor_arg_t =
     std::conditional_t<C::is_direct, proxy<F>, proxy_indirect_accessor<F>>;
 
-template <class O>
-using overload_return_type = typename overload_traits<O>::return_type;
 #define ___PRO_DEF_CAST_ACCESSOR(Q, SELF, ...) \
     template <class __F, class __C, class T> \
     struct accessor<__F, __C, T() Q> { \
