@@ -80,6 +80,16 @@ static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, Te
 static_assert(!noexcept(pro::make_proxy_inplace<TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
 static_assert(noexcept(pro::make_proxy_inplace<TestLargeStringable, int>(123)));
 
+template <class T>
+void SfinaeUnsafeIncrementImpl(T&& value) { ++value; }
+
+PRO_DEF_FREE_DISPATCH(FreeSfinaeUnsafeIncrement, SfinaeUnsafeIncrementImpl, Increment);
+
+struct SfinaeUnsafeFacade : pro::facade_builder
+    ::support_rtti
+    ::add_convention<FreeSfinaeUnsafeIncrement, void()>
+    ::build {};
+
 }  // namespace proxy_creation_tests_details
 
 namespace details = proxy_creation_tests_details;
@@ -534,4 +544,10 @@ TEST(ProxyCreationTests, TestMakeProxy_WithoutSBO_Lifetime_Move) {
   }
   expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyCreationTests, TestMakeProxy_SfinaeUnsafe) {
+  pro::proxy<details::SfinaeUnsafeFacade> p = pro::make_proxy<details::SfinaeUnsafeFacade, int>();
+  Increment(*p);
+  ASSERT_EQ(proxy_cast<int>(*p), 1);
 }
