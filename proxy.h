@@ -9,10 +9,10 @@
 #include <cstdlib>
 #include <bit>
 #include <concepts>
+#include <exception>
 #include <initializer_list>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -1264,7 +1264,7 @@ using proxy_view = proxy<observer_facade<F>>;
 class bad_proxy_cast : public std::bad_cast {
  public:
   bad_proxy_cast() noexcept = default;
-  char const* what() const final { return "pro::bad_proxy_cast"; }
+  char const* what() const noexcept final { return "pro::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti
 
@@ -1984,9 +1984,10 @@ struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
 };
 using conversion_dispatch = explicit_conversion_dispatch;
 
-class not_implemented : public std::logic_error {
+class not_implemented : public std::exception {
  public:
-  not_implemented() : logic_error("pro::not_implemented") {}
+  not_implemented() noexcept = default;
+  char const* what() const noexcept final { return "pro::not_implemented"; }
 };
 
 template <class D>
@@ -2076,9 +2077,9 @@ ___PRO_DEBUG( \
 #define PRO_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
-// PRO_DEF_WEAK_DISPATCH has been deprecated since version 3.2.0
 #define PRO_DEF_WEAK_DISPATCH(__NAME, __D, __FUNC) \
-    struct [[deprecated("Use pro::weak_dispatch instead")]] __NAME : __D { \
+    struct [[deprecated("'PRO_DEF_WEAK_DISPATCH' is deprecated. " \
+        "Use pro::weak_dispatch<" #__D "> instead.")]] __NAME : __D { \
       using __D::operator(); \
       template <class... __Args> \
       decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
