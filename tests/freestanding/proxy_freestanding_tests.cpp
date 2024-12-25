@@ -4,6 +4,7 @@
 
 #include "proxy.h"
 
+constexpr unsigned DefaultHash = -1;
 unsigned GetHash(int v) { return static_cast<unsigned>(v + 3) * 31; }
 unsigned GetHash(double v) { return static_cast<unsigned>(v * v + 5) * 87; }
 unsigned GetHash(const char* v) {
@@ -13,12 +14,11 @@ unsigned GetHash(const char* v) {
   }
   return result;
 }
-unsigned GetDefaultHash() { return -1; }
+unsigned GetHash(std::nullptr_t) { return DefaultHash; }
 
 PRO_DEF_FREE_DISPATCH(FreeGetHash, GetHash);
-PRO_DEF_WEAK_DISPATCH(WeakFreeGetHash, FreeGetHash, GetDefaultHash);
 struct Hashable : pro::facade_builder
-    ::add_convention<WeakFreeGetHash, unsigned()>
+    ::add_convention<FreeGetHash, unsigned()>
     ::build {};
 
 extern "C" int main() {
@@ -40,7 +40,7 @@ extern "C" int main() {
     return 1;
   }
   p = &t;
-  if (GetHash(*p) != GetDefaultHash()) {
+  if (GetHash(*p) != DefaultHash) {
     return 1;
   }
   return 0;
