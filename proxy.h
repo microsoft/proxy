@@ -6,19 +6,18 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include <bit>
 #include <concepts>
 #include <initializer_list>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
 #ifdef __cpp_rtti
-#ifndef __cpp_exceptions
-#include <cstdlib>  // For std::abort() when "throw" is not available
-#endif  // __cpp_exceptions
 #include <optional>
 #include <typeinfo>
 #endif  // __cpp_rtti
@@ -30,6 +29,12 @@
 #else
 #error "Proxy requires C++20 attribute no_unique_address"
 #endif
+
+#ifdef __cpp_exceptions
+#define ___PRO_THROW(...) throw __VA_ARGS__
+#else
+#define ___PRO_THROW(...) std::abort()
+#endif  // __cpp_exceptions
 
 #ifdef _MSC_VER
 #define ___PRO_ENFORCE_EBO __declspec(empty_bases)
@@ -1256,7 +1261,11 @@ using proxy_view = proxy<observer_facade<F>>;
         accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; })
 
 #ifdef __cpp_rtti
-struct bad_proxy_cast : std::bad_cast {};
+class bad_proxy_cast : public std::bad_cast {
+ public:
+  bad_proxy_cast() noexcept = default;
+  char const* what() const final { return "pro::bad_proxy_cast"; }
+};
 #endif  // __cpp_rtti
 
 namespace details {
@@ -1554,12 +1563,6 @@ template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
 #ifdef __cpp_rtti
-#ifdef __cpp_exceptions
-#define ___PRO_THROW(...) throw __VA_ARGS__
-#else
-#define ___PRO_THROW(...) std::abort()
-#endif  // __cpp_exceptions
-
 struct proxy_cast_context {
   const std::type_info* type_ptr;
   bool is_ref;
@@ -1657,8 +1660,20 @@ ___PRO_DEBUG(
 
   const std::type_info* info;
 };
-#undef ___PRO_THROW
 #endif  // __cpp_rtti
+
+struct wildcard {
+  wildcard() = delete;
+
+  template <class T>
+  [[noreturn]] operator T() {
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    std::abort();
+#endif  // __cpp_lib_unreachable
+  }
+};
 
 }  // namespace details
 
@@ -1969,6 +1984,19 @@ struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
 };
 using conversion_dispatch = explicit_conversion_dispatch;
 
+class not_implemented : public std::logic_error {
+ public:
+  not_implemented() : logic_error("pro::not_implemented") {}
+};
+
+template <class D>
+struct weak_dispatch : D {
+  using D::operator();
+  template <class... Args>
+  details::wildcard operator()(std::nullptr_t, Args&&...)
+      { ___PRO_THROW(not_implemented{}); }
+};
+
 #define ___PRO_EXPAND_IMPL(__X) __X
 #define ___PRO_EXPAND_MACRO_IMPL( \
     __MACRO, __1, __2, __3, __NAME, ...) \
@@ -2048,8 +2076,9 @@ ___PRO_DEBUG( \
 #define PRO_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
+// PRO_DEF_WEAK_DISPATCH has been deprecated since version 3.2.0
 #define PRO_DEF_WEAK_DISPATCH(__NAME, __D, __FUNC) \
-    struct __NAME : __D { \
+    struct [[deprecated("Use pro::weak_dispatch instead")]] __NAME : __D { \
       using __D::operator(); \
       template <class... __Args> \
       decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
@@ -2058,6 +2087,7 @@ ___PRO_DEBUG( \
 
 }  // namespace pro
 
+#undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
 #endif  // _MSFT_PROXY_

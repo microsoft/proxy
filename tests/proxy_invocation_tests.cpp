@@ -36,18 +36,10 @@ struct Callable : pro::facade_builder
     ::add_facade<MovableCallable<Os...>>
     ::build {};
 
-struct Wildcard {
-  template <class T>
-  operator T() const noexcept { std::terminate(); }
-};
-
-Wildcard NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }
-
-PRO_DEF_WEAK_DISPATCH(WeakOpCall, pro::operator_dispatch<"()">, NotImplemented);
 template <class... Os>
 struct WeakCallable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>
-    ::add_convention<WeakOpCall, Os...>
+    ::add_convention<pro::weak_dispatch<pro::operator_dispatch<"()">>, Os...>
     ::build {};
 
 PRO_DEF_FREE_DISPATCH(FreeSize, std::ranges::size, Size);
@@ -77,10 +69,9 @@ struct Container : pro::facade_builder
     ::build {};
 
 PRO_DEF_MEM_DISPATCH(MemAt, at, at);
-PRO_DEF_WEAK_DISPATCH(MemAtWeak, MemAt, NotImplemented);
 
 struct ResourceDictionary : pro::facade_builder
-    ::add_convention<MemAtWeak, std::string(int)>
+    ::add_convention<pro::weak_dispatch<MemAt>, std::string(int)>
     ::build {};
 
 template <class F, class T>
@@ -104,13 +95,11 @@ template <class F, class T>
 auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 
 template <class F>
-PRO_DEF_FREE_DISPATCH(FreeGetWeakImpl, GetWeakImpl<F>, GetWeak);
-template <class F>
-PRO_DEF_WEAK_DISPATCH(FreeGetWeak, FreeGetWeakImpl<F>, std::nullptr_t);
+PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
+    ::add_direct_convention<pro::weak_dispatch<FreeGetWeak<SharedStringable>>, pro::proxy<Weak<SharedStringable>>() const&>
     ::build {};
 
 template <class F, bool NE, class... Args>
@@ -272,9 +261,8 @@ TEST(ProxyInvocationTests, TestMemberDispatchDefault) {
     bool exception_thrown = false;
     try {
       p->at(0);
-    } catch (const std::runtime_error& e) {
+    } catch (const pro::not_implemented&) {
       exception_thrown = true;
-      ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
     }
     ASSERT_TRUE(exception_thrown);
   }
@@ -292,9 +280,8 @@ TEST(ProxyInvocationTests, TestFreeDispatchDefault) {
     auto p = pro::make_proxy<details::WeakCallable<void()>>(123);
     try {
       (*p)();
-    } catch (const std::runtime_error& e) {
+    } catch (const pro::not_implemented&) {
       exception_thrown = true;
-      ASSERT_EQ(static_cast<std::string>(e.what()), "Not implemented!");
     }
     ASSERT_TRUE(exception_thrown);
   }
@@ -313,7 +300,13 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   p = &test_val;  // The underlying std::shared_ptr will be destroyed
   ASSERT_TRUE(weak.has_value());
   ASSERT_FALSE(Lock(*weak).has_value());
-  ASSERT_FALSE(GetWeak(p).has_value());
+  bool exception_thrown = false;
+  try {
+    GetWeak(p);
+  } catch (const pro::not_implemented&) {
+    exception_thrown = true;
+  }
+  ASSERT_TRUE(exception_thrown);
   ASSERT_EQ(ToString(*p), "123");
 }
 
