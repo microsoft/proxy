@@ -92,14 +92,16 @@ struct Weak : pro::facade_builder
     ::build {};
 
 template <class F, class T>
-auto GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
+pro::proxy<Weak<F>> GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
+template <class F>
+pro::proxy<Weak<F>> GetWeakImpl(std::nullptr_t) { return nullptr; }
 
 template <class F>
 PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak);
 
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_direct_convention<pro::weak_dispatch<FreeGetWeak<SharedStringable>>, pro::proxy<Weak<SharedStringable>>() const&>
+    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
     ::build {};
 
 template <class F, bool NE, class... Args>
@@ -300,13 +302,7 @@ TEST(ProxyInvocationTests, TestObserverDispatch) {
   p = &test_val;  // The underlying std::shared_ptr will be destroyed
   ASSERT_TRUE(weak.has_value());
   ASSERT_FALSE(Lock(*weak).has_value());
-  bool exception_thrown = false;
-  try {
-    GetWeak(p);
-  } catch (const pro::not_implemented&) {
-    exception_thrown = true;
-  }
-  ASSERT_TRUE(exception_thrown);
+  ASSERT_FALSE(GetWeak(p).has_value());
   ASSERT_EQ(ToString(*p), "123");
 }
 
