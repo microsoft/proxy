@@ -1264,7 +1264,7 @@ using proxy_view = proxy<observer_facade<F>>;
 class bad_proxy_cast : public std::bad_cast {
  public:
   bad_proxy_cast() noexcept = default;
-  char const* what() const noexcept final { return "pro::bad_proxy_cast"; }
+  char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti
 
@@ -1987,7 +1987,7 @@ using conversion_dispatch = explicit_conversion_dispatch;
 class not_implemented : public std::exception {
  public:
   not_implemented() noexcept = default;
-  char const* what() const noexcept final { return "pro::not_implemented"; }
+  char const* what() const noexcept override { return "pro::not_implemented"; }
 };
 
 template <class D>
