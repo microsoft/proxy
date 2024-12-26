@@ -1994,7 +1994,7 @@ template <class D>
 struct weak_dispatch : D {
   using D::operator();
   template <class... Args>
-  details::wildcard operator()(std::nullptr_t, Args&&...)
+  [[noreturn]] details::wildcard operator()(std::nullptr_t, Args&&...)
       { ___PRO_THROW(not_implemented{}); }
 };
 
