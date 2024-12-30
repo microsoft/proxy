@@ -1,11 +1,11 @@
 # Function template `proxy_reflect`
 
 ```cpp
-template <class R, class F>
-/* see below */ proxy_reflect(const proxy<F>& p) noexcept;
+template <bool IsDirect, class R, class F>
+const R& proxy_reflect(const proxy<F>& p) noexcept;
 ```
 
-Let `P` be the type of the contained value of `p`. Retrieves a value of type `const typename R::reflector_type&` constructed from [`std::in_place_type<T>`](https://en.cppreference.com/w/cpp/utility/in_place), where `T` is `P` when `R::is_direct` is `true`, or otherwise `T` is `typename std::pointer_traits<P>::element_type` when `R::is_direct` is `false`. `R` is required to be defined in `typename F::reflection_types`. The behavior is undefined if `p` does not contain a value.
+Let `P` be the type of the contained value of `p`. Retrieves a value of type `const R&` constructed from [`std::in_place_type<T>`](https://en.cppreference.com/w/cpp/utility/in_place), where `T` is `P` when `IsDirect` is `true`, or otherwise `T` is `typename std::pointer_traits<P>::element_type` when `IsDirect` is `false`. There shall be a reflection type `Refl` defined in `typename F::reflection_types` where `Refl::is_direct == IsDirect && std::is_same_v<typename Refl::reflection_type, R>` is `true`. The behavior is undefined if `p` does not contain a value.
 
 The reference obtained from `proxy_reflect()` may be invalidated if `p` is subsequently modified.
 
@@ -28,10 +28,10 @@ class CopyabilityReflector {
   constexpr explicit CopyabilityReflector(std::in_place_type_t<T>)
       : copyable_(std::is_copy_constructible_v<T>) {}
 
-  template <class F, class R>
+  template <class F, bool IsDirect, class R>
   struct accessor {
     bool IsCopyable() const noexcept {
-      const CopyabilityReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      const CopyabilityReflector& self = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
       return self.copyable_;
     }
   };

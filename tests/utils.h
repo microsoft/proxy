@@ -97,10 +97,10 @@ class RttiReflector {
   template <class T>
   constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  template <class F, class R>
+  template <class F, bool IsDirect, class R>
   struct accessor {
     const char* GetTypeName() const noexcept {
-      const RttiReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      const RttiReflector& self = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
       return self.type_.name();
     }
   };

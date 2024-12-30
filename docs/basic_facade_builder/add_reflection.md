@@ -14,16 +14,16 @@ using add_direct_reflection = basic_facade_builder</* see below */>;
 The alias templates `add_reflection`, `add_indirect_reflection` and `add_direct_reflection` of `basic_facade_builder<Cs, Rs, C>` add reflection types to the template parameters. Specifically,
 
 - `add_reflection` is equivalent to `add_indirect_reflection`.
-- `add_indirect_reflection` merges an implementation-defined reflection type `R2` into `Rs`, where:
-  - `R2::is_direct` is `false`.
-  - `typename R2::reflector_type` is `R`.
-  - `typename R2::template accessor<F>` is `typename R2::template accessor<F, R2>` if applicable.
-- `add_direct_reflection` merges an implementation-defined reflection type `R2` into `Rs`, where:
-  - `R2::is_direct` is `true`.
-  - `typename R2::reflector_type` is `R`.
-  - `typename R2::template accessor<F>` is `typename R2::template accessor<F, R2>` if applicable.
+- `add_indirect_reflection` merges an implementation-defined reflection type `Refl` into `Rs`, where:
+  - `Refl::is_direct` is `false`.
+  - `typename Refl::reflector_type` is `R`.
+  - `typename Refl::template accessor<F>` is `typename R::template accessor<F, false, R>` if applicable.
+- `add_direct_reflection` merges an implementation-defined reflection type `Refl` into `Rs`, where:
+  - `Refl::is_direct` is `true`.
+  - `typename Refl::reflector_type` is `R`.
+  - `typename Refl::template accessor<F>` is `typename R::template accessor<F, true, R>` if applicable.
 
-When `Rs` already contains `R2`, the template parameters shall not change.
+When `Rs` already contains `Refl`, the template parameters shall not change.
 
 ## Notes
 
@@ -42,10 +42,10 @@ class RttiReflector {
   template <class T>
   constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
 
-  template <class F, class R>
+  template <class F, bool IsDirect, class R>
   struct accessor {
     const char* GetTypeName() const noexcept {
-      const RttiReflector& self = pro::proxy_reflect<R>(pro::access_proxy<F>(*this));
+      const RttiReflector& self = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
       return self.type_.name();
     }
   };
