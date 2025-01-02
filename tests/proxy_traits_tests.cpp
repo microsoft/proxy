@@ -298,7 +298,7 @@ struct BadFacade_BadReflectionType {
       .destructibility = pro::constraint_level::nothrow,
   };
 };
-static_assert(pro::facade<BadFacade_BadReflectionType>);
+static_assert(!pro::facade<BadFacade_BadReflectionType>);
 
 PRO_DEF_MEM_DISPATCH(MemFoo, Foo);
 PRO_DEF_MEM_DISPATCH(MemBar, Bar);
