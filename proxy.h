@@ -17,6 +17,10 @@
 #include <type_traits>
 #include <utility>
 
+#if __STDC_HOSTED__
+#include <format>
+#endif  // __STDC_HOSTED__
+
 #ifdef __cpp_rtti
 #include <optional>
 #include <typeinfo>
@@ -1575,6 +1579,33 @@ struct sign {
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
+#if __STDC_HOSTED__
+template <class CharT> struct format_overload_traits;
+template <>
+struct format_overload_traits<char>
+    : std::type_identity<std::format_context::iterator(
+          std::string_view spec, std::format_context& fc) const> {};
+template <>
+struct format_overload_traits<wchar_t>
+    : std::type_identity<std::wformat_context::iterator(
+          std::wstring_view spec, std::wformat_context& fc) const> {};
+template <class CharT>
+using format_overload_t = typename format_overload_traits<CharT>::type;
+
+struct format_dispatch {
+  template <class T, class CharT, class OutIt>
+  OutIt operator()(const T& self, std::basic_string_view<CharT> spec,
+      std::basic_format_context<OutIt, CharT>& fc) {
+    std::formatter<T, CharT> impl;
+    {
+      std::basic_format_parse_context<CharT> pc{spec};
+      impl.parse(pc);
+    }
+    return impl.format(self, fc);
+  }
+};
+#endif  // __STDC_HOSTED__
+
 #ifdef __cpp_rtti
 struct proxy_cast_context {
   const std::type_info* type_ptr;
@@ -1737,6 +1768,12 @@ struct basic_facade_builder {
   template <constraint_level CL>
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
+#if __STDC_HOSTED__
+  using support_format = add_convention<
+      details::format_dispatch, details::format_overload_t<char>>;
+  using support_wformat = add_convention<
+      details::format_dispatch, details::format_overload_t<wchar_t>>;
+#endif  // __STDC_HOSTED__
 #ifdef __cpp_rtti
   using support_indirect_rtti = basic_facade_builder<
       details::add_conv_t<Cs, details::conv_impl<false,
@@ -2107,6 +2144,34 @@ ___PRO_DEBUG( \
     }
 
 }  // namespace pro
+
+#if __STDC_HOSTED__
+namespace std {
+
+template <class F, class CharT>
+struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+  constexpr auto parse(basic_format_parse_context<CharT>& pc) {
+    auto it = pc.begin();
+    while (it < pc.end() && *it != '}') { ++it; }
+    spec_ = basic_string_view<CharT>{pc.begin(), it + 1};
+    return it;
+  }
+
+  template <class OutIt>
+  OutIt format(const pro::proxy_indirect_accessor<F>& ia,
+      basic_format_context<OutIt, CharT>& fc) const {
+    auto& p = pro::access_proxy<F>(ia);
+    if (!p.has_value()) { ___PRO_THROW(format_error{"null proxy"}); }
+    return pro::proxy_invoke<false, pro::details::format_dispatch,
+        pro::details::format_overload_t<CharT>>(p, spec_, fc);
+  }
+
+ private:
+  basic_string_view<CharT> spec_;
+};
+
+}  // namespace std
+#endif  // __STDC_HOSTED__
 
 #undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE

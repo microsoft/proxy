@@ -19,6 +19,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(msft_proxy_tests
   proxy_creation_tests.cpp
   proxy_dispatch_tests.cpp
+  proxy_format_tests.cpp
   proxy_integration_tests.cpp
   proxy_invocation_tests.cpp
   proxy_lifetime_tests.cpp
