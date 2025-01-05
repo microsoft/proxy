@@ -1595,7 +1595,8 @@ using format_overload_t = typename format_overload_traits<CharT>::type;
 struct format_dispatch {
   template <class T, class CharT, class OutIt>
   OutIt operator()(const T& self, std::basic_string_view<CharT> spec,
-      std::basic_format_context<OutIt, CharT>& fc) {
+      std::basic_format_context<OutIt, CharT>& fc)
+      requires(std::is_default_constructible_v<std::formatter<T, CharT>>) {
     std::formatter<T, CharT> impl;
     {
       std::basic_format_parse_context<CharT> pc{spec};
