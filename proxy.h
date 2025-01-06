@@ -558,6 +558,10 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   template <class P>
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs>::template applicable_ptr<P> && ...);
+  template <bool IsDirect, class D, class O>
+  static constexpr bool is_invocable = std::is_base_of_v<dispatcher_meta<
+      typename overload_traits<O>::template meta_provider<IsDirect, D>>,
+      conv_meta>;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl : inapplicable_traits {};
@@ -2150,6 +2154,9 @@ ___PRO_DEBUG( \
 namespace std {
 
 template <class F, class CharT>
+    requires(pro::details::facade_traits<F>::template is_invocable<
+        false, pro::details::format_dispatch,
+        pro::details::format_overload_t<CharT>>)
 struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     auto it = pc.begin();
