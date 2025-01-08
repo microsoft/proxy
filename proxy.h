@@ -1597,10 +1597,23 @@ template <class CharT>
 using format_overload_t = typename format_overload_traits<CharT>::type;
 
 struct format_dispatch {
+  // Note: This function requires std::formatter<T, CharT> to be well-formed.
+  // However, the standard did not provide such facility before C++23. In the
+  // "required" clause of this function, std::formattable (C++23) is preferred
+  // when available. Otherwise, when building with C++20, we simply check
+  // whether std::formatter<T, CharT> is a disabled specialization of
+  // std::formatter by std::is_default_constructible_v as per
+  // [format.formatter.spec].
   template <class T, class CharT, class OutIt>
   OutIt operator()(const T& self, std::basic_string_view<CharT> spec,
       std::basic_format_context<OutIt, CharT>& fc)
-      requires(std::is_default_constructible_v<std::formatter<T, CharT>>) {
+      requires(
+#if defined(__cpp_lib_format) && __cpp_lib_format >= 202207L
+          std::formattable<T, CharT>
+#else
+          std::is_default_constructible_v<std::formatter<T, CharT>>
+#endif  // defined(__cpp_lib_format) && __cpp_lib_format >= 202207L
+      ) {
     std::formatter<T, CharT> impl;
     {
       std::basic_format_parse_context<CharT> pc{spec};
@@ -2160,7 +2173,7 @@ template <class F, class CharT>
 struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     auto it = pc.begin();
-    while (it < pc.end() && *it != '}') { ++it; }
+    while (it != pc.end() && *it != '}') { ++it; }
     spec_ = basic_string_view<CharT>{pc.begin(), it + 1};
     return it;
   }
