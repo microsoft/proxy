@@ -2172,10 +2172,13 @@ template <class F, class CharT>
         pro::details::format_overload_t<CharT>>)
 struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
-    auto it = pc.begin();
-    while (it != pc.end() && *it != '}') { ++it; }
-    spec_ = basic_string_view<CharT>{pc.begin(), it + 1};
-    return it;
+    for (auto it = pc.begin(); it != pc.end(); ++it) {
+      if (*it == '}') {
+        spec_ = basic_string_view<CharT>{pc.begin(), it + 1};
+        return it;
+      }
+    }
+    return pc.end();
   }
 
   template <class OutIt>
