@@ -17,6 +17,10 @@
 #include <type_traits>
 #include <utility>
 
+#if __STDC_HOSTED__
+#include <format>
+#endif  // __STDC_HOSTED__
+
 #ifdef __cpp_rtti
 #include <optional>
 #include <typeinfo>
@@ -554,6 +558,10 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   template <class P>
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs>::template applicable_ptr<P> && ...);
+  template <bool IsDirect, class D, class O>
+  static constexpr bool is_invocable = std::is_base_of_v<dispatcher_meta<
+      typename overload_traits<O>::template meta_provider<IsDirect, D>>,
+      conv_meta>;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl : inapplicable_traits {};
@@ -1575,6 +1583,47 @@ struct sign {
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
+#if __STDC_HOSTED__
+template <class CharT> struct format_overload_traits;
+template <>
+struct format_overload_traits<char>
+    : std::type_identity<std::format_context::iterator(
+          std::string_view spec, std::format_context& fc) const> {};
+template <>
+struct format_overload_traits<wchar_t>
+    : std::type_identity<std::wformat_context::iterator(
+          std::wstring_view spec, std::wformat_context& fc) const> {};
+template <class CharT>
+using format_overload_t = typename format_overload_traits<CharT>::type;
+
+struct format_dispatch {
+  // Note: This function requires std::formatter<T, CharT> to be well-formed.
+  // However, the standard did not provide such facility before C++23. In the
+  // "required" clause of this function, std::formattable (C++23) is preferred
+  // when available. Otherwise, when building with C++20, we simply check
+  // whether std::formatter<T, CharT> is a disabled specialization of
+  // std::formatter by std::is_default_constructible_v as per
+  // [format.formatter.spec].
+  template <class T, class CharT, class OutIt>
+  OutIt operator()(const T& self, std::basic_string_view<CharT> spec,
+      std::basic_format_context<OutIt, CharT>& fc)
+      requires(
+#if defined(__cpp_lib_format_ranges) && __cpp_lib_format_ranges >= 202207L
+          std::formattable<T, CharT>
+#else
+          std::is_default_constructible_v<std::formatter<T, CharT>>
+#endif  // defined(__cpp_lib_format_ranges) && __cpp_lib_format_ranges >= 202207L
+      ) {
+    std::formatter<T, CharT> impl;
+    {
+      std::basic_format_parse_context<CharT> pc{spec};
+      impl.parse(pc);
+    }
+    return impl.format(self, fc);
+  }
+};
+#endif  // __STDC_HOSTED__
+
 #ifdef __cpp_rtti
 struct proxy_cast_context {
   const std::type_info* type_ptr;
@@ -1737,6 +1786,12 @@ struct basic_facade_builder {
   template <constraint_level CL>
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
+#if __STDC_HOSTED__
+  using support_format = add_convention<
+      details::format_dispatch, details::format_overload_t<char>>;
+  using support_wformat = add_convention<
+      details::format_dispatch, details::format_overload_t<wchar_t>>;
+#endif  // __STDC_HOSTED__
 #ifdef __cpp_rtti
   using support_indirect_rtti = basic_facade_builder<
       details::add_conv_t<Cs, details::conv_impl<false,
@@ -2107,6 +2162,39 @@ ___PRO_DEBUG( \
     }
 
 }  // namespace pro
+
+#if __STDC_HOSTED__
+namespace std {
+
+template <class F, class CharT>
+    requires(pro::details::facade_traits<F>::template is_invocable<false,
+        pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
+struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+  constexpr auto parse(basic_format_parse_context<CharT>& pc) {
+    for (auto it = pc.begin(); it != pc.end(); ++it) {
+      if (*it == '}') {
+        spec_ = basic_string_view<CharT>{pc.begin(), it + 1};
+        return it;
+      }
+    }
+    return pc.end();
+  }
+
+  template <class OutIt>
+  OutIt format(const pro::proxy_indirect_accessor<F>& ia,
+      basic_format_context<OutIt, CharT>& fc) const {
+    auto& p = pro::access_proxy<F>(ia);
+    if (!p.has_value()) { ___PRO_THROW(format_error{"null proxy"}); }
+    return pro::proxy_invoke<false, pro::details::format_dispatch,
+        pro::details::format_overload_t<CharT>>(p, spec_, fc);
+  }
+
+ private:
+  basic_string_view<CharT> spec_;
+};
+
+}  // namespace std
+#endif  // __STDC_HOSTED__
 
 #undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
