@@ -2167,9 +2167,8 @@ ___PRO_DEBUG( \
 namespace std {
 
 template <class F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<
-        false, pro::details::format_dispatch,
-        pro::details::format_overload_t<CharT>>)
+    requires(pro::details::facade_traits<F>::template is_invocable<false,
+        pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
 struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
