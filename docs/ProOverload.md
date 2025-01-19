@@ -12,7 +12,7 @@ A type `O` meets the *ProOverload* requirements if it matches one of the followi
 | `R(Args...) && noexcept`      |
 | `R(Args...) const`            |
 | `R(Args...) const noexcept`   |
-| `R(Args...) cosnt&`           |
+| `R(Args...) const&`           |
 | `R(Args...) const& noexcept`  |
 | `R(Args...) const&&`          |
 | `R(Args...) const&& noexcept` |

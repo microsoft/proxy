@@ -2,7 +2,7 @@
 
 ```cpp
 template <class T>
-T&& operator()(T&& value) noexcept;
+T&& operator()(T&& value) const noexcept;
 ```
 
 Returns `std::forward<T>(value)`.

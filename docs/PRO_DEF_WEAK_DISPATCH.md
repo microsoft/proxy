@@ -1,8 +1,10 @@
 # Macro `PRO_DEF_WEAK_DISPATCH`
 
 ```cpp
-#define PRO_DEF_WEAK_DISPATCH // see below
+#define PRO_DEF_WEAK_DISPATCH // deprecated since 3.2, see below
 ```
+
+<mark>⚠️ Macro `PRO_DEF_WEAK_DISPATCH` has been replaced by class template `weak_dispatch` since 3.2, and may be removed in a future version.</mark>
 
 Macro `PRO_DEF_WEAK_DISPATCH` defines a "weak dispatch" type with a default implementation. It supports the following syntax:
 
@@ -16,7 +18,7 @@ Defines a class named `dispatch_name` that inherits `existing_dispatch` and prov
 struct dispatch_name : existing_dispatch {
   using existing_dispatch::operator();
   template <class... Args>
-  decltype(auto) operator()(std::nullptr_t, Args&&... args)
+  decltype(auto) operator()(std::nullptr_t, Args&&... args) const
       noexcept(noexcept(default_func_name(std::forward<Args>(args)...)))
       requires(requires { default_func_name(std::forward<Args>(args)...); }) {
     return default_func_name(std::forward<Args>(args)...);
@@ -68,4 +70,5 @@ int main() {
 
 ## See Also
 
+- [class template `weak_dispatch`](weak_dispatch.md)
 - [named requirements *ProDispatch*](ProDispatch.md)

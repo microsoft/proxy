@@ -71,5 +71,5 @@ int main() {
 
 ## See Also
 
-- [(constructor)](proxy.md)
+- [(constructor)](constructor.md)
 - [`reset`](reset.md)

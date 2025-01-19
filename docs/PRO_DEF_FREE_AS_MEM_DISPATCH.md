@@ -1,7 +1,7 @@
 # Macro `PRO_DEF_FREE_AS_MEM_DISPATCH`
 
 ```cpp
-#define PRO_DEF_FREE_AS_MEM_DISPATCH // see below
+#define PRO_DEF_FREE_AS_MEM_DISPATCH // since 3.1, see below
 ```
 
 Macro `PRO_DEF_FREE_AS_MEM_DISPATCH` defines dispatch types for free function expressions with accessibility via a member function. It supports two syntaxes:
@@ -21,7 +21,7 @@ PRO_DEF_FREE_AS_MEM_DISPATCH(dispatch_name, func_name, accessibility_func_name);
 ```cpp
 struct dispatch_name {
   template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
+  decltype(auto) operator()(T&& self, Args&&... args) const
       noexcept(noexcept(func_name(std::forward<T>(self), std::forward<Args>(args)...)))
       requires(requires { func_name(std::forward<T>(self), std::forward<Args>(args)...); }) {
     return func_name(std::forward<T>(self), std::forward<Args>(args)...);

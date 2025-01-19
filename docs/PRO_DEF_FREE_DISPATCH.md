@@ -21,7 +21,7 @@ PRO_DEF_FREE_DISPATCH(dispatch_name, func_name, accessibility_func_name);
 ```cpp
 struct dispatch_name {
   template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
+  decltype(auto) operator()(T&& self, Args&&... args) const
       noexcept(noexcept(func_name(std::forward<T>(self), std::forward<Args>(args)...)))
       requires(requires { func_name(std::forward<T>(self), std::forward<Args>(args)...); }) {
     return func_name(std::forward<T>(self), std::forward<Args>(args)...);
