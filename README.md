@@ -70,12 +70,12 @@ Here is a step-by-step explanation:
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`. `p1` behaves like a raw pointer, and does not have ownership of the underlying `std::string`. If the lifetime of `str` ends before `p1`, `p1` becomes dangling.
 - `std::format("p1 = {}\n", *p1)`: This is how it works. `*p1` is formatted as "Hello World" because the capability was defined in the facade `Formattable`, so it works as if by calling `std::format("p1 = {}\n", str)`.
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p2 = `[`std::make_unique`](https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)`<int>(123)`: Creates a [`std::unique_ptr`](https://en.cppreference.com/w/cpp/memory/unique_ptr)`<int>` and converts to a `proxy`. Different from `p1`, `p2` has ownership of the underlying `int` because it is instantiated from a value of `std::unique_ptr`, and will call the destructor of `std::unique_ptr` when `p2` is destroyed, while `p1` does not have ownership of the underlying `int` because it is instantiated from a raw pointer. `p1` and `p2` are of the same type `pro::proxy<Formattable>`, which means you can have a function that returns `pro::proxy<Formattable>` without exposing any information about the implementation details to its caller.
-- `std::format("p2 = {}\n", *p2)`: Formats `*p2` as "123" with no surprise.
+- `std::format("p2 = {}\n", *p2)`: Formats `*p2` as "123" with no surprises.
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p3 = `[`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html)`<Formattable>(3.14159)`: Creates a `proxy` from a `double` without specifying the underlying pointer type. Specifically,
   - Similar with `p2`, `p3` also has ownership of the underlying `double` value, but can effectively avoid heap allocation.
   - Since the size of the underlying type (`double`) is known to be small (on major 32- or 64-bit platforms), [`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html) realizes the fact at compile-time, and falls back to [`pro::make_proxy_inplace`](https://microsoft.github.io/proxy/docs/make_proxy_inplace.html), which guarantees no heap allocation.
   - The "Proxy" library explicitly defines when heap allocation occurs or not to avoid users falling into performance hell, which is different from [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and other existing polymorphic wrappers in the standard.
-- `std::format("p3 = {:.2f}\n", *p3)`: Formats `*p3` as "3.14" as per the [standard format specification](https://en.cppreference.com/w/cpp/utility/format/spec) with no surprise.
+- `std::format("p3 = {:.2f}\n", *p3)`: Formats `*p3` as "3.14" as per the [standard format specification](https://en.cppreference.com/w/cpp/utility/format/spec) with no surprises.
 - When `main` returns, `p2` and `p3` will destroy the underlying objects, while `p1` does nothing because it holds a raw pointer that does not have ownership of the underlying `std::string`.
 
 ### Hello World (Stream Version)
@@ -122,9 +122,9 @@ Here is a step-by-step explanation:
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`.
 - `std::cout << *p1`: It prints "Hello World" because the calling convention is defined in the facade `Streamable`, so it works as if by calling `std::cout << str`.
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p2 = `[`std::make_unique`](https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)`<int>(123)`: Creates a [`std::unique_ptr`](https://en.cppreference.com/w/cpp/memory/unique_ptr)`<int>` and converts to a `proxy`.
-- `std::cout << *p2`: Prints "123" with no surprise.
+- `std::cout << *p2`: Prints "123" with no surprises.
 - [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p3 = `[`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html)`<Streamable>(3.14)`: Creates a `proxy` from a `double`.
-- `std::cout << std::fixed << std::setprecision(2) << *p3;`: Prints "3.14" with no surprise.
+- `std::cout << std::fixed << std::setprecision(2) << *p3;`: Prints "3.14" with no surprises.
 
 ### More Expressions
 
