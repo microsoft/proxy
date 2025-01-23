@@ -5,31 +5,31 @@ template <class F>
 class proxy;
 ```
 
-Class template `proxy` is a general-purpose polymorphic wrapper for C++ objects. Unlike other polymorphic wrappers in the C++ standard (e.g., [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function), [`std::move_only_function`](https://en.cppreference.com/w/cpp/utility/functional/move_only_function), [`std::any`](https://en.cppreference.com/w/cpp/utility/any), etc.), `proxy` is based on pointer semantics. It supports flexible lifetime management without runtime [garbage collection (GC)](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)) at runtime, and offers best-in-class code generation quality, extendibility and accessibility.
+Class template `proxy` is a general-purpose polymorphic wrapper for C++ objects. Unlike other polymorphic wrappers in the C++ standard (e.g., [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function), [`std::move_only_function`](https://en.cppreference.com/w/cpp/utility/functional/move_only_function), [`std::any`](https://en.cppreference.com/w/cpp/utility/any), etc.), `proxy` is based on pointer semantics. It supports flexible lifetime management without runtime [garbage collection (GC)](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)), and offers best-in-class code generation quality, extendibility and accessibility.
 
 To instantiate `proxy<F>`, `F` shall model [concept `facade`](facade.md). As per `facade<F>`, `typename F::convention_types` shall be a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type containing any number of distinct types `Cs`, and `typename F::reflection_types` shall be a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type containing any number of distinct types `Rs`. For each type `T` in `Cs` or `Rs`, if `T` meets the [*ProAccessible* requirements](ProAccessible.md) of `F`, `typename T::template accessor<F>` is inherited by `proxy<F>` when `T::is_direct` is `true`. Otherwise, it is inherited by [`proxy_indirect_accessor`](proxy_indirect_accessor.md), the return type of [`operator*`](proxy/indirection.md), when `T::is_direct` is `false`. Implementation of accessors can call [`access_proxy`](access_proxy.md) to access the `proxy` object. It is recommended to use [`facade_builder`](basic_facade_builder.md) to define a facade type.
 
 Any instance of `proxy<F>` at any given point in time either *contains a value* or *does not contain a value*. If a `proxy<F>` *contains a value*, the type of the value shall be a pointer type `P`  where [`proxiable<P, F>`](proxiable.md) is `true`, and the value is guaranteed to be allocated as part of the `proxy` object footprint, i.e. no dynamic memory allocation occurs. However, `P` may allocate during its construction, depending on its implementation.
 
-## Member functions
+## Member Functions
 
 | Name                                                       | Description                                        |
 | ---------------------------------------------------------- | -------------------------------------------------- |
 | [(constructor)](proxy/constructor.md)                      | constructs a `proxy` object                        |
 | [(destructor)](proxy/destructor.md)                        | destroys a `proxy` object                          |
-| [`operator=`](proxy/assignment.md)                         | assigns a `proxy` object                           |
+| [`emplace`](proxy/emplace.md)                              | constructs the contained value in-place            |
 | [`operator bool`<br />`has_value`](proxy/operator_bool.md) | checks if the `proxy` contains a value             |
+| [`operator->`<br />`operator*`](proxy/indirection.md)      | accesses the accessors of the indirect conventions |
+| [`operator=`](proxy/assignment.md)                         | assigns a `proxy` object                           |
 | [`reset`](proxy/reset.md)                                  | destroys any contained value                       |
 | [`swap`](proxy/swap.md)                                    | exchanges the contents                             |
-| [`emplace`](proxy/emplace.md)                              | constructs the contained value in-place            |
-| [`operator->`<br />`operator*`](proxy/indirection.md)      | accesses the accessors of the indirect conventions |
 
-## Non-member functions
+## Non-Member Functions
 
 | Name                                              | Description                                                  |
 | ------------------------------------------------- | ------------------------------------------------------------ |
-| [`swap`](proxy/friend_swap.md)                    | overload the [`std::swap`](https://en.cppreference.com/w/cpp/algorithm/swap) algorithm |
 | [`operator==`](proxy/friend_operator_equality.md) | compares a `proxy` with `nullptr`                            |
+| [`swap`](proxy/friend_swap.md)                    | overload the [`std::swap`](https://en.cppreference.com/w/cpp/algorithm/swap) algorithm |
 
 ## Comparing with Other Standard Polymorphic Wrappers
 

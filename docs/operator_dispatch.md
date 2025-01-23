@@ -25,7 +25,7 @@ The following 8 SOPs are not supported:
 
 ## Type Conversion
 
-Type conversion expressions, although using `operator` syntax, do not have a specific sign and are not within the scope of `operator_dispatch`. They are supported by another class template [`conversion_dispatch`](conversion_dispatch.md).
+Type conversion expressions, although using `operator` syntax, do not have a specific sign and are not within the scope of `operator_dispatch`. They are supported by [class `explicit_conversion_dispatch` (aka. `conversion_dispatch`)](explicit_conversion_dispatch.md) and [class `implicit_conversion_dispatch`](implicit_conversion_dispatch.md).
 
 ## Specializations
 
@@ -140,4 +140,4 @@ int main() {
 
 ## See Also
 
-- [class template `conversion_dispatch`](conversion_dispatch.md)
+- [class `conversion_dispatch`](explicit_conversion_dispatch.md)

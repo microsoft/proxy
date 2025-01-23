@@ -31,25 +31,24 @@ While virtual functions have served well for decades, "Proxy" offers modern solu
 
 ### <a name="how-learn">How to learn "Proxy" effectively?</a>
 
-The fundamental abstraction of "Proxy" is called "facade". It is recommended for beginners to start with the examples in the [README](../README.md), try to understand the pattern of defining a [`facade`](ProFacade.md) type, using a facade type to specify a [`proxy`](proxy.md) type, and creating and using a proxy object at runtime. Don't hesitate to consult the [specifications](specifications.md) for more details about any facility in the library.
+The fundamental abstraction of "Proxy" is called "facade". It is recommended for beginners to start with the examples in the [README](../README.md), try to understand the pattern of defining a [`facade`](facade.md) type, using a facade type to specify a [`proxy`](proxy.md) type, and creating and using a proxy object at runtime. Don't hesitate to consult the [specifications](specifications.md) for more details about any facility in the library.
 
 ### <a name="how-integrate">How to integrate "Proxy" into my project?</a>
 
 Since "Proxy" is a single-header library, you can simply navigate to the [latest release](https://github.com/microsoft/proxy/releases), download the source code, and include "proxy.h" in your project. Make sure your compiler version meets the [minimum requirements for compilers](../README.md#compiler-req). If your project has already integrated with [vcpkg](https://vcpkg.io/) or [conan](https://conan.io/), just search for the keyword "proxy" and install it. Thanks to the community that helped port "Proxy" to these platforms!
-
 
 ### <a name="how-migrate">My existing project uses virtual functions. How should I migrate to "Proxy"?</a>
 
 Follow the 4 steps below to upgrade an existing project from using virtual functions to "Proxy":
 
 1. Update the compiler version to meet our [minimum requirements for compilers](../README.md#compiler-req).
-2. Define [`facade`](ProFacade.md) types that match the "base classes with virtual functions" (virtual base classes).
+2. Define [`facade`](facade.md) types that match the "base classes with virtual functions" (virtual base classes).
 3. Replace all the usage of virtual base classes with [`proxy`](proxy.md) from the API boundary.
 4. Remove all the definitions and inheritance of virtual base classes.
 
 ### <a name="performance">How is the performance compared to virtual functions?</a>
 
-The design of "Proxy" follows the [zero-overhead principle](https://en.cppreference.com/w/cpp/language/Zero-overhead_principle). With general compiler optimizations, "Proxy" is expected to generate high quality code in most scenarios that is not worse than an equivalent hand-written implementation with or without virtual functions. In practice, when a construct of runtime abstraction has ownership of its context, "Proxy" usually has better performance than the inheritance-based approach in lifetime management. When performing an indirect call, "Proxy" usually generates similar code to a virtual function with equal performance. We have observed that when the concrete implementation and the abstraction appear in the same translation unit, a virtual function is more likely to be devirtualized in the generated code, but sometimes the compiler won't do that trick for "Proxy".
+The design of "Proxy" follows the [zero-overhead principle](https://en.cppreference.com/w/cpp/language/Zero-overhead_principle). With general compiler optimizations, "Proxy" is expected to generate high quality code in most scenarios that is not worse than an equivalent hand-written implementation with or without virtual functions. In practice, "Proxy" usually demonstrates better performance in indirect invocations than virtual functions, and in lifetime management than standard smart pointers or polymorphic wrappers. Please refer to our [blog post](https://devblogs.microsoft.com/cppblog/analyzing-the-performance-of-the-proxy-library/) for more details.
 
 ### <a name="why-pointer">Why is "Proxy" based on pointer semantics rather than value semantics like [std::function](https://en.cppreference.com/w/cpp/utility/functional/function)?</a>
 
@@ -57,7 +56,7 @@ At the beginning, we explored the feasibility of designing a general-purpose pol
 
 ### <a name="why-macros">Why does "Proxy" define several macros instead of modern C++ facilities?</a>
 
-"Proxy" defines 4 macros: [`__msft_lib_proxy`](msft_lib_proxy.md), [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), and [`PRO_DEF_WEAK_DISPATCH`](PRO_DEF_WEAK_DISPATCH.md). [`__msft_lib_proxy`](msft_lib_proxy.md) is the feature test macro, following the existing practice in the C++20 standard. The other 3 macros are fundamental facilities to define a custom [`dispatch`](ProDispatch.md) type. These macros cannot be replaced by modern C++ facilities because there is no existing language feature prior to C++26 that allows generating a function with an arbitrary name. As a result, "Proxy" does not provide a default interface for [modules](https://en.cppreference.com/w/cpp/language/modules) as of now.
+"Proxy" defines 4 macros: [`__msft_lib_proxy`](msft_lib_proxy.md), [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), and [`PRO_DEF_FREE_AS_MEM_DISPATCH`](PRO_DEF_FREE_AS_MEM_DISPATCH.md). [`__msft_lib_proxy`](msft_lib_proxy.md) is the feature test macro, following the existing practice in the C++20 standard. The other 3 macros are fundamental facilities to define a custom [`dispatch`](ProDispatch.md) type. These macros cannot be replaced by modern C++ facilities because there is no existing language feature prior to C++26 that allows generating a function with an arbitrary name. As a result, "Proxy" does not provide a default interface for [modules](https://en.cppreference.com/w/cpp/language/modules) as of now.
 
 ### <a name="standardization">What is the standardization progress of this library?</a>
 

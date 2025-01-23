@@ -18,7 +18,7 @@ Accesses a `proxy` object from an [accessor](ProAccessible.md) instantiated from
 
 ## Return Value
 
-A reference to the `proxy` that instantiates `a`.
+A reference to the `proxy` that has instantiated `a`.
 
 ## Notes
 

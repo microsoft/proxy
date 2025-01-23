@@ -52,7 +52,7 @@
 #define ___PRO_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202410L
+#define __msft_lib_proxy 202501L
 
 namespace pro {
 
@@ -222,8 +222,7 @@ R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
 template <class D, class P, qualifier_type Q, class R, class... Args>
 R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr_direct<D, P, Q, true, R, Args...>) {
-  auto& qp = *std::launder(
-      reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
+  auto& qp = *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
   if constexpr (Q == qualifier_type::rv) {
     destruction_guard guard{&qp};
     return invoke_dispatch<D, R>(
@@ -722,10 +721,9 @@ struct proxy_helper {
 #if defined(__NVCOMPILER)
 #pragma diagnostic pop
 #endif  // defined(__NVCOMPILER)
-      return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(
-          *(reinterpret_cast<add_qualifier_ptr_t<std::byte, Q>>(
-              static_cast<add_qualifier_ptr_t<proxy_indirect_accessor<F>, Q>>(
-                  std::addressof(a))) - offset));
+      return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(*(reinterpret_cast<
+          add_qualifier_ptr_t<std::byte, Q>>(static_cast<add_qualifier_ptr_t<
+              proxy_indirect_accessor<F>, Q>>(std::addressof(a))) - offset));
     }
   }
 };
@@ -872,9 +870,8 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   ~proxy() noexcept(F::constraints.destructibility == constraint_level::nothrow)
       requires(F::constraints.destructibility == constraint_level::nontrivial ||
           F::constraints.destructibility == constraint_level::nothrow) {
-    if (meta_.has_value()) {
-      meta_->_Traits::destructibility_meta::dispatcher(*ptr_);
-    }
+    if (meta_.has_value())
+        { meta_->_Traits::destructibility_meta::dispatcher(*ptr_); }
   }
 
   bool has_value() const noexcept { return meta_.has_value(); }
@@ -930,7 +927,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   proxy_indirect_accessor<F>&& operator*() && noexcept
       { return std::move(ia_); }
   const proxy_indirect_accessor<F>&& operator*() const&& noexcept
-      { return std::forward<const proxy_indirect_accessor<F>>(ia_); }
+      { return std::move(ia_); }
 
   friend void swap(proxy& lhs, proxy& rhs) noexcept(noexcept(lhs.swap(rhs)))
       { lhs.swap(rhs); }
@@ -942,8 +939,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   P& initialize(Args&&... args) {
     P& result = *std::construct_at(
         reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    if constexpr (requires { (bool)result; })
-        { assert((bool)result); }
+    if constexpr (std::is_constructible_v<bool, P&>) { assert(result); }
     meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
     return result;
   }
@@ -1171,8 +1167,7 @@ template <facade F, class T, class Alloc, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
   return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
 }
-template <facade F, class T, class Alloc, class U,
-    class... Args>
+template <facade F, class T, class Alloc, class U, class... Args>
 proxy<F> allocate_proxy(const Alloc& alloc, std::initializer_list<U> il,
     Args&&... args) {
   return details::allocate_proxy_impl<F, T>(
@@ -1218,18 +1213,17 @@ using proxy_view = proxy<observer_facade<F>>;
     __MACRO(noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
     __MACRO(&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
     __MACRO(& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(&&, ::pro::access_proxy<__F>(::std::forward<accessor>(*this)), \
+    __MACRO(&&, ::pro::access_proxy<__F>(::std::move(*this)), __VA_ARGS__); \
+    __MACRO(&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__); \
-    __MACRO(&& noexcept, ::pro::access_proxy<__F>( \
-        ::std::forward<accessor>(*this)), __VA_ARGS__); \
     __MACRO(const, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
     __MACRO(const noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
     __MACRO(const&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
     __MACRO(const& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const&&, ::pro::access_proxy<__F>( \
-        ::std::forward<const accessor>(*this)), __VA_ARGS__); \
-    __MACRO(const&& noexcept, ::pro::access_proxy<__F>( \
-        ::std::forward<const accessor>(*this)), __VA_ARGS__);
+    __MACRO(const&&, ::pro::access_proxy<__F>(::std::move(*this)), \
+        __VA_ARGS__); \
+    __MACRO(const&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
+        __VA_ARGS__);
 
 #define ___PRO_ADL_ARG ::pro::details::adl_accessor_arg_t<__F, __IsDirect>
 #define ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
@@ -1274,7 +1268,6 @@ using proxy_view = proxy<observer_facade<F>>;
 #ifdef __cpp_rtti
 class bad_proxy_cast : public std::bad_cast {
  public:
-  bad_proxy_cast() noexcept = default;
   char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti
@@ -1305,7 +1298,7 @@ struct cast_dispatch_base {
 
 struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
   template <class T>
-  T&& operator()(T&& self) noexcept { return std::forward<T>(self); }
+  T&& operator()(T&& self) const noexcept { return std::forward<T>(self); }
 };
 
 template <class T>
@@ -1315,7 +1308,7 @@ struct explicit_conversion_adapter {
   explicit_conversion_adapter(const explicit_conversion_adapter&) = delete;
 
   template <class U>
-  operator U() noexcept(std::is_nothrow_constructible_v<U, T>)
+  operator U() const noexcept(std::is_nothrow_constructible_v<U, T>)
       requires(std::is_constructible_v<U, T>)
       { return U{std::forward<T>(value_)}; }
 
@@ -1478,7 +1471,7 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
 
 struct proxy_view_dispatch : cast_dispatch_base<false, true> {
   template <class T>
-  auto* operator()(T&& value)
+  auto* operator()(T&& value) const
       ___PRO_DIRECT_FUNC_IMPL(std::addressof(*std::forward<T>(value)))
 };
 
@@ -1606,7 +1599,7 @@ struct format_dispatch {
   // [format.formatter.spec].
   template <class T, class CharT, class OutIt>
   OutIt operator()(const T& self, std::basic_string_view<CharT> spec,
-      std::basic_format_context<OutIt, CharT>& fc)
+      std::basic_format_context<OutIt, CharT>& fc) const
       requires(
 #if defined(__cpp_lib_format_ranges) && __cpp_lib_format_ranges >= 202207L
           std::formattable<T, CharT>
@@ -1679,7 +1672,7 @@ struct proxy_cast_accessor_impl {
               void(proxy_cast_context) Q> {}
 struct proxy_cast_dispatch {
   template <class T>
-  void operator()(T&& self, proxy_cast_context ctx) {
+  void operator()(T&& self, proxy_cast_context ctx) const {
     if (typeid(T) == *ctx.type_ptr) {
       if (ctx.is_ref) {
         if constexpr (std::is_lvalue_reference_v<T>) {
@@ -1732,7 +1725,7 @@ struct wildcard {
   wildcard() = delete;
 
   template <class T>
-  [[noreturn]] operator T() {
+  [[noreturn]] operator T() const {
 #ifdef __cpp_lib_unreachable
     std::unreachable();
 #else
@@ -1860,18 +1853,18 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
-    decltype(auto) operator()(T&& self) \
+    decltype(auto) operator()(T&& self) const \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
 #define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
-    decltype(auto) operator()(T&& self) \
+    decltype(auto) operator()(T&& self) const \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
     template <class T> \
-    decltype(auto) operator()(T&& self, int) \
+    decltype(auto) operator()(T&& self, int) const \
         ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
 #define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T, class Arg> \
-    decltype(auto) operator()(T&& self, Arg&& arg) \
+    decltype(auto) operator()(T&& self, Arg&& arg) const \
         ___PRO_DIRECT_FUNC_IMPL( \
             std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
 #define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
@@ -1906,7 +1899,7 @@ ___PRO_DEBUG( \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
-      decltype(auto) operator()(T&& self, Arg&& arg) \
+      decltype(auto) operator()(T&& self, Arg&& arg) const \
           ___PRO_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE( \
@@ -1953,7 +1946,7 @@ ___PRO_DEBUG( \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       template <class T, class Arg> \
-      decltype(auto) operator()(T&& self, Arg&& arg) \
+      decltype(auto) operator()(T&& self, Arg&& arg) const \
           ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
               std::forward<Arg>(arg)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
@@ -1962,7 +1955,7 @@ ___PRO_DEBUG( \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
-      decltype(auto) operator()(T&& self, Arg&& arg) \
+      decltype(auto) operator()(T&& self, Arg&& arg) const \
           ___PRO_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
@@ -2007,7 +2000,7 @@ ___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 template <>
 struct operator_dispatch<"()", false> {
   template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
+  decltype(auto) operator()(T&& self, Args&&... args) const
       ___PRO_DIRECT_FUNC_IMPL(
           std::forward<T>(self)(std::forward<Args>(args)...))
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
@@ -2016,12 +2009,12 @@ template <>
 struct operator_dispatch<"[]", false> {
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
   template <class T, class... Args>
-  decltype(auto) operator()(T&& self, Args&&... args)
+  decltype(auto) operator()(T&& self, Args&&... args) const
       ___PRO_DIRECT_FUNC_IMPL(
           std::forward<T>(self)[std::forward<Args>(args)...])
 #else
   template <class T, class Arg>
-  decltype(auto) operator()(T&& self, Arg&& arg)
+  decltype(auto) operator()(T&& self, Arg&& arg) const
       ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202110L
   ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
@@ -2048,18 +2041,17 @@ struct operator_dispatch<"[]", false> {
 struct implicit_conversion_dispatch
     : details::cast_dispatch_base<false, false> {
   template <class T>
-  T&& operator()(T&& self) noexcept { return std::forward<T>(self); }
+  T&& operator()(T&& self) const noexcept { return std::forward<T>(self); }
 };
 struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
   template <class T>
-  auto operator()(T&& self) noexcept
+  auto operator()(T&& self) const noexcept
       { return details::explicit_conversion_adapter<T>{std::forward<T>(self)}; }
 };
 using conversion_dispatch = explicit_conversion_dispatch;
 
 class not_implemented : public std::exception {
  public:
-  not_implemented() noexcept = default;
   char const* what() const noexcept override { return "pro::not_implemented"; }
 };
 
@@ -2067,7 +2059,7 @@ template <class D>
 struct weak_dispatch : D {
   using D::operator();
   template <class... Args>
-  [[noreturn]] details::wildcard operator()(std::nullptr_t, Args&&...)
+  [[noreturn]] details::wildcard operator()(std::nullptr_t, Args&&...) const
       { ___PRO_THROW(not_implemented{}); }
 };
 
@@ -2092,7 +2084,7 @@ struct weak_dispatch : D {
 #define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) const \
           ___PRO_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
               .__FUNC(::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
@@ -2125,7 +2117,7 @@ ___PRO_DEBUG( \
 #define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) const \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_FREE_ACCESSOR, __FNAME) \
@@ -2140,7 +2132,7 @@ ___PRO_DEBUG( \
 #define ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      decltype(auto) operator()(__T&& __self, __Args&&... __args) \
+      decltype(auto) operator()(__T&& __self, __Args&&... __args) const \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
@@ -2157,7 +2149,7 @@ ___PRO_DEBUG( \
         "Use pro::weak_dispatch<" #__D "> instead.")]] __NAME : __D { \
       using __D::operator(); \
       template <class... __Args> \
-      decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) \
+      decltype(auto) operator()(::std::nullptr_t, __Args&&... __args) const \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
     }
 

@@ -34,6 +34,56 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 Let's get started with the following "Hello World" example:
 
 ```cpp
+#include <format>
+#include <iostream>
+#include <string>
+
+#include "proxy.h"
+
+struct Formattable : pro::facade_builder
+    ::support_format
+    ::build {};
+
+int main() {
+  std::string str = "Hello World";
+  pro::proxy<Formattable> p1 = &str;
+  std::cout << std::format("p1 = {}\n", *p1);  // Prints: "p1 = Hello World"
+
+  pro::proxy<Formattable> p2 = std::make_unique<int>(123);
+  std::cout << std::format("p2 = {}\n", *p2);  // Prints: "p2 = 123"
+
+  pro::proxy<Formattable> p3 = pro::make_proxy<Formattable>(3.14159);
+  std::cout << std::format("p3 = {:.2f}\n", *p3) << "\n";  // Prints: "p3 = 3.14"
+}
+```
+
+Here is a step-by-step explanation:
+
+- `#include <format>`: For [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format).
+- `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
+- `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
+- `#include "proxy.h"`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`. If the library is consumed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), this line should be changed into `#include <proxy/proxy.h>`.
+- `struct Formattable : pro::facade_builder ... ::build {}`: Defines a facade type `Formattable`. The term "facade", formally defined as the [*ProFacade* requirements](https://microsoft.github.io/proxy/docs/ProFacade.html), is how the "Proxy" library models runtime abstraction. Specifically,
+  - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Provides capability to build a facade type at compile-time.
+  - [`support_format`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_format.html): Specifies the capability of formatting (via [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format)).
+  - [`build`](https://microsoft.github.io/proxy/docs/basic_facade_builder/build.html): Builds the context into a facade type.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`. `p1` behaves like a raw pointer, and does not have ownership of the underlying `std::string`. If the lifetime of `str` ends before `p1`, `p1` becomes dangling.
+- `std::format("p1 = {}\n", *p1)`: This is how it works. `*p1` is formatted as "Hello World" because the capability was defined in the facade `Formattable`, so it works as if by calling `std::format("p1 = {}\n", str)`.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p2 = `[`std::make_unique`](https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)`<int>(123)`: Creates a [`std::unique_ptr`](https://en.cppreference.com/w/cpp/memory/unique_ptr)`<int>` and converts to a `proxy`. Different from `p1`, `p2` has ownership of the underlying `int` because it is instantiated from a value of `std::unique_ptr`, and will call the destructor of `std::unique_ptr` when `p2` is destroyed, while `p1` does not have ownership of the underlying `int` because it is instantiated from a raw pointer. `p1` and `p2` are of the same type `pro::proxy<Formattable>`, which means you can have a function that returns `pro::proxy<Formattable>` without exposing any information about the implementation details to its caller.
+- `std::format("p2 = {}\n", *p2)`: Formats `*p2` as "123" with no surprises.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Formattable> p3 = `[`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html)`<Formattable>(3.14159)`: Creates a `proxy` from a `double` without specifying the underlying pointer type. Specifically,
+  - Similar with `p2`, `p3` also has ownership of the underlying `double` value, but can effectively avoid heap allocation.
+  - Since the size of the underlying type (`double`) is known to be small (on major 32- or 64-bit platforms), [`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html) realizes the fact at compile-time, and falls back to [`pro::make_proxy_inplace`](https://microsoft.github.io/proxy/docs/make_proxy_inplace.html), which guarantees no heap allocation.
+  - The "Proxy" library explicitly defines when heap allocation occurs or not to avoid users falling into performance hell, which is different from [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and other existing polymorphic wrappers in the standard.
+- `std::format("p3 = {:.2f}\n", *p3)`: Formats `*p3` as "3.14" as per the [standard format specification](https://en.cppreference.com/w/cpp/utility/format/spec) with no surprises.
+- When `main` returns, `p2` and `p3` will destroy the underlying objects, while `p1` does nothing because it holds a raw pointer that does not have ownership of the underlying `std::string`.
+
+### Hello World (Stream Version)
+
+In the previous "Hello Word" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation:
+
+```cpp
+#include <iomanip>
 #include <iostream>
 #include <string>
 
@@ -51,42 +101,40 @@ int main() {
   pro::proxy<Streamable> p2 = std::make_unique<int>(123);
   std::cout << "p2 = " << *p2 << "\n";  // Prints: "p2 = 123"
 
-  pro::proxy<Streamable> p3 = pro::make_proxy<Streamable>(3.14);
-  std::cout << "p3 = " << *p3 << "\n";  // Prints: "p3 = 3.14"
+  pro::proxy<Streamable> p3 = pro::make_proxy<Streamable>(3.14159);
+  std::cout << "p3 = " << std::fixed << std::setprecision(2) << *p3 << "\n";  // Prints: "p3 = 3.14"
 }
 ```
 
 Here is a step-by-step explanation:
 
+- `#include <iostream>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
-- `#include "proxy.h"`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`. If the library is consumed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), this line should be changed into `#include <proxy/proxy.h>`.
-- `struct Streamable : pro::facade_builder ... ::build {}`: Defines a facade type `Streamable`. The term "facade", formally defined as the [*ProFacade* requirements](https://microsoft.github.io/proxy/docs/ProFacade.html), is how the "Proxy" library models runtime abstraction. Specifically,
-  - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Provides capability to build a facade type at compile-time.
+- `#include "proxy.h"`: For the "Proxy" library.
+- `struct Streamable : pro::facade_builder ... ::build {}`: Defines a facade type `Streamable`. Specifically,
+  - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Gets prepared to build another facade.
   - [`add_convention`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_convention.html): Adds a generalized "calling convention", defined by a "dispatch" and several "overloads", to the build context.
   - [`pro::operator_dispatch`](https://microsoft.github.io/proxy/docs/operator_dispatch.html)`<"<<", true>`: Specifies a dispatch for operator `<<` expressions where the primary operand (`proxy`) is on the right-hand side (specified by the second template parameter `true`). Note that polymorphism in the "Proxy" library is defined by expressions rather than member functions, which is different from C++ virtual functions or other OOP languages.
   - `std::ostream&(std::ostream& out) const`: The signature of the calling convention, similar with [`std::move_only_function`](https://en.cppreference.com/w/cpp/utility/functional/move_only_function). `const` specifies that the primary operand is `const`.
   - [`build`](https://microsoft.github.io/proxy/docs/basic_facade_builder/build.html): Builds the context into a facade type.
-- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`. `p1` behaves like a raw pointer, and does not have ownership of the underlying `std::string`. If the lifetime of `str` ends before `p1`, `p1` becomes dangling.
-- `std::cout << *p1`: This is how it works. It prints "Hello World" because the calling convention is defined in the facade `Streamable`, so it works as if by calling `std::cout << str`.
-- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p2 = `[`std::make_unique`](https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)`<int>(123)`: Creates a [`std::unique_ptr`](https://en.cppreference.com/w/cpp/memory/unique_ptr)`<int>` and converts to a `proxy`. Different from `p1`, `p2` has ownership of the underlying `int` because it is instantiated from a value of `std::unique_ptr`, and will call the destructor of `std::unique_ptr` when `p2` is destroyed, while `p1` does not have ownership of the underlying `int` because it is instantiated from a raw pointer. `p1` and `p2` are of the same type `pro::proxy<Streamable>`, which means you can have a function that returns `pro::proxy<Streamable>` without exposing any information about the implementation details to its caller.
-- `std::cout << *p2`: Prints "123" with no surprise.
-- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p3 = `[`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html)`<Streamable>(3.14)`: Creates a `proxy` from a `double` without specifying the underlying pointer type. Specifically,
-  - Similar with `p2`, `p3` also has ownership of the underlying `double` value, but can effectively avoid heap allocation.
-  - Since the size of the underlying type (`double`) is known to be small (on major 32- or 64-bit platforms), [`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html) realizes the fact at compile-time, and falls back to [`pro::make_proxy_inplace`](https://microsoft.github.io/proxy/docs/make_proxy_inplace.html), which guarantees no heap allocation.
-  - The "Proxy" library explicitly defines when heap allocation occurs or not to avoid users falling into performance hell, which is different from [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and other existing polymorphic wrappers in the standard.
 
-- `std::cout << *p3`: Prints "3.14" with no surprise.
-- When `main` returns, `p2` and `p3` will destroy the underlying objects, while `p1` does nothing because it holds a raw pointer that does not have ownership of the underlying `std::string`.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`.
+- `std::cout << *p1`: It prints "Hello World" because the calling convention is defined in the facade `Streamable`, so it works as if by calling `std::cout << str`.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p2 = `[`std::make_unique`](https://en.cppreference.com/w/cpp/memory/unique_ptr/make_unique)`<int>(123)`: Creates a [`std::unique_ptr`](https://en.cppreference.com/w/cpp/memory/unique_ptr)`<int>` and converts to a `proxy`.
+- `std::cout << *p2`: Prints "123" with no surprises.
+- [`pro::proxy`](https://microsoft.github.io/proxy/docs/proxy.html)`<Streamable> p3 = `[`pro::make_proxy`](https://microsoft.github.io/proxy/docs/make_proxy.html)`<Streamable>(3.14)`: Creates a `proxy` from a `double`.
+- `std::cout << std::fixed << std::setprecision(2) << *p3;`: Prints "3.14" with no surprises.
 
 ### More Expressions
 
-In addition to the operator expressions demonstrated in the previous example, the library supports almost all forms of expressions in C++ and can make them polymorphic. Specifically,
+In addition to the operator expressions demonstrated in the previous examples, the library supports almost all forms of expressions in C++ and can make them polymorphic. Specifically,
 
-- [macro `PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html): Defines a dispatch type for member function call expressions.
-- [macro `PRO_DEF_FREE_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_FREE_DISPATCH.html): Defines a dispatch type for free function call expressions.
+- [macro `PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html): Defines a dispatch type for member function call expressions, providing accessibility as member functions.
+- [macro `PRO_DEF_FREE_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_FREE_DISPATCH.html): Defines a dispatch type for free function call expressions, providing accessibility as free functions.
+- [macro `PRO_DEF_FREE_AS_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_FREE_AS_MEM_DISPATCH.html): Defines a dispatch type for free function call expressions, providing accessibility as member functions.
 - [class template `pro::operator_dispatch`](https://microsoft.github.io/proxy/docs/operator_dispatch.html): Dispatch type for operator expressions.
-- [class template `pro::conversion_dispatch`](https://microsoft.github.io/proxy/docs/conversion_dispatch.html): Dispatch type for conversion expressions.
+- [class `explicit_conversion_dispatch` (aka. `conversion_dispatch`)](https://microsoft.github.io/proxy/docs/explicit_conversion_dispatch.html) and [class `implicit_conversion_dispatch`](https://microsoft.github.io/proxy/docs/implicit_conversion_dispatch.html): Dispatch type for conversion expressions.
 
 Note that some facilities are provided as macro, because C++ templates today do not support generating a function with an arbitrary name. Here is another example that makes member function call expressions polymorphic:
 
@@ -157,10 +205,12 @@ The "Proxy" library is a self-contained solution for runtime polymorphism in C++
 
 - **Overloading**: [`facade_builder::add_convention`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_convention.html) is more powerful than demonstrated above. It can take any number of overload types (formally, any type meeting the [*ProOverload* requirements](https://microsoft.github.io/proxy/docs/ProOverload.html)) and perform standard overload resolution when invoking a `proxy`.
 - **Facade composition**: [`facade_builder::add_facade`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_facade.html) allows flexible composition of different abstractions.
-- **Weak dispatch**: When an object does not implement a convention, and we do not want it to trigger a hard compile error, it is allowed to define a "weak dispatch" with [macro `PRO_DEF_WEAK_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_WEAK_DISPATCH.html) from an existing dispatch type and a default implementation.
 - **Allocator awareness**: [function template `allocate_proxy`](https://microsoft.github.io/proxy/docs/allocate_proxy.html) is able to create a `proxy` from a value with any custom allocator. In C++11, [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and [`std::packaged_task`](https://en.cppreference.com/w/cpp/thread/packaged_task) had constructors that accepted custom allocators for performance tuning, but these were [removed in C++17](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0302r1.html) because "the semantics are unclear, and there are technical issues with storing an allocator in a type-erased context and then recovering that allocator later for any allocations needed during copy assignment". These issues do not apply to `allocate_proxy`.
 - **Configurable constraints**: [`facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html) provides full support for constraints configuration, including memory layout (by [`restrict_layout`](https://microsoft.github.io/proxy/docs/basic_facade_builder/restrict_layout.html)), copyability (by [`support_copy`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_copy.html)), relocatability (by [`support_relocation`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_relocation.html)), and destructibility (by [`support_destruction`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_destruction.html)).
 - **Reflection**: `proxy` supports type-based compile-time reflection for runtime queries. Please refer to [`facade_builder::add_reflection`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_reflection.html) and [function template `proxy_reflect`](https://microsoft.github.io/proxy/docs/proxy_reflect.html) for more details.
+- **Non-owning proxy**: Although `proxy` can manage the lifetime of an object effectively, similar to a smart pointer, we sometimes want to dereference it before passing to a non-owning context. This has been implemented as an extension since 3.2. Please refer to [class template `observer_facade`, alias template `proxy_view`](https://microsoft.github.io/proxy/docs/observer_facade.html) and [`facade_builder::add_view`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_view.html) for more details.
+- **RTTI**: [RTTI (run-time type information)](https://en.wikipedia.org/wiki/Run-time_type_information) provides "weak" reflection capability in C++ since the last century. Although it is not as powerful as reflection in some other languages (like `Object.GetType()` in C# or `Object.getClass()` in Java), it offers the basic infrastructure for type-safe casting at runtime. Since 3.2, "RTTI for `proxy`" has been implemented as an extension and allows users to opt-in for each facade definition. Please refer to [`facade_builder::support_rtti`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_rtti.html) for more details.
+- **Weak dispatch**: When an object does not implement a convention, and we do not want it to trigger a hard compile error, it is allowed to specify a [`weak_dispatch`](https://microsoft.github.io/proxy/docs/weak_dispatch.html) that throws when invoked.
 
 ## <a name="compiler-req">Minimum Requirements for Compilers</a>
 
@@ -183,9 +233,11 @@ ctest --test-dir build -j
 
 ## Related Resources
 
+- January, 2025: [Published ISO C++ proposal P3086R3: Proxy: A Pointer-Semantics-Based Polymorphism Library](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3086r3.pdf)
+- January, 2025: [Published ISO C++ proposal P3584R0: Enrich Facade Creation Facilities for the Pointer-Semantics-Based Polymorphism Library - Proxy](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3584r0.pdf)
 - November, 2024: [Analyzing the Performance of the “Proxy” Library](https://devblogs.microsoft.com/cppblog/analyzing-the-performance-of-the-proxy-library/)
+- September, 2024: [Published ISO C++ proposal P3401R0: Enrich Creation Functions for the Pointer-Semantics-Based Polymorphism Library - Proxy](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3401r0.pdf)
 - September, 2024: [Announcing the Proxy 3 Library for Dynamic Polymorphism](https://devblogs.microsoft.com/cppblog/announcing-the-proxy-3-library-for-dynamic-polymorphism/)
-- April, 2024: [Published ISO C++ proposal P3086R2: Proxy: A Pointer-Semantics-Based Polymorphism Library](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3086r2.pdf)
 - August, 2022: [proxy: Runtime Polymorphism Made Easier Than Ever](https://devblogs.microsoft.com/cppblog/proxy-runtime-polymorphism-made-easier-than-ever/)
 
 ## Contributing
