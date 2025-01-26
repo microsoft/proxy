@@ -34,7 +34,7 @@ struct IntConvertible : pro::facade_builder
 
 int main() {
   pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);  // p holds a short
-  std::cout << static_cast<int>(*p) << "\n";  // Prints: "123"
+  std::cout << static_cast<int>(*p) << "\n";  // Prints "123"
 }
 ```
 

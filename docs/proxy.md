@@ -66,8 +66,8 @@ int main() {
   auto container2 = std::make_shared<std::vector<const char*>>();
   container2->push_back("hello");
   container2->push_back("world");
-  PrintDictionary(&container1);  // Prints: "hello"
-  PrintDictionary(container2);  // Prints: "world"
+  PrintDictionary(&container1);  // Prints "hello"
+  PrintDictionary(container2);  // Prints "world"
 }
 ```
 

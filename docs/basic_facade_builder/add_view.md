@@ -36,7 +36,7 @@ int main() {
   pro::proxy_view<RttiAware> pv = p;
   pro::proxy_view<const RttiAware> pcv = p;
   proxy_cast<int&>(*pv) = 456;  // Modifies the contained object of p
-  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints: "456"
+  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints "456"
 }
 ```
 

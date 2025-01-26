@@ -58,12 +58,12 @@ struct WeakDictionary : pro::facade_builder
 int main() {
   std::vector<const char*> v{"hello", "world"};
   pro::proxy<WeakDictionary> p1 = &v;
-  std::cout << p1->at(1) << "\n";  // Prints: "world"
+  std::cout << p1->at(1) << "\n";  // Prints "world"
   pro::proxy<WeakDictionary> p2 = pro::make_proxy<WeakDictionary>(123);
   try {
     p2->at(1);
   } catch (const std::runtime_error& e) {
-    std::cout << e.what() << "\n";  // Prints: "Not implemented!"
+    std::cout << e.what() << "\n";  // Prints "Not implemented!"
   }
 }
 ```

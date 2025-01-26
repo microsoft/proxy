@@ -17,15 +17,15 @@ int main() {
   pro::proxy<Stringable> p = pro::make_proxy<Stringable>(123);
 
   // Invokes with accessibility API
-  std::cout << ToString(*p) << "\n";  // Prints: "123"
+  std::cout << ToString(*p) << "\n";  // Prints "123"
 
   // How it works behind the scenes
   using Accessor = FreeToString::accessor<Stringable, false, FreeToString, std::string()>;
   static_assert(std::is_base_of_v<Accessor, std::remove_reference_t<decltype(*p)>>);
   Accessor& a = static_cast<Accessor&>(*p);
   pro::proxy<Stringable>& p2 = pro::access_proxy<Stringable>(a);
-  std::cout << std::boolalpha << (&p == &p2) << "\n";  // Prints: "true" because access_proxy converts
+  std::cout << std::boolalpha << (&p == &p2) << "\n";  // Prints "true" because access_proxy converts
                                                        // an accessor back to the original proxy
   auto result = pro::proxy_invoke<false, FreeToString, std::string()>(p2);
-  std::cout << result << "\n";  // Prints: "123"
+  std::cout << result << "\n";  // Prints "123"
 }

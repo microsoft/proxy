@@ -17,5 +17,5 @@ struct Dictionary : pro::facade_builder
 int main() {
   std::vector<const char*> v{"hello", "world"};
   pro::proxy<Dictionary> p = &v;
-  std::cout << p->at(1) << "\n";  // Prints: "world"
+  std::cout << p->at(1) << "\n";  // Prints "world"
 }

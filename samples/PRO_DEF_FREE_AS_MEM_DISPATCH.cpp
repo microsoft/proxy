@@ -15,5 +15,5 @@ struct Stringable : pro::facade_builder
 
 int main() {
   pro::proxy<Stringable> p = pro::make_proxy<Stringable>(123);
-  std::cout << p->ToString() << "\n";  // Prints: "123"
+  std::cout << p->ToString() << "\n";  // Prints "123"
 }

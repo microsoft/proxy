@@ -32,6 +32,6 @@ struct RttiAware : pro::facade_builder
 int main() {
   int a = 123;
   pro::proxy<RttiAware> p = &a;
-  std::cout << p.GetTypeName() << "\n";  // Prints: "Pi" (assuming GCC)
-  std::cout << p->GetTypeName() << "\n";  // Prints: "i" (assuming GCC)
+  std::cout << p.GetTypeName() << "\n";  // Prints "Pi" (assuming GCC)
+  std::cout << p->GetTypeName() << "\n";  // Prints "i" (assuming GCC)
 }

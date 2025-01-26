@@ -13,6 +13,6 @@ struct Formattable : pro::facade_builder
 
 int main() {
   pro::proxy<Formattable> p = pro::make_proxy<Formattable>(123);
-  std::cout << std::format("{}", *p) << "\n";  // Prints: "123"
-  std::cout << std::format("{:*<6}", *p) << "\n";  // Prints: "123***"
+  std::cout << std::format("{}", *p) << "\n";  // Prints "123"
+  std::cout << std::format("{:*<6}", *p) << "\n";  // Prints "123***"
 }
