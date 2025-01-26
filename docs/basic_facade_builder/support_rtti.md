@@ -41,4 +41,4 @@ int main() {
 
 ## See Also
 
-- [`support_view`](support_view.md)
+- [`add_view`](add_view.md)

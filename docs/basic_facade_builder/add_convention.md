@@ -1,4 +1,4 @@
-# `basic_facade_builder::add_convention`, `basic_facade_builder::add_direct_convention`, `basic_facade_builder::add_indirect_convention`
+# `basic_facade_builder::add_convention`<br />`basic_facade_builder::add_direct_convention`<br />`basic_facade_builder::add_indirect_convention`
 
 ```cpp
 template <class D, class... Os> requires(/* see below */)

@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from support_view.md.
+// This file contains example code from add_view.md.
 
 #include <iomanip>
 #include <iostream>

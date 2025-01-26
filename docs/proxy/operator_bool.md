@@ -1,4 +1,4 @@
-# `proxy::operator bool`, `proxy::has_value`
+# `proxy::operator bool`<br />`proxy::has_value`
 
 ```cpp
 explicit operator bool() const noexcept;

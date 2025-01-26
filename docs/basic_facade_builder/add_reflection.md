@@ -1,4 +1,4 @@
-# `basic_facade_builder::add_reflection`
+# `basic_facade_builder::add_reflection`<br />`basic_facade_builder::add_direct_reflection`<br />`basic_facade_builder::add_indirect_reflection`
 
 ```cpp
 template <class R>

@@ -4,7 +4,7 @@
 #define PRO_DEF_WEAK_DISPATCH // deprecated since 3.2, see below
 ```
 
-<mark>⚠️ Macro `PRO_DEF_WEAK_DISPATCH` has been replaced by class template `weak_dispatch` since 3.2, and may be removed in a future version.</mark>
+<mark>⚠️ Macro <code>PRO_DEF_WEAK_DISPATCH</code> has been replaced by class template <code>weak_dispatch</code> since 3.2, and may be removed in a future version.</mark>
 
 Macro `PRO_DEF_WEAK_DISPATCH` defines a "weak dispatch" type with a default implementation. It supports the following syntax:
 
