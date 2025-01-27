@@ -7,29 +7,28 @@
 
 #include "proxy.h"
 
-class LayoutReflector {
+struct LayoutReflector {
  public:
   template <class T>
   constexpr explicit LayoutReflector(std::in_place_type_t<T>)
-      : size_(sizeof(T)), align_(alignof(T)) {}
+      : Size(sizeof(T)), Align(alignof(T)) {}
 
   template <class F, bool IsDirect, class R>
   struct accessor {
     friend std::size_t SizeOf(const std::conditional_t<IsDirect, pro::proxy<F>,
         pro::proxy_indirect_accessor<F>>& self) noexcept {
       const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
-      return refl.size_;
+      return refl.Size;
     }
 
     friend std::size_t AlignOf(const std::conditional_t<IsDirect, pro::proxy<F>,
         pro::proxy_indirect_accessor<F>>& self) noexcept {
       const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
-      return refl.align_;
+      return refl.Align;
     }
   };
 
- private:
-  std::size_t size_, align_;
+  std::size_t Size, Align;
 };
 
 struct LayoutAware : pro::facade_builder
