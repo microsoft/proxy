@@ -54,6 +54,6 @@ int main() {
   p = pro::make_proxy<LayoutAware, std::array<char, 100>>();  // SBO disabled
   std::cout << SizeOf(p) << "\n";  // Prints sizeof(raw pointer)
   std::cout << AlignOf(p) << "\n";  // Prints alignof(raw pointer)
-  std::cout << SizeOf(*p) << "\n";  // Prints 100
-  std::cout << AlignOf(*p) << "\n";  // Prints 1
+  std::cout << SizeOf(*p) << "\n";  // Prints "100"
+  std::cout << AlignOf(*p) << "\n";  // Prints "1"
 }
