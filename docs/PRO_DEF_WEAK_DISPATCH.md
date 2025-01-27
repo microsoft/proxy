@@ -4,7 +4,7 @@
 #define PRO_DEF_WEAK_DISPATCH // deprecated since 3.2, see below
 ```
 
-<mark>⚠️ Macro `PRO_DEF_WEAK_DISPATCH` has been replaced by class template `weak_dispatch` since 3.2, and may be removed in a future version.</mark>
+<mark>⚠️ Macro <code>PRO_DEF_WEAK_DISPATCH</code> has been replaced by class template <code>weak_dispatch</code> since 3.2, and may be removed in a future version.</mark>
 
 Macro `PRO_DEF_WEAK_DISPATCH` defines a "weak dispatch" type with a default implementation. It supports the following syntax:
 
@@ -58,12 +58,12 @@ struct WeakDictionary : pro::facade_builder
 int main() {
   std::vector<const char*> v{"hello", "world"};
   pro::proxy<WeakDictionary> p1 = &v;
-  std::cout << p1->at(1) << "\n";  // Prints: "world"
+  std::cout << p1->at(1) << "\n";  // Prints "world"
   pro::proxy<WeakDictionary> p2 = pro::make_proxy<WeakDictionary>(123);
   try {
     p2->at(1);
   } catch (const std::runtime_error& e) {
-    std::cout << e.what() << "\n";  // Prints: "Not implemented!"
+    std::cout << e.what() << "\n";  // Prints "Not implemented!"
   }
 }
 ```

@@ -12,7 +12,7 @@ struct RttiAware : pro::facade_builder
 
 int main() {
   pro::proxy<RttiAware> p;
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints: "v" (assuming GCC)
+  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "v" (assuming GCC)
   p = pro::make_proxy<RttiAware>(123);
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints: "i" (assuming GCC)
+  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "i" (assuming GCC)
 }

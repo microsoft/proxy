@@ -32,13 +32,13 @@ struct RttiAware : pro::facade_builder
 int main() {
   int v = 123;
   pro::proxy<RttiAware> p = &v;
-  std::cout << proxy_typeid(p).name() << "\n";  // Prints: "Pi" (assuming GCC)
+  std::cout << proxy_typeid(p).name() << "\n";  // Prints "Pi" (assuming GCC)
   std::cout << proxy_cast<int*>(p) << "\n";  // Prints the address of v
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints: "i" (assuming GCC)
-  std::cout << proxy_cast<int>(*p) << "\n";  // Prints: "123"
+  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "i" (assuming GCC)
+  std::cout << proxy_cast<int>(*p) << "\n";  // Prints "123"
 }
 ```
 
 ## See Also
 
-- [`support_view`](support_view.md)
+- [`add_view`](add_view.md)

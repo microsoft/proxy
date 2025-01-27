@@ -1,4 +1,4 @@
-# `proxy::operator->`, `proxy::operator*`
+# `proxy::operator->`<br />`proxy::operator*`
 
 The definitions of `proxy::operator->` and `proxy::operator*` make use of the following exposition-only constant:
 

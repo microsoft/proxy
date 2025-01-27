@@ -47,13 +47,13 @@ struct Formattable : pro::facade_builder
 int main() {
   std::string str = "Hello World";
   pro::proxy<Formattable> p1 = &str;
-  std::cout << std::format("p1 = {}\n", *p1);  // Prints: "p1 = Hello World"
+  std::cout << std::format("p1 = {}\n", *p1);  // Prints "p1 = Hello World"
 
   pro::proxy<Formattable> p2 = std::make_unique<int>(123);
-  std::cout << std::format("p2 = {}\n", *p2);  // Prints: "p2 = 123"
+  std::cout << std::format("p2 = {}\n", *p2);  // Prints "p2 = 123"
 
   pro::proxy<Formattable> p3 = pro::make_proxy<Formattable>(3.14159);
-  std::cout << std::format("p3 = {:.2f}\n", *p3) << "\n";  // Prints: "p3 = 3.14"
+  std::cout << std::format("p3 = {:.2f}\n", *p3) << "\n";  // Prints "p3 = 3.14"
 }
 ```
 
@@ -96,13 +96,13 @@ struct Streamable : pro::facade_builder
 int main() {
   std::string str = "Hello World";
   pro::proxy<Streamable> p1 = &str;
-  std::cout << "p1 = " << *p1 << "\n";  // Prints: "p1 = Hello World"
+  std::cout << "p1 = " << *p1 << "\n";  // Prints "p1 = Hello World"
 
   pro::proxy<Streamable> p2 = std::make_unique<int>(123);
-  std::cout << "p2 = " << *p2 << "\n";  // Prints: "p2 = 123"
+  std::cout << "p2 = " << *p2 << "\n";  // Prints "p2 = 123"
 
   pro::proxy<Streamable> p3 = pro::make_proxy<Streamable>(3.14159);
-  std::cout << "p3 = " << std::fixed << std::setprecision(2) << *p3 << "\n";  // Prints: "p3 = 3.14"
+  std::cout << "p3 = " << std::fixed << std::setprecision(2) << *p3 << "\n";  // Prints "p3 = 3.14"
 }
 ```
 
@@ -179,7 +179,7 @@ std::string PrintDrawableToString(pro::proxy<Drawable> p) {
 int main() {
   pro::proxy<Drawable> p = pro::make_proxy<Drawable, Rectangle>(3, 5);
   std::string str = PrintDrawableToString(p);
-  std::cout << str << "\n";  // Prints: "entity = {Rectangle: width = 3, height = 5}, area = 15"
+  std::cout << str << "\n";  // Prints "entity = {Rectangle: width = 3, height = 5}, area = 15"
 }
 ```
 

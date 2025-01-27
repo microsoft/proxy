@@ -19,9 +19,9 @@ int main() {
     std::cout << e.what() << "\n";  // Prints an explanatory string
   }
   p = &v;
-  std::cout << proxy_cast<int>(*p) << "\n";  // Prints: "123"
+  std::cout << proxy_cast<int>(*p) << "\n";  // Prints "123"
   proxy_cast<int&>(*p) = 456;
-  std::cout << v << "\n";  // Prints: "456"
+  std::cout << v << "\n";  // Prints "456"
   try {
     proxy_cast<double>(*p);  // Throws
   } catch (const pro::bad_proxy_cast& e) {

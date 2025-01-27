@@ -18,9 +18,9 @@ int main() {
   pro::proxy<Printable> p3 = pro::make_proxy<Printable>(3.1415926);  // From double
   pro::proxy<Printable> p4 = pro::make_proxy<Printable>("lalala");  // From const char*
   pro::proxy<Printable> p5 = pro::make_proxy<Printable, std::string>(5, 'x');  // From a in-place constructed string
-  std::cout << std::boolalpha << *p1 << "\n";  // Prints: "true"
-  std::cout << *p2 << "\n";  // Prints: "123"
-  std::cout << std::fixed << std::setprecision(10) << *p3 << "\n";  // Prints: "3.1415926000"
-  std::cout << *p4 << "\n";  // Prints: "lalala"
-  std::cout << *p5 << "\n";  // Prints: "xxxxx"
+  std::cout << std::boolalpha << *p1 << "\n";  // Prints "true"
+  std::cout << *p2 << "\n";  // Prints "123"
+  std::cout << std::fixed << std::setprecision(10) << *p3 << "\n";  // Prints "3.1415926000"
+  std::cout << *p4 << "\n";  // Prints "lalala"
+  std::cout << *p5 << "\n";  // Prints "xxxxx"
 }

@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from support_view.md.
+// This file contains example code from add_view.md.
 
 #include <iomanip>
 #include <iostream>
@@ -19,5 +19,5 @@ int main() {
   pro::proxy_view<RttiAware> pv = p;
   pro::proxy_view<const RttiAware> pcv = p;
   proxy_cast<int&>(*pv) = 456;  // Modifies the contained object of p
-  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints: "456"
+  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints "456"
 }

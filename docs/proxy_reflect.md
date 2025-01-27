@@ -46,10 +46,10 @@ struct CopyabilityAware : pro::facade_builder
 
 int main() {
   pro::proxy<CopyabilityAware> p1 = std::make_unique<int>();
-  std::cout << std::boolalpha << p1.IsCopyable() << "\n";  // Prints: "false"
+  std::cout << std::boolalpha << p1.IsCopyable() << "\n";  // Prints "false"
 
   pro::proxy<CopyabilityAware> p2 = std::make_shared<int>();
-  std::cout << p2.IsCopyable() << "\n";  // Prints: "true"
+  std::cout << p2.IsCopyable() << "\n";  // Prints "true"
 }
 ```
 

@@ -5,7 +5,7 @@ template <class F>
 using add_view = basic_facade_builder</* see below */>;
 ```
 
-The alias template `add_view` of `basic_facade_builder<Cs, Rs, C>` adds necessary convention types to allow implicit conversion from [`proxy`](../proxy.md)`<F1>` to [`proxy_view`](../observer_facade.md)`<F>` where `F1` is a [facade](../facade.md) type built from `basic_facade_builder`.
+The alias template `add_view` of `basic_facade_builder<Cs, Rs, C>` adds necessary convention types to allow implicit conversion from [`proxy`](../proxy.md)`<F1>` to [`proxy_view`](../proxy_view.md)`<F>` where `F1` is a [facade](../facade.md) type built from `basic_facade_builder`.
 
 Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if any).
 
@@ -36,7 +36,7 @@ int main() {
   pro::proxy_view<RttiAware> pv = p;
   pro::proxy_view<const RttiAware> pcv = p;
   proxy_cast<int&>(*pv) = 456;  // Modifies the contained object of p
-  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints: "456"
+  std::cout << proxy_cast<const int&>(*pcv) << "\n";  // Prints "456"
 }
 ```
 

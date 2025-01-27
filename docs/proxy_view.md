@@ -1,4 +1,4 @@
-# Class template `observer_facade`<br />Alias template `proxy_view`
+# Alias template `proxy_view`<br />Class template `observer_facade`
 
 ```cpp
 template <class F>
@@ -52,6 +52,6 @@ int main() {
 }
 ```
 
-## See also
+## See Also
 
-[`basic_facade_builder::support_view`](basic_facade_builder/support_view.md)
+[`basic_facade_builder::add_view`](basic_facade_builder/add_view.md)

@@ -2064,8 +2064,7 @@ struct weak_dispatch : D {
 };
 
 #define ___PRO_EXPAND_IMPL(__X) __X
-#define ___PRO_EXPAND_MACRO_IMPL( \
-    __MACRO, __1, __2, __3, __NAME, ...) \
+#define ___PRO_EXPAND_MACRO_IMPL(__MACRO, __1, __2, __3, __NAME, ...) \
     __MACRO##_##__NAME
 #define ___PRO_EXPAND_MACRO(__MACRO, ...) \
     ___PRO_EXPAND_IMPL(___PRO_EXPAND_MACRO_IMPL( \

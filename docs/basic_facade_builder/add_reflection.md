@@ -1,4 +1,4 @@
-# `basic_facade_builder::add_reflection`
+# `basic_facade_builder::add_reflection`<br />`basic_facade_builder::add_direct_reflection`<br />`basic_facade_builder::add_indirect_reflection`
 
 ```cpp
 template <class R>
@@ -62,8 +62,8 @@ struct RttiAware : pro::facade_builder
 int main() {
   int a = 123;
   pro::proxy<RttiAware> p = &a;
-  std::cout << p.GetTypeName() << "\n";  // Prints: "Pi" (assuming GCC)
-  std::cout << p->GetTypeName() << "\n";  // Prints: "i" (assuming GCC)
+  std::cout << p.GetTypeName() << "\n";  // Prints "Pi" (assuming GCC)
+  std::cout << p->GetTypeName() << "\n";  // Prints "i" (assuming GCC)
 }
 ```
 

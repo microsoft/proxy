@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-// This file contains example code from observer_facade.md.
+// This file contains example code from proxy_view.md.
 
 #include <map>
 

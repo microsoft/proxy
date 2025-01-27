@@ -20,10 +20,10 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`explicit_conversion_dispatch`<br />`conversion_dispatch`](explicit_conversion_dispatch.md)<br />*(since 3.2)* | Dispatch type for explicit conversion expressions with accessibility |
 | [`implicit_conversion_dispatch`](implicit_conversion_dispatch.md)<br />*(since 3.2)* | Dispatch type for implicit conversion expressions with accessibility |
 | [`not_implemented` ](not_implemented.md)<br />*(since 3.2)*  | Exception thrown by `weak_dispatch` for the default implementation |
-| [`observer_facade`<br />`proxy_view`](observer_facade.md)<br />*(since 3.2)* | Non-owning proxy optimized for raw pointers                  |
 | [`operator_dispatch`](operator_dispatch.md)                  | Dispatch type for operator expressions with accessibility    |
 | [`proxiable_ptr_constraints`](proxiable_ptr_constraints.md)  | Defines the constraints of a pointer type to instantiate a `proxy` |
 | [`proxy_indirect_accessor`](proxy_indirect_accessor.md)<br />*(since 3.2)* | Provides indirection accessibility for `proxy`               |
+| [`proxy_view`<br />`observer_facade`](proxy_view.md)<br />*(since 3.2)* | Non-owning proxy optimized for raw pointers                  |
 | [`proxy`](proxy.md)                                          | Wraps a pointer object matching specified facade             |
 | [`std::formatter<proxy_indirect_accessor>`](formatter_proxy_indirect_accessor.md)<br />*(since 3.2)* | Formatting support for `proxy_indirect_accessor`             |
 | [`weak_dispatch`](weak_dispatch.md)<br />*(since 3.2)*       | Weak dispatch type with a default implementation that throws `not_implemented` |
