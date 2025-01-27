@@ -2,9 +2,7 @@
 // Licensed under the MIT License.
 // This file contains example code from add_view.md.
 
-#include <iomanip>
 #include <iostream>
-#include <string>
 
 #include "proxy.h"
 

@@ -24,7 +24,7 @@ A reference to the `proxy` that has instantiated `a`.
 
 Similar to [`proxy_invoke`](proxy_invoke.md), this function can be used to implement the accessibility of `proxy`. If the facade type `F` is defined with the recommended facilities, it has full accessibility support. Specifically, when:
 
-- the underlying dispatch type `typename C::dispatch_type` is defined via [macro `PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [macro `PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), or is a specialization of either [`operator_dispatch`](operator_dispatch.md) or [`conversion_dispatch`](conversion_dispatch.md), and
+- the underlying dispatch type `typename C::dispatch_type` is defined via [macro `PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [macro `PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), or is a specialization of either [`operator_dispatch`](operator_dispatch.md) or [`conversion_dispatch`](explicit_conversion_dispatch.md), and
 - the convention is defined via [`facade_builder`](basic_facade_builder.md).
 
 ## Example
