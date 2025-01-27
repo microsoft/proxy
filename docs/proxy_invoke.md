@@ -32,7 +32,7 @@ The behavior is undefined if `p` does not contain a value.
 
 It is generally not recommended to call `proxy_invoke` directly. Using an [`accessor`](ProAccessible.md) is usually a better option with easier and more descriptive syntax. If the facade type `F` is defined with the recommended facilities, it has full accessibility support. Specifically, when
 
-- `D` is defined via [macro `PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [macro `PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), or is a specialization of either [`operator_dispatch`](operator_dispatch.md) or [`conversion_dispatch`](conversion_dispatch.md), and
+- `D` is defined via [macro `PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [macro `PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), or is a specialization of either [`operator_dispatch`](operator_dispatch.md) or [`conversion_dispatch`](explicit_conversion_dispatch.md), and
 - the convention type `Conv` is defined via [`facade_builder`](basic_facade_builder.md).
 
 ## Example

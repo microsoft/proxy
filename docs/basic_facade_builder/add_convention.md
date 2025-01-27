@@ -68,5 +68,5 @@ int main() {
 - [macro `PRO_DEF_MEM_DISPATCH`](../PRO_DEF_MEM_DISPATCH.md)
 - [macro `PRO_DEF_FREE_DISPATCH`](../PRO_DEF_FREE_DISPATCH.md)
 - [class template `operator_dispatch`](../operator_dispatch.md)
-- [class template `conversion_dispatch`](../conversion_dispatch.md)
+- [class `conversion_dispatch`](../explicit_conversion_dispatch.md)
 - [macro `PRO_DEF_WEAK_DISPATCH`](../PRO_DEF_WEAK_DISPATCH.md)

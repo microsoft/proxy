@@ -2,36 +2,58 @@
 // Licensed under the MIT License.
 // This file contains example code from add_reflection.md.
 
+#include <array>
 #include <iostream>
-#include <typeinfo>
 
 #include "proxy.h"
 
-class RttiReflector {
+class LayoutReflector {
  public:
   template <class T>
-  constexpr explicit RttiReflector(std::in_place_type_t<T>) : type_(typeid(T)) {}
+  constexpr explicit LayoutReflector(std::in_place_type_t<T>)
+      : size_(sizeof(T)), align_(alignof(T)) {}
 
   template <class F, bool IsDirect, class R>
   struct accessor {
-    const char* GetTypeName() const noexcept {
-      const RttiReflector& self = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
-      return self.type_.name();
+    friend std::size_t SizeOf(const std::conditional_t<IsDirect, pro::proxy<F>,
+        pro::proxy_indirect_accessor<F>>& self) noexcept {
+      const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+      return refl.size_;
+    }
+
+    friend std::size_t AlignOf(const std::conditional_t<IsDirect, pro::proxy<F>,
+        pro::proxy_indirect_accessor<F>>& self) noexcept {
+      const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+      return refl.align_;
     }
   };
 
  private:
-  const std::type_info& type_;
+  std::size_t size_, align_;
 };
 
-struct RttiAware : pro::facade_builder
-    ::add_direct_reflection<RttiReflector>
-    ::add_indirect_reflection<RttiReflector>
+struct LayoutAware : pro::facade_builder
+    ::add_direct_reflection<LayoutReflector>
+    ::add_indirect_reflection<LayoutReflector>
     ::build {};
 
 int main() {
   int a = 123;
-  pro::proxy<RttiAware> p = &a;
-  std::cout << p.GetTypeName() << "\n";  // Prints "Pi" (assuming GCC)
-  std::cout << p->GetTypeName() << "\n";  // Prints "i" (assuming GCC)
+  pro::proxy<LayoutAware> p = &a;
+  std::cout << SizeOf(p) << "\n";  // Prints sizeof(raw pointer)
+  std::cout << AlignOf(p) << "\n";  // Prints alignof(raw pointer)
+  std::cout << SizeOf(*p) << "\n";  // Prints sizeof(int)
+  std::cout << AlignOf(*p) << "\n";  // Prints alignof(int)
+
+  p = pro::make_proxy<LayoutAware>(123);  // SBO enabled
+  std::cout << SizeOf(p) << "\n";  // Prints sizeof(int)
+  std::cout << AlignOf(p) << "\n";  // Prints alignof(int)
+  std::cout << SizeOf(*p) << "\n";  // Prints sizeof(int)
+  std::cout << AlignOf(*p) << "\n";  // Prints alignof(int)
+
+  p = pro::make_proxy<LayoutAware, std::array<char, 100>>();  // SBO disabled
+  std::cout << SizeOf(p) << "\n";  // Prints sizeof(raw pointer)
+  std::cout << AlignOf(p) << "\n";  // Prints alignof(raw pointer)
+  std::cout << SizeOf(*p) << "\n";  // Prints 100
+  std::cout << AlignOf(*p) << "\n";  // Prints 1
 }

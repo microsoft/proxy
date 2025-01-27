@@ -19,9 +19,7 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 ## Example
 
 ```cpp
-#include <iomanip>
 #include <iostream>
-#include <string>
 
 #include "proxy.h"
 

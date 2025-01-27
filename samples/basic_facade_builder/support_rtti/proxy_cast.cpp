@@ -28,8 +28,8 @@ int main() {
     std::cout << e.what() << "\n";  // Prints an explanatory string
   }
   int* ptr1 = proxy_cast<int>(&*p);
-  std::cout << std::boolalpha << ptr1 << "\n";  // Prints an address
-  std::cout << std::boolalpha << &v << "\n";  // Prints the same address as above
+  std::cout << ptr1 << "\n";  // Prints an address
+  std::cout << &v << "\n";  // Prints the same address as above
   double* ptr2 = proxy_cast<double>(&*p);
   std::cout << ptr2 << "\n";  // Prints "0"
 }
