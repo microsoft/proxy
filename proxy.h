@@ -66,6 +66,9 @@ struct proxiable_ptr_constraints {
   constraint_level destructibility;
 };
 
+template <template <class> class O>
+struct facade_aware_overload_t {};
+
 template <class F> struct proxy_indirect_accessor;
 template <class F> class proxy;
 
@@ -328,6 +331,16 @@ template <class R, class... Args>
 struct overload_traits<R(Args...) const&& noexcept>
     : overload_traits_impl<qualifier_type::const_rv, true, R, Args...> {};
 
+template <class O>
+struct overload_substitution_traits : inapplicable_traits
+    { template <class> using type = O; };
+template <template <class> class O>
+struct overload_substitution_traits<facade_aware_overload_t<O>>
+    : applicable_traits { template <class F> using type = O<F>; };
+template <class O, class F>
+using substituted_overload_t =
+    typename overload_substitution_traits<O>::template type<F>;
+
 template <class MP>
 struct dispatcher_meta {
   constexpr dispatcher_meta() noexcept : dispatcher(nullptr) {}
@@ -368,21 +381,23 @@ consteval bool is_is_direct_well_formed() {
   return false;
 }
 
-template <class C, class... Os>
+template <class C, class F, class... Os>
 struct conv_traits_impl : inapplicable_traits {};
-template <class C, class... Os>
-    requires(sizeof...(Os) > 0u && (overload_traits<Os>::applicable && ...))
-struct conv_traits_impl<C, Os...> : applicable_traits {
-  using meta = composite_meta_impl<dispatcher_meta<typename overload_traits<Os>
-      ::template meta_provider<C::is_direct, typename C::dispatch_type>>...>;
+template <class C, class F, class... Os>
+    requires(sizeof...(Os) > 0u &&
+        (overload_traits<substituted_overload_t<Os, F>>::applicable && ...))
+struct conv_traits_impl<C, F, Os...> : applicable_traits {
+  using meta = composite_meta_impl<dispatcher_meta<typename overload_traits<
+      substituted_overload_t<Os, F>>::template meta_provider<
+          C::is_direct, typename C::dispatch_type>>...>;
 
   template <class P>
   static constexpr bool applicable_ptr =
-      (overload_traits<Os>::template applicable_ptr<
+      (overload_traits<substituted_overload_t<Os, F>>::template applicable_ptr<
           C::is_direct, typename C::dispatch_type, P> && ...);
 };
-template <class C> struct conv_traits : inapplicable_traits {};
-template <class C>
+template <class C, class F> struct conv_traits : inapplicable_traits {};
+template <class C, class F>
     requires(
         requires {
           typename C::dispatch_type;
@@ -391,8 +406,8 @@ template <class C>
         is_is_direct_well_formed<C>() &&
         std::is_trivial_v<typename C::dispatch_type> &&
         is_tuple_like_well_formed<typename C::overload_types>())
-struct conv_traits<C>
-    : instantiated_t<conv_traits_impl, typename C::overload_types, C> {};
+struct conv_traits<C, F>
+    : instantiated_t<conv_traits_impl, typename C::overload_types, C, F> {};
 
 template <class P>
 using ptr_element_t = typename std::pointer_traits<P>::element_type;
@@ -548,15 +563,15 @@ consteval bool is_facade_constraints_well_formed() {
 }
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
-template <class F, class... Cs> requires(conv_traits<Cs>::applicable && ...)
+template <class F, class... Cs> requires(conv_traits<Cs, F>::applicable && ...)
 struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
-  using conv_meta = composite_meta<typename conv_traits<Cs>::meta...>;
+  using conv_meta = composite_meta<typename conv_traits<Cs, F>::meta...>;
   using conv_indirect_accessor = composite_accessor<false, F, Cs...>;
   using conv_direct_accessor = composite_accessor<true, F, Cs...>;
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
-      (conv_traits<Cs>::template applicable_ptr<P> && ...);
+      (conv_traits<Cs, F>::template applicable_ptr<P> && ...);
   template <bool IsDirect, class D, class O>
   static constexpr bool is_invocable = std::is_base_of_v<dispatcher_meta<
       typename overload_traits<O>::template meta_provider<IsDirect, D>>,
@@ -1377,13 +1392,18 @@ template <class T, class F, bool IsDirect, class... Args>
 using instantiated_accessor_t =
     typename accessor_instantiation_traits<void, T, F, IsDirect, Args...>::type;
 
+template <class O>
+concept extended_overload = overload_traits<O>::applicable ||
+    overload_substitution_traits<O>::applicable;
+
 template <bool IsDirect, class D, class... Os>
 struct conv_impl {
   static constexpr bool is_direct = IsDirect;
   using dispatch_type = D;
   using overload_types = std::tuple<Os...>;
   template <class F>
-  using accessor = instantiated_accessor_t<D, F, IsDirect, Os...>;
+  using accessor = instantiated_accessor_t<
+      D, F, IsDirect, substituted_overload_t<Os, F>...>;
 };
 template <bool IsDirect, class R>
 struct refl_impl {
@@ -1481,32 +1501,18 @@ struct facade_of_traits<proxy<F>> : std::type_identity<F> {};
 template <class P> using facade_of_t = typename facade_of_traits<P>::type;
 
 template <class F, bool IsDirect, class D, class O>
-struct observer_overload_mapping_traits_impl
-    : std::type_identity<typename overload_traits<O>::view_type> {};
-template <class F, class D, class O>
-    requires(!std::is_same_v<D, proxy_view_dispatch> ||
-        std::is_same_v<typename overload_traits<O>::return_type, proxy_view<F>>)
-struct observer_overload_mapping_traits_impl<F, true, D, O>
-    : std::type_identity<void> {};
-template <class F, bool IsDirect, class D, class O>
 struct observer_overload_mapping_traits : std::type_identity<void> {};
-template <class F, bool IsDirect, class D, class O>
+template <class F, class D, class O>
     requires(overload_traits<O>::qualifier ==
         (std::is_const_v<F> ? qualifier_type::const_lv : qualifier_type::lv))
-struct observer_overload_mapping_traits<F, IsDirect, D, O>
-    : observer_overload_mapping_traits_impl<F, IsDirect, D, O> {};
+struct observer_overload_mapping_traits<F, false, D, O>
+    : std::type_identity<typename overload_traits<O>::view_type> {};
 template <class F, class O>
 struct observer_overload_mapping_traits<F, true, upward_conversion_dispatch, O>
     : std::type_identity<proxy_view<std::conditional_t<std::is_const_v<F>,
           const facade_of_t<typename overload_traits<O>::return_type>,
           facade_of_t<typename overload_traits<O>::return_type>>>()
           const noexcept> {};
-
-template <class D>
-struct observer_dispatch_reduction : std::type_identity<D> {};
-template <>
-struct observer_dispatch_reduction<upward_conversion_dispatch>
-    : std::type_identity<proxy_view_dispatch> {};
 
 template <class O, class I>
 struct observer_overload_ignore_void_reduction : std::type_identity<O> {};
@@ -1521,16 +1527,17 @@ using observer_overload_ignore_void_reduction_t =
 template <class F, class C, class... Os>
 using observer_conv_impl = recursive_reduction_t<
     observer_overload_ignore_void_reduction_t,
-    conv_impl<C::is_direct, typename observer_dispatch_reduction<
-        typename C::dispatch_type>::type>,
+    conv_impl<C::is_direct, typename C::dispatch_type>,
     typename observer_overload_mapping_traits<
-        F, C::is_direct, typename C::dispatch_type, Os>::type...>;
+        F, C::is_direct, typename C::dispatch_type,
+        substituted_overload_t<Os, std::remove_const_t<F>>>::type...>;
 
 template <class O, class I>
 struct observer_conv_reduction : std::type_identity<O> {};
-template <class O, class I>
+template <class... Cs, class I>
     requires(std::tuple_size_v<typename I::overload_types> != 0u)
-struct observer_conv_reduction<O, I> : std::type_identity<add_conv_t<O, I>> {};
+struct observer_conv_reduction<std::tuple<Cs...>, I>
+    : std::type_identity<std::tuple<Cs..., I>> {};
 template <class F>
 struct observer_conv_reduction_traits {
   template <class O, class I>
@@ -1558,13 +1565,9 @@ struct observer_facade_refl_impl {
 };
 
 template <class F>
-struct proxy_view_overload_traits
-    : std::type_identity<proxy_view<F>() noexcept> {};
+using proxy_view_overload = proxy_view<F>() noexcept;
 template <class F>
-struct proxy_view_overload_traits<const F>
-    : std::type_identity<proxy_view<const F>() const noexcept> {};
-template <class F>
-using proxy_view_overload = typename proxy_view_overload_traits<F>::type;
+using proxy_view_const_overload = proxy_view<const F>() const noexcept;
 
 template <std::size_t N>
 struct sign {
@@ -1738,19 +1741,16 @@ struct wildcard {
 
 template <class Cs, class Rs, proxiable_ptr_constraints C>
 struct basic_facade_builder {
-  template <class D, class... Os>
-      requires(sizeof...(Os) > 0u &&
-          (details::overload_traits<Os>::applicable && ...))
-  using add_indirect_convention = basic_facade_builder<details::add_conv_t<
-      Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(sizeof...(Os) > 0u &&
-          (details::overload_traits<Os>::applicable && ...))
-  using add_direct_convention = basic_facade_builder<details::add_conv_t<
-      Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
-  template <class D, class... Os>
-      requires(sizeof...(Os) > 0u &&
-          (details::overload_traits<Os>::applicable && ...))
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
+  using add_indirect_convention = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
+  using add_direct_convention = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
   using add_convention = add_indirect_convention<D, Os...>;
   template <class R>
   using add_indirect_reflection = basic_facade_builder<
@@ -1803,8 +1803,18 @@ struct basic_facade_builder {
   using support_rtti = support_indirect_rtti;
 #endif  // __cpp_rtti
   template <class F>
-  using add_view = add_direct_convention<
-      details::proxy_view_dispatch, details::proxy_view_overload<F>>;
+  using add_view [[deprecated(
+      "Use support_view and support_const_view instead.")]] =
+      add_direct_convention<
+          details::proxy_view_dispatch, std::conditional_t<std::is_const_v<F>,
+              details::proxy_view_const_overload<std::remove_const_t<F>>,
+              details::proxy_view_overload<F>>>;
+  using support_view = add_direct_convention<
+      details::proxy_view_dispatch,
+      facade_aware_overload_t<details::proxy_view_overload>>;
+  using support_const_view = add_direct_convention<
+      details::proxy_view_dispatch,
+      facade_aware_overload_t<details::proxy_view_const_overload>>;
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
   basic_facade_builder() = delete;
 };
