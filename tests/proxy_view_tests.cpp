@@ -10,8 +10,8 @@ namespace proxy_view_tests_details {
 struct TestFacade : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"+=">, void(int)>
     ::add_convention<utils::spec::FreeToString, std::string(), std::string() const>
-    ::add_view<TestFacade>
-    ::add_view<const TestFacade>
+    ::support_view
+    ::support_const_view
     ::build {};
 
 template <class T>
@@ -124,8 +124,8 @@ TEST(ProxyViewTests, TestConstViewOfNonOwning) {
 TEST(ProxyViewTests, TestOverloadShadowing) {
   struct TestFacade : pro::facade_builder
       ::add_convention<pro::operator_dispatch<"()">, int(), int() const>
-      ::add_view<TestFacade>
-      ::add_view<const TestFacade>
+      ::support_view
+      ::support_const_view
       ::build {};
   struct TestImpl {
     int operator()() { return 0; }
@@ -144,7 +144,7 @@ TEST(ProxyViewTests, TestUpwardConversion_FromNull) {
   struct TestFacade1 : pro::facade_builder::build {};
   struct TestFacade2 : pro::facade_builder
       ::add_facade<TestFacade1, true>  // Supports upward conversion
-      ::add_view<TestFacade2>
+      ::support_view
       ::build {};
   pro::proxy<TestFacade2> p1;
   pro::proxy_view<TestFacade2> p2 = p1;
@@ -161,8 +161,8 @@ TEST(ProxyViewTests, TestUpwardConversion_FromValue) {
   struct TestFacade2 : pro::facade_builder
       ::support_copy<pro::constraint_level::nontrivial>
       ::add_facade<TestFacade1, true>  // Supports upward conversion
-      ::add_view<TestFacade2>
-      ::add_view<const TestFacade2>
+      ::support_view
+      ::support_const_view
       ::build {};
   pro::proxy<TestFacade2> p1 = pro::make_proxy<TestFacade2>(123);
   pro::proxy_view<TestFacade2> p2 = p1;
