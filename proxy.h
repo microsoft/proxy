@@ -743,6 +743,16 @@ struct proxy_helper {
   }
 };
 
+template <class P>
+bool is_not_null(const P& p) {
+  if constexpr (std::is_constructible_v<bool, const P&> &&
+      !std::is_array_v<P>) {
+    return static_cast<bool>(p);
+  } else {
+    return true;
+  }
+}
+
 }  // namespace details
 
 template <class F>
@@ -818,7 +828,10 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       requires(!details::is_in_place_type<std::decay_t<P>> &&
           proxiable<std::decay_t<P>, F> &&
           std::is_constructible_v<std::decay_t<P>, P>)
-      : proxy() { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
+      : proxy() {
+    if (details::is_not_null(ptr))
+        { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
+  }
   template <proxiable<F> P, class... Args>
   explicit proxy(std::in_place_type_t<P>, Args&&... args)
       noexcept(std::is_nothrow_constructible_v<P, Args...>)
@@ -872,11 +885,15 @@ class proxy : public details::facade_traits<F>::direct_accessor {
       requires(proxiable<std::decay_t<P>, F> &&
           std::is_constructible_v<std::decay_t<P>, P> &&
           F::constraints.destructibility >= constraint_level::nontrivial) {
-    if constexpr (std::is_nothrow_constructible_v<std::decay_t<P>, P>) {
-      std::destroy_at(this);
-      initialize<std::decay_t<P>>(std::forward<P>(ptr));
+    if (details::is_not_null(ptr)) {
+      if constexpr (std::is_nothrow_constructible_v<std::decay_t<P>, P>) {
+        std::destroy_at(this);
+        initialize<std::decay_t<P>>(std::forward<P>(ptr));
+      } else {
+        *this = proxy{std::forward<P>(ptr)};
+      }
     } else {
-      *this = proxy{std::forward<P>(ptr)};
+      reset();
     }
     return *this;
   }
@@ -954,7 +971,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   P& initialize(Args&&... args) {
     P& result = *std::construct_at(
         reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    if constexpr (std::is_constructible_v<bool, P&>) { assert(result); }
+    assert(details::is_not_null(result));
     meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
     return result;
   }
