@@ -903,7 +903,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
     if constexpr (F::constraints.relocatability == constraint_level::trivial ||
         F::constraints.copyability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
-      std::swap(ptr_, rhs.ptr);
+      std::swap(ptr_, rhs.ptr_);
     } else {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {

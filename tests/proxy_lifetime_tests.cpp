@@ -974,6 +974,16 @@ TEST(ProxyLifetimeTests, TestSwap_Null_Null) {
   ASSERT_FALSE(p2.has_value());
 }
 
+TEST(ProxyLifetimeTests, TestSwap_Trivial) {
+  pro::proxy<details::TestTrivialFacade> p1 = pro::make_proxy<details::TestTrivialFacade>(123);
+  pro::proxy<details::TestTrivialFacade> p2 = pro::make_proxy<details::TestTrivialFacade>(456);
+  swap(p1, p2);
+  ASSERT_TRUE(p1.has_value());
+  ASSERT_EQ(ToString(*p1), "456");
+  ASSERT_TRUE(p2.has_value());
+  ASSERT_EQ(ToString(*p2), "123");
+}
+
 TEST(ProxyLifetimeTests, Test_DirectConvension_Lvalue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
