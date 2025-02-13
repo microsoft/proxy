@@ -1158,49 +1158,64 @@ concept inplace_proxiable_target = proxiable<details::inplace_ptr<T>, F>;
 
 template <facade F, inplace_proxiable_target<F> T, class... Args>
 proxy<F> make_proxy_inplace(Args&&... args)
-    noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+    noexcept(std::is_nothrow_constructible_v<T, Args...>)
+    requires(std::is_constructible_v<T, Args...>) {
   return proxy<F>{std::in_place_type<details::inplace_ptr<T>>,
       std::forward<Args>(args)...};
 }
 template <facade F, inplace_proxiable_target<F> T, class U, class... Args>
 proxy<F> make_proxy_inplace(std::initializer_list<U> il, Args&&... args)
     noexcept(std::is_nothrow_constructible_v<
-        T, std::initializer_list<U>&, Args...>) {
+        T, std::initializer_list<U>&, Args...>)
+    requires(std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
   return proxy<F>{std::in_place_type<details::inplace_ptr<T>>,
       il, std::forward<Args>(args)...};
 }
 template <facade F, class T>
 proxy<F> make_proxy_inplace(T&& value)
     noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
-    requires(inplace_proxiable_target<std::decay_t<T>, F>) {
+    requires(inplace_proxiable_target<std::decay_t<T>, F> &&
+        std::is_constructible_v<std::decay_t<T>, T>) {
   return proxy<F>{std::in_place_type<details::inplace_ptr<std::decay_t<T>>>,
       std::forward<T>(value)};
 }
 
 #if __STDC_HOSTED__
-template <facade F, class T, class Alloc, class... Args>
-proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args) {
+template <class T, class F>
+concept proxiable_target = inplace_proxiable_target<T, F> ||
+    proxiable<details::allocated_ptr<T, std::allocator<void>>, F>;
+
+template <facade F, proxiable_target<F> T, class Alloc, class... Args>
+proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args)
+    requires(std::is_constructible_v<T, Args...>) {
   return details::allocate_proxy_impl<F, T>(alloc, std::forward<Args>(args)...);
 }
-template <facade F, class T, class Alloc, class U, class... Args>
-proxy<F> allocate_proxy(const Alloc& alloc, std::initializer_list<U> il,
-    Args&&... args) {
+template <facade F, proxiable_target<F> T, class Alloc, class U, class... Args>
+proxy<F> allocate_proxy(
+    const Alloc& alloc, std::initializer_list<U> il, Args&&... args)
+    requires(std::is_constructible_v<T, std::initializer_list<U>&, Args...>) {
   return details::allocate_proxy_impl<F, T>(
       alloc, il, std::forward<Args>(args)...);
 }
 template <facade F, class Alloc, class T>
-proxy<F> allocate_proxy(const Alloc& alloc, T&& value) {
+proxy<F> allocate_proxy(const Alloc& alloc, T&& value)
+    requires(proxiable_target<std::decay_t<T>, F> &&
+        std::is_constructible_v<std::decay_t<T>, T>) {
   return details::allocate_proxy_impl<F, std::decay_t<T>>(
       alloc, std::forward<T>(value));
 }
-template <facade F, class T, class... Args>
+template <facade F, proxiable_target<F> T, class... Args>
 proxy<F> make_proxy(Args&&... args)
+    requires(std::is_constructible_v<T, Args...>)
     { return details::make_proxy_impl<F, T>(std::forward<Args>(args)...); }
-template <facade F, class T, class U, class... Args>
+template <facade F, proxiable_target<F> T, class U, class... Args>
 proxy<F> make_proxy(std::initializer_list<U> il, Args&&... args)
+    requires(std::is_constructible_v<T, std::initializer_list<U>&, Args...>)
     { return details::make_proxy_impl<F, T>(il, std::forward<Args>(args)...); }
 template <facade F, class T>
-proxy<F> make_proxy(T&& value) {
+proxy<F> make_proxy(T&& value)
+    requires(proxiable_target<std::decay_t<T>, F> &&
+        std::is_constructible_v<std::decay_t<T>, T>) {
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
 #endif  // __STDC_HOSTED__

@@ -80,6 +80,9 @@ static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, Te
 static_assert(!noexcept(pro::make_proxy_inplace<TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
 static_assert(noexcept(pro::make_proxy_inplace<TestLargeStringable, int>(123)));
 
+static_assert(pro::proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>);
+static_assert(pro::proxiable_target<utils::LifetimeTracker::Session, TestSmallStringable>);
+
 template <class T>
 void SfinaeUnsafeIncrementImpl(T&& value) { ++value; }
 
