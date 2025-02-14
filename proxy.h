@@ -495,7 +495,7 @@ using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
   template <class> friend class pro::proxy;
-  template <class F> friend struct pro::proxy_indirect_accessor;
+  template <class> friend struct pro::proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -919,7 +919,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
     if constexpr (F::constraints.relocatability == constraint_level::trivial ||
         F::constraints.copyability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
-      std::swap(ptr_, rhs.ptr);
+      std::swap(ptr_, rhs.ptr_);
     } else {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
@@ -1727,7 +1727,7 @@ struct proxy_typeid_reflector {
       return *refl.info;
     }
 ___PRO_DEBUG(
-    accessor() noexcept { std::ignore = &accessor::_symbol_guard; }
+    accessor() noexcept { std::ignore = &_symbol_guard; }
 
    private:
     static inline const std::type_info& _symbol_guard(
@@ -1912,7 +1912,7 @@ struct operator_dispatch;
             SELF, std::forward<Arg>(arg)); \
       } \
 ___PRO_DEBUG( \
-      accessor() noexcept { std::ignore = &accessor::_symbol_guard; } \
+      accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
       static inline R _symbol_guard(Arg arg, SELF_ARG) NE { \
@@ -1961,7 +1961,7 @@ ___PRO_DEBUG( \
         return arg; \
       } \
 ___PRO_DEBUG( \
-      accessor() noexcept { std::ignore = &accessor::_symbol_guard; } \
+      accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
       static inline Arg& _symbol_guard(Arg& arg, SELF_ARG) NE \
@@ -2130,7 +2130,7 @@ struct weak_dispatch : D {
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
 ___PRO_DEBUG( \
-      accessor() noexcept { ::std::ignore = &accessor::_symbol_guard; } \
+      accessor() noexcept { ::std::ignore = &_symbol_guard; } \
     \
      private: \
       static inline __R _symbol_guard(__SELF_ARG, __Args... __args) __NE { \
