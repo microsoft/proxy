@@ -827,8 +827,7 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   proxy(P&& ptr) noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
       requires(!details::is_in_place_type<std::decay_t<P>> &&
           proxiable<std::decay_t<P>, F> &&
-          std::is_constructible_v<std::decay_t<P>, P>)
-      : proxy() {
+          std::is_constructible_v<std::decay_t<P>, P>) : proxy() {
     if (details::is_not_null(ptr))
         { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
   }
