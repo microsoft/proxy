@@ -1,7 +1,7 @@
 # Macro `PRO_DEF_FREE_AS_MEM_DISPATCH`
 
 ```cpp
-#define PRO_DEF_FREE_AS_MEM_DISPATCH // since 3.1, see below
+#define PRO_DEF_FREE_AS_MEM_DISPATCH  // since 3.1.0, see below
 ```
 
 Macro `PRO_DEF_FREE_AS_MEM_DISPATCH` defines dispatch types for free function expressions with accessibility via a member function. It supports two syntaxes:

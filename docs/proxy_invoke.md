@@ -14,7 +14,11 @@ template <bool IsDirect, class D, class O, class F, class... Args>
 /* see below */ proxy_invoke(const proxy<F>&& p, Args&&... args);
 ```
 
-Invokes a `proxy` with a specified dispatch type, an overload type, and arguments. There shall be a convention type `Conv` defined in `typename F::convention_types` where `Conv::is_direct == IsDirect && std::is_same_v<typename Conv::dispatch_type, D>` is `true`. `O` is required to be defined in `typename Conv::overload_types`.
+Invokes a `proxy` with a specified dispatch type, an overload type, and arguments. There shall be a convention type `Conv` defined in `typename F::convention_types` where
+
+- `Conv::is_direct == IsDirect` is `true`, and
+- `typename Conv::dispatch_type` is `D`, and
+- there shall be an overload type `O1` defined in `typename Conv::overload_types` where [`substituted-overload`](ProOverload.md)`<O1, F>` is `O`.
 
 Let `ptr` be the contained value of `p` with the same cv ref-qualifiers, `Args2...` be the argument types of `O`, `R` be the return type of `O`,
 

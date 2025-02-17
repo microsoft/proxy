@@ -1,7 +1,7 @@
 # Class `implicit_conversion_dispatch`
 
 ```cpp
-class implicit_conversion_dispatch;  // since 3.2
+class implicit_conversion_dispatch;  // since 3.2.0
 ```
 
 Class `implicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type for implicit type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types.

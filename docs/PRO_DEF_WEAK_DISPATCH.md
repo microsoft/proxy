@@ -1,7 +1,7 @@
 # Macro `PRO_DEF_WEAK_DISPATCH`
 
 ```cpp
-#define PRO_DEF_WEAK_DISPATCH // deprecated since 3.2, see below
+#define PRO_DEF_WEAK_DISPATCH  // deprecated since 3.2.0, see below
 ```
 
 <mark>⚠️ Macro <code>PRO_DEF_WEAK_DISPATCH</code> has been replaced by class template <code>weak_dispatch</code> since 3.2, and may be removed in a future version.</mark>

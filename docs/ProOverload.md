@@ -1,6 +1,8 @@
 # Named requirements: *ProOverload*
 
-A type `O` meets the *ProOverload* requirements if it matches one of the following definitions, where `R` is the *return type*, `Args...` are the *argument types*.
+A type `O` meets the *ProOverload* requirements if `substituted-overload<O, F>` matches one of the following definitions, where `F` is any type meeting the [*ProBasicFacade* requirements](ProBasicFacade.md), `R` is the *return type*, `Args...` are the *argument types*.
+
+The exposition-only type `substituted-overload<O, F>` is `OT<F>` if `O` is a specialization of [`facade_aware_overload_t<OT>`](facade_aware_overload_t.md), or `O` otherwise.
 
 | Definitions of `O`            |
 | ----------------------------- |
