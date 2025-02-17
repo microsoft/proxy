@@ -24,9 +24,6 @@ struct RttiAware : pro::facade_builder
     ::support_view
     ::build {};
 
-static_assert(!std::is_trivially_copyable_v<pro::proxy<RttiAware>>);
-static_assert(std::is_trivially_copyable_v<pro::proxy_view<RttiAware>>);
-
 int main() {
   pro::proxy<RttiAware> p = pro::make_proxy<RttiAware>(123);
   pro::proxy_view<RttiAware> pv = p;

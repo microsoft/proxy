@@ -53,7 +53,7 @@ int main() {
   std::cout << std::format("p2 = {}\n", *p2);  // Prints "p2 = 123"
 
   pro::proxy<Formattable> p3 = pro::make_proxy<Formattable>(3.14159);
-  std::cout << std::format("p3 = {:.2f}\n", *p3) << "\n";  // Prints "p3 = 3.14"
+  std::cout << std::format("p3 = {:.2f}\n", *p3);  // Prints "p3 = 3.14"
 }
 ```
 

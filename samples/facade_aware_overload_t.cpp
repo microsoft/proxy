@@ -14,31 +14,15 @@ pro::proxy<F> operator+(const T& value, const pro::proxy_indirect_accessor<F>& r
     requires(!std::is_same_v<T, pro::proxy_indirect_accessor<F>>)
     { return pro::make_proxy<F, T>(value + proxy_cast<const T&>(rhs)); }
 
-template <class T, class F>
-pro::proxy<F> operator*(const T& value, const pro::proxy_indirect_accessor<F>& rhs)
-    requires(!std::is_same_v<T, pro::proxy_indirect_accessor<F>>)
-    { return pro::make_proxy<F, T>(value * proxy_cast<const T&>(rhs)); }
-
 struct Addable : pro::facade_builder
     ::support_rtti
+    ::support_format
     ::add_convention<pro::operator_dispatch<"+">, pro::facade_aware_overload_t<BinaryOverload>>
     ::build {};
 
-struct Multipliable : pro::facade_builder
-    ::support_rtti
-    ::add_convention<pro::operator_dispatch<"*">, pro::facade_aware_overload_t<BinaryOverload>>
-    ::build {};
-
-struct BasicNumber : pro::facade_builder
-    ::support_format
-    ::add_facade<Addable>
-    ::add_facade<Multipliable>
-    ::build {};
-
 int main() {
-  pro::proxy<BasicNumber> p1 = pro::make_proxy<BasicNumber>(1);
-  pro::proxy<BasicNumber> p2 = pro::make_proxy<BasicNumber>(2);
-  pro::proxy<BasicNumber> p3 = *p1 + *p2;  // p3 is int(3)
-  p3 = *p3 * *p2;  // p3 becomes int(6)
-  std::cout << std::format("{}\n", *p3);  // Prints "6"
+  pro::proxy<Addable> p1 = pro::make_proxy<Addable>(1);
+  pro::proxy<Addable> p2 = pro::make_proxy<Addable>(2);
+  pro::proxy<Addable> p3 = *p1 + *p2;
+  std::cout << std::format("{}\n", *p3);  // Prints "3"
 }
