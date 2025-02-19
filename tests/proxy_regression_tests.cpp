@@ -2,7 +2,10 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
+#include <vector>
 #include "proxy.h"
+
+namespace proxy_regression_tests_details {
 
 template <class It, class F>
 bool operator==(const It& it, const pro::proxy<F>& rhs) noexcept
@@ -10,17 +13,24 @@ bool operator==(const It& it, const pro::proxy<F>& rhs) noexcept
   return typeid(It) == proxy_typeid(rhs) && it == proxy_cast<const It&>(rhs);
 }
 
-namespace proxy_regression_tests_details {
-
 template <class F>
 using SelfComparisonOverload = bool(const pro::proxy<F>& rhs) const noexcept;
 
 template <class T>
 struct Iterator : pro::facade_builder
     ::support_direct_rtti
+    ::restrict_layout<4 * sizeof(void*)>
     ::add_direct_convention<pro::operator_dispatch<"++">, void() noexcept>
     ::add_direct_convention<pro::operator_dispatch<"!=">, pro::facade_aware_overload_t<SelfComparisonOverload>>
     ::add_convention<pro::implicit_conversion_dispatch, T&() const noexcept>
+    ::build {};
+
+PRO_DEF_MEM_DISPATCH(MemBegin, begin);
+PRO_DEF_MEM_DISPATCH(MemEnd, end);
+template <class T>
+struct Range : pro::facade_builder
+    ::add_convention<MemBegin, pro::proxy<Iterator<T>>()>
+    ::template add_convention<MemEnd, pro::proxy<Iterator<T>>()>
     ::build {};
 
 }  // namespace proxy_regression_tests_details
@@ -43,9 +53,11 @@ TEST(ProxyRegressionTests, TestUnexpectedCompilerWarning) {
 
 // https://github.com/microsoft/proxy/issues/254
 TEST(ProxyRegressionTests, TestProxiableSelfDependency) {
-  int a[3]{1, 2, 3};
-  pro::proxy<details::Iterator<int>> p = a;
-  ASSERT_EQ(*p, 1);
-  ++p;
-  ASSERT_EQ(*p, 2);
+  std::vector<int> original{1, 2, 123};
+  std::vector<int> expected;
+  pro::proxy<details::Range<int>> p = &original;
+  for (int i : *p) {
+    expected.push_back(i);
+  }
+  EXPECT_EQ(expected, original);
 }
