@@ -332,11 +332,19 @@ struct overload_traits<R(Args...) const&& noexcept>
     : overload_traits_impl<qualifier_type::const_rv, true, R, Args...> {};
 
 template <class O>
-struct overload_substitution_traits : inapplicable_traits
-    { template <class> using type = O; };
+struct overload_substitution_traits : inapplicable_traits {
+  template <class> using type = O;
+  template <bool IsDirect, class D, class P>
+  static constexpr bool applicable_ptr =
+      overload_traits<O>::template applicable_ptr<IsDirect, D, P>;
+};
 template <template <class> class O>
 struct overload_substitution_traits<facade_aware_overload_t<O>>
-    : applicable_traits { template <class F> using type = O<F>; };
+    : applicable_traits {
+  template <class F> using type = O<F>;
+  template <bool IsDirect, class D, class P>
+  static constexpr bool applicable_ptr = true;
+};
 template <class O, class F>
 using substituted_overload_t =
     typename overload_substitution_traits<O>::template type<F>;
@@ -393,7 +401,7 @@ struct conv_traits_impl<C, F, Os...> : applicable_traits {
 
   template <class P>
   static constexpr bool applicable_ptr =
-      (overload_traits<substituted_overload_t<Os, F>>::template applicable_ptr<
+      (overload_substitution_traits<Os>::template applicable_ptr<
           C::is_direct, typename C::dispatch_type, P> && ...);
 };
 template <class C, class F> struct conv_traits : inapplicable_traits {};
