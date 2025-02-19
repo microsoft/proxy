@@ -30,8 +30,9 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
 | Name                                                         | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | [`build`](basic_facade_builder/build.md)                     | Specifies a [`facade`](facade.md) type deduced from the template parameters of the `basic_facade_builder` |
-| [`support_format`<br />`support_wformat`](basic_facade_builder/support_format.md)<br />*(since 3.2)* | Specifies the capability of formatting (via [formatting functions](https://en.cppreference.com/w/cpp/utility/format)) to the template parameters |
-| [`support_rtti`<br />`support_indirect_rtti`<br />`support_direct_rtti`](basic_facade_builder/support_rtti.md)<br />*(since 3.2)* | Specifies the capability of RTTI (via `proxy_cast` and `proxy_typeid`) to the template parameters |
+| [`support_format`<br />`support_wformat`](basic_facade_builder/support_format.md)<br />*(since 3.2.0)* | Specifies the capability of formatting (via [formatting functions](https://en.cppreference.com/w/cpp/utility/format)) to the template parameters |
+| [`support_rtti`<br />`support_indirect_rtti`<br />`support_direct_rtti`](basic_facade_builder/support_rtti.md)<br />*(since 3.2.0)* | Specifies the capability of RTTI (via `proxy_cast` and `proxy_typeid`) to the template parameters |
+| [`support_view` ](basic_facade_builder/support_view.md)<br />*(since 3.2.1)* | Specifies the capability of implicit conversion to `proxy_view` to the template parameters |
 
 ## Member Alias Templates
 
@@ -40,7 +41,6 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
 | [`add_convention`<br />`add_indirect_convention`<br />`add_direct_convention`](basic_facade_builder/add_convention.md) | Adds a convention to the template parameters                 |
 | [`add_facade`](basic_facade_builder/add_facade.md)           | Adds a facade to the template parameters                     |
 | [`add_reflection`<br />`add_indirect_reflection`<br />`add_direct_reflection`](basic_facade_builder/add_reflection.md) | Adds a reflection to the template parameters                 |
-| [`add_view` ](basic_facade_builder/add_view.md)<br />*(since 3.2)* | Specifies the capability of implicit conversion to `proxy_view` to the template parameters |
 | [`restrict_layout`](basic_facade_builder/restrict_layout.md) | Specifies maximum `max_size` and `max_align` of `C` in the template parameters |
 | [`support_copy`](basic_facade_builder/support_copy.md)       | Specifies minimum `copyability` of `C` in the template parameters |
 | [`support_destruction`](basic_facade_builder/support_destruction.md) | Specifies minimum `destructibility` of `C` in the template parameters |

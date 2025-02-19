@@ -3,7 +3,7 @@
 ```cpp
 namespace std {
   template <class F, class CharT> requires(/* see below */)
-  struct formatter<pro::proxy_indirect_accessor<F>, ChatT>;
+  struct formatter<pro::proxy_indirect_accessor<F>, ChatT>;  // since 3.2.0
 }
 ```
 

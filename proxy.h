@@ -52,7 +52,7 @@
 #define ___PRO_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202501L
+#define __msft_lib_proxy 202502L
 
 namespace pro {
 
@@ -67,7 +67,7 @@ struct proxiable_ptr_constraints {
 };
 
 template <template <class> class O>
-struct facade_aware_overload_t {};
+struct facade_aware_overload_t { facade_aware_overload_t() = delete; };
 
 template <class F> struct proxy_indirect_accessor;
 template <class F> class proxy;
@@ -332,11 +332,19 @@ struct overload_traits<R(Args...) const&& noexcept>
     : overload_traits_impl<qualifier_type::const_rv, true, R, Args...> {};
 
 template <class O>
-struct overload_substitution_traits : inapplicable_traits
-    { template <class> using type = O; };
+struct overload_substitution_traits : inapplicable_traits {
+  template <class> using type = O;
+  template <bool IsDirect, class D, class P>
+  static constexpr bool applicable_ptr =
+      overload_traits<O>::template applicable_ptr<IsDirect, D, P>;
+};
 template <template <class> class O>
 struct overload_substitution_traits<facade_aware_overload_t<O>>
-    : applicable_traits { template <class F> using type = O<F>; };
+    : applicable_traits {
+  template <class F> using type = O<F>;
+  template <bool IsDirect, class D, class P>
+  static constexpr bool applicable_ptr = true;
+};
 template <class O, class F>
 using substituted_overload_t =
     typename overload_substitution_traits<O>::template type<F>;
@@ -393,7 +401,7 @@ struct conv_traits_impl<C, F, Os...> : applicable_traits {
 
   template <class P>
   static constexpr bool applicable_ptr =
-      (overload_traits<substituted_overload_t<Os, F>>::template applicable_ptr<
+      (overload_substitution_traits<Os>::template applicable_ptr<
           C::is_direct, typename C::dispatch_type, P> && ...);
 };
 template <class C, class F> struct conv_traits : inapplicable_traits {};
@@ -1505,60 +1513,85 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
         F::constraints.copyability != constraint_level::trivial) ?
         F::constraints.relocatability : constraint_level::none>::type;
 
+template <class LR, class CLR, class RR, class CRR>
+struct observer_ptr {
+ public:
+  explicit observer_ptr(std::remove_reference_t<LR>* ptr) : ptr_(ptr) {}
+  observer_ptr(const observer_ptr&) = default;
+  auto operator->() noexcept { return std::addressof(static_cast<LR>(*ptr_)); }
+  auto operator->() const noexcept
+      { return std::addressof(static_cast<CLR>(*ptr_)); }
+  LR operator*() & noexcept { return static_cast<LR>(*ptr_); }
+  CLR operator*() const& noexcept { return static_cast<CLR>(*ptr_); }
+  RR operator*() && noexcept { return static_cast<RR>(*ptr_); }
+  CRR operator*() const&& noexcept { return static_cast<CRR>(*ptr_); }
+
+ private:
+  std::remove_reference_t<LR>* ptr_;
+};
 struct proxy_view_dispatch : cast_dispatch_base<false, true> {
   template <class T>
-  auto* operator()(T&& value) const
-      ___PRO_DIRECT_FUNC_IMPL(std::addressof(*std::forward<T>(value)))
+  auto operator()(T& value) const noexcept
+      requires(requires { { std::addressof(*value) } noexcept; }) {
+    return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
+        decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
+        {std::addressof(*value)};
+  }
 };
 
 template <class P> struct facade_of_traits;
 template <class F>
 struct facade_of_traits<proxy<F>> : std::type_identity<F> {};
 template <class P> using facade_of_t = typename facade_of_traits<P>::type;
-
-template <class F, bool IsDirect, class D, class O>
-struct observer_overload_mapping_traits : std::type_identity<void> {};
-template <class F, class D, class O>
-    requires(overload_traits<O>::qualifier ==
-        (std::is_const_v<F> ? qualifier_type::const_lv : qualifier_type::lv))
-struct observer_overload_mapping_traits<F, false, D, O>
-    : std::type_identity<typename overload_traits<O>::view_type> {};
-template <class F, class O>
-struct observer_overload_mapping_traits<F, true, upward_conversion_dispatch, O>
-    : std::type_identity<proxy_view<std::conditional_t<std::is_const_v<F>,
-          const facade_of_t<typename overload_traits<O>::return_type>,
-          facade_of_t<typename overload_traits<O>::return_type>>>()
-          const noexcept> {};
+template <class O>
+using observer_upward_conversion_overload = proxy_view<
+    facade_of_t<typename overload_traits<O>::return_type>>() const noexcept;
 
 template <class O, class I>
-struct observer_overload_ignore_void_reduction : std::type_identity<O> {};
-template <bool IsDirect, class D, class... Os, class O>
-    requires(!std::is_void_v<O>)
-struct observer_overload_ignore_void_reduction<conv_impl<IsDirect, D, Os...>, O>
-    : std::type_identity<conv_impl<IsDirect, D, Os..., O>> {};
+struct observer_upward_conversion_conv_reduction : std::type_identity<O> {};
+template <class... Os, class O>
+    requires(!std::is_same_v<Os, observer_upward_conversion_overload<O>> && ...)
+struct observer_upward_conversion_conv_reduction<
+    conv_impl<true, upward_conversion_dispatch, Os...>, O>
+    : std::type_identity<conv_impl<true, upward_conversion_dispatch, Os...,
+          observer_upward_conversion_overload<O>>> {};
 template <class O, class I>
-using observer_overload_ignore_void_reduction_t =
-    typename observer_overload_ignore_void_reduction<O, I>::type;
+using observer_upward_conversion_conv_reduction_t =
+    typename observer_upward_conversion_conv_reduction<O, I>::type;
+template <class... Os>
+using observer_upward_conversion_conv =
+    recursive_reduction_t<observer_upward_conversion_conv_reduction_t,
+        conv_impl<true, upward_conversion_dispatch>, Os...>;
 
-template <class F, class C, class... Os>
-using observer_conv_impl = recursive_reduction_t<
-    observer_overload_ignore_void_reduction_t,
-    conv_impl<C::is_direct, typename C::dispatch_type>,
-    typename observer_overload_mapping_traits<
-        F, C::is_direct, typename C::dispatch_type,
-        substituted_overload_t<Os, std::remove_const_t<F>>>::type...>;
+template <class D, class F, class... Os>
+using observer_indirect_conv =
+    conv_impl<false, D, substituted_overload_t<Os, F>...>;
 
-template <class O, class I>
+template <class C, class F>
+struct observer_conv_traits : inapplicable_traits {};
+template <class C, class F>
+    requires(C::is_direct &&
+        std::is_same_v<typename C::dispatch_type, upward_conversion_dispatch>)
+struct observer_conv_traits<C, F>
+    : applicable_traits, std::type_identity<instantiated_t<
+          observer_upward_conversion_conv, typename C::overload_types>> {};
+template <class C, class F> requires(!C::is_direct)
+struct observer_conv_traits<C, F>
+    : applicable_traits, std::type_identity<instantiated_t<
+          observer_indirect_conv, typename C::overload_types,
+          typename C::dispatch_type, F>> {};
+
+template <class F, class O, class I>
 struct observer_conv_reduction : std::type_identity<O> {};
-template <class... Cs, class I>
-    requires(std::tuple_size_v<typename I::overload_types> != 0u)
-struct observer_conv_reduction<std::tuple<Cs...>, I>
-    : std::type_identity<std::tuple<Cs..., I>> {};
+template <class F, class... Cs, class I>
+    requires(observer_conv_traits<I, F>::applicable)
+struct observer_conv_reduction<F, std::tuple<Cs...>, I>
+    : std::type_identity<
+          std::tuple<Cs..., typename observer_conv_traits<I, F>::type>> {};
 template <class F>
-struct observer_conv_reduction_traits {
+struct observer_conv_reduction_helper {
   template <class O, class I>
-  using type = typename observer_conv_reduction<O, instantiated_t<
-      observer_conv_impl, typename I::overload_types, F, I>>::type;
+  using type = typename observer_conv_reduction<F, O, I>::type;
 };
 
 template <class O, class I>
@@ -1572,7 +1605,7 @@ using observer_refl_reduction_t = typename observer_refl_reduction<O, I>::type;
 template <class F, class... Cs>
 struct observer_facade_conv_impl {
   using convention_types = recursive_reduction_t<
-      observer_conv_reduction_traits<F>::template type, std::tuple<>, Cs...>;
+      observer_conv_reduction_helper<F>::template type, std::tuple<>, Cs...>;
 };
 template <class... Rs>
 struct observer_facade_refl_impl {
@@ -1582,8 +1615,6 @@ struct observer_facade_refl_impl {
 
 template <class F>
 using proxy_view_overload = proxy_view<F>() noexcept;
-template <class F>
-using proxy_view_const_overload = proxy_view<const F>() const noexcept;
 
 template <std::size_t N>
 struct sign {
@@ -1818,19 +1849,8 @@ struct basic_facade_builder {
           details::proxy_typeid_reflector>>, C>;
   using support_rtti = support_indirect_rtti;
 #endif  // __cpp_rtti
-  template <class F>
-  using add_view [[deprecated(
-      "Use support_view and support_const_view instead.")]] =
-      add_direct_convention<
-          details::proxy_view_dispatch, std::conditional_t<std::is_const_v<F>,
-              details::proxy_view_const_overload<std::remove_const_t<F>>,
-              details::proxy_view_overload<F>>>;
-  using support_view = add_direct_convention<
-      details::proxy_view_dispatch,
+  using support_view = add_direct_convention<details::proxy_view_dispatch,
       facade_aware_overload_t<details::proxy_view_overload>>;
-  using support_const_view = add_direct_convention<
-      details::proxy_view_dispatch,
-      facade_aware_overload_t<details::proxy_view_const_overload>>;
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
   basic_facade_builder() = delete;
 };
