@@ -1,9 +1,9 @@
 # `basic_facade_builder::support_format`<br />`basic_facade_builder::support_wformat`
 
 ```cpp
-using support_format = basic_facade_builder</* see below */>;
+using support_format = basic_facade_builder</* see below */>;  // since 3.2.0
 
-using support_wformat = basic_facade_builder</* see below */>;
+using support_wformat = basic_facade_builder</* see below */>;  // since 3.2.0
 ```
 
 The member types `support_format` and `support_wformat` of `basic_facade_builder<Cs, Rs, C>` add necessary convention and reflection types to the template parameters, enabling specializations of [`std::formatter<proxy_indirect_accessor<F>, CharT>`](../formatter_proxy_indirect_accessor.md) where `F` is a [facade](../facade.md) type built from `basic_facade_builder`, `CharT` is `char` (if `support_format` is specified) or `wchar_t` (if `support_wformat` is specified).

@@ -1,9 +1,9 @@
 # Class `explicit_conversion_dispatch`
 
 ```cpp
-class explicit_conversion_dispatch;  // since 3.2
+class explicit_conversion_dispatch;  // since 3.2.0
 
-using conversion_dispatch = explicit_conversion_dispatch;  // since 3.2
+using conversion_dispatch = explicit_conversion_dispatch;  // since 3.2.0
 ```
 
 Class `explicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type for explicit type conversion expressions. It meets the [*ProAccessible* requirements](ProAccessible.md) of applicable types. `conversion_dispatch` is an alias of `explicit_conversion_dispatch`.

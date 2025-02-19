@@ -1,7 +1,7 @@
 # Class `not_implemented`
 
 ```cpp
-class not_implemented : public std::exception;
+class not_implemented : public std::exception;  // since 3.2.0
 ```
 
 A type of object to be thrown by the default implementation of [`weak_dispatch`](weak_dispatch.md).
