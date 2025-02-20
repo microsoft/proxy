@@ -218,8 +218,9 @@ R invoke_dispatch(Args&&... args) {
 template <class D, class P, qualifier_type Q, class R, class... Args>
 R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr_indirect<D, P, Q, true, R, Args...>) {
-  return invoke_dispatch<D, R>(*std::forward<add_qualifier_t<P, Q>>(
-      *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self))),
+  auto& qp = *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
+  if constexpr (std::is_constructible_v<bool, decltype(qp)>) { assert(qp); }
+  return invoke_dispatch<D, R>(*std::forward<add_qualifier_t<P, Q>>(qp),
       std::forward<Args>(args)...);
 }
 template <class D, class P, qualifier_type Q, class R, class... Args>
@@ -962,7 +963,6 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   P& initialize(Args&&... args) {
     P& result = *std::construct_at(
         reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    if constexpr (std::is_constructible_v<bool, P&>) { assert(result); }
     meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
     return result;
   }
