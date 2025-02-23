@@ -76,9 +76,15 @@ struct TestMemFn1_ReturnTypeNotExist { void MemFn1(double) {} };
 static_assert(!pro::proxiable<TestMemFn1_ReturnTypeNotExist*, TestMemFn1>);
 
 static_assert(pro::inplace_proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>);
+static_assert(pro::diagnose_inplace_proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>());
 static_assert(!pro::inplace_proxiable_target<utils::LifetimeTracker::Session, TestSmallStringable>);
 static_assert(!noexcept(pro::make_proxy_inplace<TestLargeStringable, utils::LifetimeTracker::Session>(std::declval<utils::LifetimeTracker*>())));
 static_assert(noexcept(pro::make_proxy_inplace<TestLargeStringable, int>(123)));
+
+static_assert(pro::proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>);
+static_assert(pro::diagnose_proxiable_target<utils::LifetimeTracker::Session, TestLargeStringable>());
+static_assert(pro::proxiable_target<utils::LifetimeTracker::Session, TestSmallStringable>);
+static_assert(pro::diagnose_proxiable_target<utils::LifetimeTracker::Session, TestSmallStringable>());
 
 template <class T>
 void SfinaeUnsafeIncrementImpl(T&& value) { ++value; }
