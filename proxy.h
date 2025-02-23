@@ -361,6 +361,13 @@ template <class O, class F>
 using substituted_overload_t =
     typename overload_substitution_traits<O>::template type<F>;
 template <class P, class F, bool IsDirect, class D, class O>
+consteval bool diagnose_proxiable_overload_ill_formed() {
+  constexpr bool verdict = overload_traits<substituted_overload_t<O, F>>
+      ::applicable;
+  static_assert(verdict, "not proxiable due to an overload ill-formed");
+  return verdict;
+}
+template <class P, class F, bool IsDirect, class D, class O>
 consteval bool diagnose_proxiable_required_convention_not_implemented() {
   constexpr bool verdict = overload_traits<substituted_overload_t<O, F>>
       ::template is_applicable_ptr<IsDirect, D, P>();
@@ -421,8 +428,12 @@ struct conv_traits_impl<C, F, Os...> : applicable_traits {
 
   template <class P>
   static consteval bool diagnose_proxiable() {
-    return (diagnose_proxiable_required_convention_not_implemented<
-        P, F, C::is_direct, typename C::dispatch_type, Os>() && ...);
+    bool verdict = true;
+    ((verdict &= diagnose_proxiable_overload_ill_formed<
+            P, F, C::is_direct, typename C::dispatch_type, Os>() &&
+        diagnose_proxiable_required_convention_not_implemented<
+            P, F, C::is_direct, typename C::dispatch_type, Os>()), ...);
+    return verdict;
   }
 
   template <class P>
@@ -647,8 +658,11 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   using conv_direct_accessor = composite_accessor<true, F, Cs...>;
 
   template <class P>
-  static consteval bool diagnose_proxiable_conv()
-      { return (conv_traits<Cs, F>::template diagnose_proxiable<P>() && ...); }
+  static consteval bool diagnose_proxiable_conv() {
+    bool verdict = true;
+    ((verdict &= conv_traits<Cs, F>::template diagnose_proxiable<P>()), ...);
+    return verdict;
+  }
 
   template <class P>
   static constexpr bool conv_applicable_ptr =
@@ -667,8 +681,11 @@ struct facade_refl_traits_impl<F, Rs...> : applicable_traits {
   using refl_direct_accessor = composite_accessor<true, F, Rs...>;
 
   template <class P>
-  static consteval bool diagnose_proxiable_refl()
-      { return (refl_traits<Rs>::template diagnose_proxiable<P, F>() && ...); }
+  static consteval bool diagnose_proxiable_refl() {
+    bool verdict = true;
+    ((verdict &= refl_traits<Rs>::template diagnose_proxiable<P, F>()), ...);
+    return verdict;
+  }
 
   template <class P>
   static constexpr bool refl_applicable_ptr =
@@ -711,18 +728,20 @@ struct facade_traits<F>
 
   template <class P>
   static consteval bool diagnose_proxiable() {
-    return diagnose_proxiable_size_too_large<
-            P, F, sizeof(P), F::constraints.max_size>() &&
-        diagnose_proxiable_align_too_large<
-            P, F, alignof(P), F::constraints.max_align>() &&
-        diagnose_proxiable_insufficient_copyability<
-            P, F, F::constraints.copyability>() &&
-        diagnose_proxiable_insufficient_relocatability<
-            P, F, F::constraints.relocatability>() &&
-        diagnose_proxiable_insufficient_destructibility<
-            P, F, F::constraints.destructibility>() &&
-        facade_traits::template diagnose_proxiable_conv<P>() &&
-        facade_traits::template diagnose_proxiable_refl<P>();
+    bool verdict = true;
+    verdict &= diagnose_proxiable_size_too_large<
+        P, F, sizeof(P), F::constraints.max_size>();
+    verdict &= diagnose_proxiable_align_too_large<
+        P, F, alignof(P), F::constraints.max_align>();
+    verdict &= diagnose_proxiable_insufficient_copyability<
+        P, F, F::constraints.copyability>();
+    verdict &= diagnose_proxiable_insufficient_relocatability<
+        P, F, F::constraints.relocatability>();
+    verdict &= diagnose_proxiable_insufficient_destructibility<
+        P, F, F::constraints.destructibility>();
+    verdict &= facade_traits::template diagnose_proxiable_conv<P>();
+    verdict &= facade_traits::template diagnose_proxiable_refl<P>();
+    return verdict;
   }
 
   template <class P>
