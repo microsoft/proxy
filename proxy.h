@@ -40,12 +40,6 @@
 #define ___PRO_THROW(...) std::abort()
 #endif  // __cpp_exceptions
 
-#ifdef __cpp_lib_unreachable
-#define ___PRO_UNREACHABLE() std::unreachable()
-#else
-#define ___PRO_UNREACHABLE() std::abort()
-#endif  // __cpp_lib_unreachable
-
 #ifdef _MSC_VER
 #define ___PRO_ENFORCE_EBO __declspec(empty_bases)
 #else
@@ -1888,7 +1882,13 @@ struct wildcard {
   wildcard() = delete;
 
   template <class T>
-  [[noreturn]] operator T() const { ___PRO_UNREACHABLE(); }
+  [[noreturn]] operator T() const {
+#ifdef __cpp_lib_unreachable
+    std::unreachable();
+#else
+    std::abort();
+#endif  // __cpp_lib_unreachable
+  }
 };
 
 }  // namespace details
@@ -2340,7 +2340,6 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 }  // namespace std
 #endif  // __STDC_HOSTED__
 
-#undef ___PRO_UNREACHABLE
 #undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
