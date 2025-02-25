@@ -715,7 +715,7 @@ struct facade_traits<F>
       typename facade_traits::refl_direct_accessor>;
 
   template <class P>
-  static consteval bool diagnose_proxiable() {
+  static consteval void diagnose_proxiable() {
     bool verdict = true;
     verdict &= diagnose_proxiable_size_too_large<
         P, F, sizeof(P), F::constraints.max_size>();
@@ -729,7 +729,7 @@ struct facade_traits<F>
         P, F, F::constraints.destructibility>();
     verdict &= facade_traits::template diagnose_proxiable_conv<P>();
     verdict &= facade_traits::template diagnose_proxiable_refl<P>();
-    return verdict;
+    if (!verdict) { std::abort(); }  // Propagate the error to the caller side
   }
 
   template <class P>
@@ -781,14 +781,6 @@ template <class M>
 struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
 template <class M>
 using meta_ptr = typename meta_ptr_traits<M>::type;
-template <class F, class P>
-consteval auto make_meta_ptr() {
-  if constexpr (facade_traits<F>::template diagnose_proxiable<P>()) {
-    return meta_ptr<typename facade_traits<F>::meta>{std::in_place_type<P>};
-  } else {
-    std::abort();  // Propagate the error to the caller side
-  }
-}
 
 template <class MP>
 struct meta_ptr_reset_guard {
@@ -1075,7 +1067,11 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   constexpr P& initialize(Args&&... args) {
     P& result = *std::construct_at(
         reinterpret_cast<P*>(ptr_), std::forward<Args>(args)...);
-    meta_ = details::make_meta_ptr<F, P>();
+    if constexpr (proxiable<P, F>) {
+      meta_ = details::meta_ptr<typename _Traits::meta>{std::in_place_type<P>};
+    } else {
+      _Traits::template diagnose_proxiable<P>();
+    }
     return result;
   }
 

@@ -15,12 +15,19 @@ jobs:
 
     - name: install clang
       run: |
-        sudo apt install -y clang-17 clang-18
+        sudo apt install -y clang-16 clang-17 clang-18
 
     - name: check compiler versions
       run: |
+        clang++-16 --version
         clang++-17 --version
         clang++-18 --version
+
+    - name: build and run test with clang 16
+      run: |
+        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-clang-16 -j
+        ctest --test-dir build-clang-16 -j
 
     - name: build and run test with clang 17
       run: |
