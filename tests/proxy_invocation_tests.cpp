@@ -63,9 +63,15 @@ pro::proxy<Container<T>> AppendImpl(C& container, T&& v) {
 PRO_DEF_FREE_DISPATCH(FreeAppend, AppendImpl, Append);
 
 template <class T>
+struct FreeAppendOverloadTraits {
+  template <class F>
+  using Type = pro::proxy<F>(T) const&;
+};
+
+template <class T>
 struct Container : pro::facade_builder
     ::add_facade<Iterable<T>>
-    ::template add_convention<FreeAppend, pro::proxy<Container<T>>(T) const&>
+    ::template add_convention<FreeAppend, pro::facade_aware_overload_t<FreeAppendOverloadTraits<T>::template Type>>
     ::build {};
 
 PRO_DEF_MEM_DISPATCH(MemAt, at, at);
@@ -99,9 +105,12 @@ pro::proxy<Weak<F>> GetWeakImpl(std::nullptr_t) { return nullptr; }
 template <class F>
 PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak);
 
+template <class F>
+using FreeGetWeakOverload = pro::proxy<Weak<F>>() const&;
+
 struct SharedStringable : pro::facade_builder
     ::add_facade<utils::spec::Stringable>
-    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::proxy<Weak<SharedStringable>>() const&>
+    ::add_direct_convention<FreeGetWeak<SharedStringable>, pro::facade_aware_overload_t<FreeGetWeakOverload>>
     ::build {};
 
 template <class F, bool NE, class... Args>
