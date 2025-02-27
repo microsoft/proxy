@@ -56,43 +56,10 @@
 
 namespace pro {
 
-enum class constraint_level { none, nontrivial, nothrow, trivial };
-
-struct proxiable_ptr_constraints {
-  std::size_t max_size;
-  std::size_t max_align;
-  constraint_level copyability;
-  constraint_level relocatability;
-  constraint_level destructibility;
-};
-
-template <template <class> class O>
-struct facade_aware_overload_t { facade_aware_overload_t() = delete; };
-
-template <class F> struct proxy_indirect_accessor;
-template <class F> class proxy;
-
 namespace details {
 
 struct applicable_traits { static constexpr bool applicable = true; };
 struct inapplicable_traits { static constexpr bool applicable = false; };
-
-enum class qualifier_type { lv, const_lv, rv, const_rv };
-template <class T, qualifier_type Q> struct add_qualifier_traits;
-template <class T>
-struct add_qualifier_traits<T, qualifier_type::lv> : std::type_identity<T&> {};
-template <class T>
-struct add_qualifier_traits<T, qualifier_type::const_lv>
-    : std::type_identity<const T&> {};
-template <class T>
-struct add_qualifier_traits<T, qualifier_type::rv> : std::type_identity<T&&> {};
-template <class T>
-struct add_qualifier_traits<T, qualifier_type::const_rv>
-    : std::type_identity<const T&&> {};
-template <class T, qualifier_type Q>
-using add_qualifier_t = typename add_qualifier_traits<T, Q>::type;
-template <class T, qualifier_type Q>
-using add_qualifier_ptr_t = std::remove_reference_t<add_qualifier_t<T, Q>>*;
 
 template <template <class, class> class R, class O, class... Is>
 struct recursive_reduction : std::type_identity<O> {};
@@ -130,6 +97,48 @@ struct instantiated_traits<T, TL, std::index_sequence<Is...>, Args...>
 template <template <class...> class T, class TL, class... Args>
 using instantiated_t = typename instantiated_traits<
     T, TL, std::make_index_sequence<std::tuple_size_v<TL>>, Args...>::type;
+
+template <class F> struct basic_facade_traits;
+
+}  // namespace details
+
+enum class constraint_level { none, nontrivial, nothrow, trivial };
+
+struct proxiable_ptr_constraints {
+  std::size_t max_size;
+  std::size_t max_align;
+  constraint_level copyability;
+  constraint_level relocatability;
+  constraint_level destructibility;
+};
+
+template <template <class> class O>
+struct facade_aware_overload_t { facade_aware_overload_t() = delete; };
+
+template <class F>
+concept facade = details::basic_facade_traits<F>::applicable;
+
+template <facade F> struct proxy_indirect_accessor;
+template <facade F> class proxy;
+
+namespace details {
+
+enum class qualifier_type { lv, const_lv, rv, const_rv };
+template <class T, qualifier_type Q> struct add_qualifier_traits;
+template <class T>
+struct add_qualifier_traits<T, qualifier_type::lv> : std::type_identity<T&> {};
+template <class T>
+struct add_qualifier_traits<T, qualifier_type::const_lv>
+    : std::type_identity<const T&> {};
+template <class T>
+struct add_qualifier_traits<T, qualifier_type::rv> : std::type_identity<T&&> {};
+template <class T>
+struct add_qualifier_traits<T, qualifier_type::const_rv>
+    : std::type_identity<const T&&> {};
+template <class T, qualifier_type Q>
+using add_qualifier_t = typename add_qualifier_traits<T, Q>::type;
+template <class T, qualifier_type Q>
+using add_qualifier_ptr_t = std::remove_reference_t<add_qualifier_t<T, Q>>*;
 
 template <class T>
 consteval bool has_copyability(constraint_level level) {
@@ -353,10 +362,15 @@ struct overload_substitution_traits<facade_aware_overload_t<O>>
 template <class O, class F>
 using substituted_overload_t =
     typename overload_substitution_traits<O>::template type<F>;
+template <class O>
+concept extended_overload = overload_traits<O>::applicable ||
+    overload_substitution_traits<O>::applicable;
 template <class P, class F, bool IsDirect, class D, class O>
 consteval bool diagnose_proxiable_required_convention_not_implemented() {
-  constexpr bool verdict = overload_traits<substituted_overload_t<O, F>>
-      ::template is_applicable_ptr<IsDirect, D, P>();
+  constexpr bool verdict =
+      overload_traits<substituted_overload_t<O, F>>::applicable &&
+      overload_traits<substituted_overload_t<O, F>>
+          ::template is_applicable_ptr<IsDirect, D, P>();
   static_assert(verdict,
       "not proxiable due to a required convention not implemented");
   return verdict;
@@ -402,11 +416,27 @@ consteval bool is_is_direct_well_formed() {
   return false;
 }
 
+template <class C, class... Os>
+struct basic_conv_traits_impl : inapplicable_traits {};
+template <class C, extended_overload... Os> requires(sizeof...(Os) > 0u)
+struct basic_conv_traits_impl<C, Os...> : applicable_traits {};
+template <class C> struct basic_conv_traits : inapplicable_traits {};
+template <class C>
+    requires(
+        requires {
+          typename C::dispatch_type;
+          typename C::overload_types;
+        } &&
+        is_is_direct_well_formed<C>() &&
+        std::is_trivial_v<typename C::dispatch_type> &&
+        is_tuple_like_well_formed<typename C::overload_types>())
+struct basic_conv_traits<C>
+    : instantiated_t<basic_conv_traits_impl, typename C::overload_types, C> {};
+
 template <class C, class F, class... Os>
 struct conv_traits_impl : inapplicable_traits {};
 template <class C, class F, class... Os>
-    requires(sizeof...(Os) > 0u &&
-        (overload_traits<substituted_overload_t<Os, F>>::applicable && ...))
+    requires(overload_traits<substituted_overload_t<Os, F>>::applicable && ...)
 struct conv_traits_impl<C, F, Os...> : applicable_traits {
   using meta = composite_meta_impl<dispatcher_meta<typename overload_traits<
       substituted_overload_t<Os, F>>::template meta_provider<
@@ -425,17 +455,8 @@ struct conv_traits_impl<C, F, Os...> : applicable_traits {
       substituted_overload_t<Os, F>>::template is_applicable_ptr<
       C::is_direct, typename C::dispatch_type, P>() && ...);
 };
-template <class C, class F> struct conv_traits : inapplicable_traits {};
 template <class C, class F>
-    requires(
-        requires {
-          typename C::dispatch_type;
-          typename C::overload_types;
-        } &&
-        is_is_direct_well_formed<C>() &&
-        std::is_trivial_v<typename C::dispatch_type> &&
-        is_tuple_like_well_formed<typename C::overload_types>())
-struct conv_traits<C, F>
+struct conv_traits
     : instantiated_t<conv_traits_impl, typename C::overload_types, C, F> {};
 
 template <class P>
@@ -451,6 +472,12 @@ struct refl_meta {
 
   R reflector;
 };
+
+template <class R> struct basic_refl_traits : inapplicable_traits {};
+template <class R>
+    requires(requires { typename R::reflector_type; } &&
+        is_is_direct_well_formed<R>())
+struct basic_refl_traits<R> : applicable_traits {};
 
 template <class T, bool IsDirect, class R>
 consteval bool is_reflector_well_formed() {
@@ -473,11 +500,8 @@ consteval bool diagnose_proxiable_required_reflection_not_implemented() {
   return verdict;
 }
 
-template <class R> struct refl_traits : inapplicable_traits {};
 template <class R>
-    requires(requires { typename R::reflector_type; } &&
-        is_is_direct_well_formed<R>())
-struct refl_traits<R> : applicable_traits {
+struct refl_traits {
   using meta = refl_meta<R::is_direct, typename R::reflector_type>;
 
   template <class P, class F>
@@ -537,8 +561,8 @@ using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
 
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <class> friend class pro::proxy;
-  template <class> friend struct pro::proxy_indirect_accessor;
+  template <facade> friend class pro::proxy;
+  template <facade> friend struct pro::proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -637,6 +661,30 @@ consteval bool is_facade_constraints_well_formed() {
   }
   return false;
 }
+template <class... Cs>
+struct basic_facade_conv_traits_impl : inapplicable_traits {};
+template <class... Cs> requires(basic_conv_traits<Cs>::applicable && ...)
+struct basic_facade_conv_traits_impl<Cs...> : applicable_traits {};
+template <class... Rs>
+struct basic_facade_refl_traits_impl : inapplicable_traits {};
+template <class... Rs> requires(basic_refl_traits<Rs>::applicable && ...)
+struct basic_facade_refl_traits_impl<Rs...> : applicable_traits {};
+template <class F> struct basic_facade_traits : inapplicable_traits {};
+template <class F>
+    requires(
+        requires {
+          typename F::convention_types;
+          typename F::reflection_types;
+        } &&
+        is_facade_constraints_well_formed<F>() &&
+        is_tuple_like_well_formed<typename F::convention_types>() &&
+        instantiated_t<basic_facade_conv_traits_impl,
+            typename F::convention_types>::applicable &&
+        is_tuple_like_well_formed<typename F::reflection_types>() &&
+        instantiated_t<basic_facade_refl_traits_impl,
+            typename F::reflection_types>::applicable)
+struct basic_facade_traits<F> : applicable_traits {};
+
 template <class F, class... Cs>
 struct facade_conv_traits_impl : inapplicable_traits {};
 template <class F, class... Cs> requires(conv_traits<Cs, F>::applicable && ...)
@@ -661,9 +709,7 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
       conv_meta>;
 };
 template <class F, class... Rs>
-struct facade_refl_traits_impl : inapplicable_traits {};
-template <class F, class... Rs> requires(refl_traits<Rs>::applicable && ...)
-struct facade_refl_traits_impl<F, Rs...> : applicable_traits {
+struct facade_refl_traits_impl {
   using refl_meta = composite_meta<typename refl_traits<Rs>::meta...>;
   using refl_indirect_accessor = composite_accessor<false, F, Rs...>;
   using refl_direct_accessor = composite_accessor<true, F, Rs...>;
@@ -680,26 +726,14 @@ struct facade_refl_traits_impl<F, Rs...> : applicable_traits {
       (refl_traits<Rs>::template applicable_ptr<P> && ...);
 };
 template <class F> struct facade_traits : inapplicable_traits {};
-template <class F>
-    requires(
-        requires {
-          typename F::convention_types;
-          typename F::reflection_types;
-        } &&
-        is_facade_constraints_well_formed<F>() &&
-        is_tuple_like_well_formed<typename F::convention_types>() &&
-        instantiated_t<facade_conv_traits_impl, typename F::convention_types, F>
-            ::applicable &&
-        is_tuple_like_well_formed<typename F::reflection_types>() &&
-        instantiated_t<facade_refl_traits_impl, typename F::reflection_types, F>
-            ::applicable)
+template <class F> requires(instantiated_t<
+    facade_conv_traits_impl, typename F::convention_types, F>::applicable)
 struct facade_traits<F>
     : instantiated_t<facade_conv_traits_impl, typename F::convention_types, F>,
       instantiated_t<facade_refl_traits_impl, typename F::reflection_types, F> {
   using copyability_meta = lifetime_meta_t<
       copyability_meta_provider, F::constraints.copyability>;
-  using relocatability_meta = lifetime_meta_t<
-      relocatability_meta_provider,
+  using relocatability_meta = lifetime_meta_t<relocatability_meta_provider,
       F::constraints.copyability == constraint_level::trivial ?
           constraint_level::trivial : F::constraints.relocatability>;
   using destructibility_meta = lifetime_meta_t<
@@ -862,24 +896,21 @@ struct proxy_helper {
 
 }  // namespace details
 
-template <class F>
-concept facade = details::facade_traits<F>::applicable;
-
 template <class P, class F>
-concept proxiable =
-    facade<F> && details::facade_traits<F>::template applicable_ptr<P>;
+concept proxiable = facade<F> && details::facade_traits<F>::applicable &&
+    details::facade_traits<F>::template applicable_ptr<P>;
 
-template <class F> struct proxy_indirect_accessor {};
-template <class F> requires(!std::is_same_v<typename details::facade_traits<F>
+template <facade F> struct proxy_indirect_accessor {};
+template <facade F> requires(!std::is_same_v<typename details::facade_traits<F>
     ::indirect_accessor, details::composite_accessor_impl<>>)
 struct proxy_indirect_accessor<F>
     : details::facade_traits<F>::indirect_accessor {};
 
-template <class F>
+template <facade F>
 class proxy : public details::facade_traits<F>::direct_accessor {
-  static_assert(facade<F>);
   friend struct details::proxy_helper<F>;
   using _Traits = details::facade_traits<F>;
+  static_assert(_Traits::applicable);
 
  public:
   proxy() noexcept {
@@ -1081,26 +1112,26 @@ class proxy : public details::facade_traits<F>::direct_accessor {
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
 
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(proxy<F>& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
   return details::proxy_helper<F>::template invoke<IsDirect, D, O,
       details::qualifier_type::lv>(p, std::forward<Args>(args)...);
 }
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(const proxy<F>& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
   return details::proxy_helper<F>::template invoke<IsDirect, D, O,
       details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
 }
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(proxy<F>&& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
   return details::proxy_helper<F>::template invoke<
       IsDirect, D, O, details::qualifier_type::rv>(
       std::move(p), std::forward<Args>(args)...);
 }
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(const proxy<F>&& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
   return details::proxy_helper<F>::template invoke<
@@ -1108,28 +1139,28 @@ auto proxy_invoke(const proxy<F>&& p, Args&&... args)
       std::move(p), std::forward<Args>(args)...);
 }
 
-template <bool IsDirect, class R, class F>
+template <bool IsDirect, class R, facade F>
 const R& proxy_reflect(const proxy<F>& p) noexcept {
   return static_cast<const details::refl_meta<IsDirect, R>&>(
       details::proxy_helper<F>::get_meta(p)).reflector;
 }
 
-template <class F, class A>
+template <facade F, class A>
 proxy<F>& access_proxy(A& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::lv>(a);
 }
-template <class F, class A>
+template <facade F, class A>
 const proxy<F>& access_proxy(const A& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::const_lv>(a);
 }
-template <class F, class A>
+template <facade F, class A>
 proxy<F>&& access_proxy(A&& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::rv>(std::forward<A>(a));
 }
-template <class F, class A>
+template <facade F, class A>
 const proxy<F>&& access_proxy(const A&& a) noexcept {
   return details::proxy_helper<F>::template access<
       A, details::qualifier_type::const_rv>(std::forward<const A>(a));
@@ -1330,10 +1361,10 @@ constexpr proxy<F> make_proxy(T&& value)
 }
 #endif  // __STDC_HOSTED__
 
-template <class F>
+template <facade F>
 struct observer_facade;
 
-template <class F>
+template <facade F>
 using proxy_view = proxy<observer_facade<F>>;
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
@@ -1516,10 +1547,6 @@ struct accessor_instantiation_traits<std::void_t<typename T::template accessor<
 template <class T, class F, bool IsDirect, class... Args>
 using instantiated_accessor_t =
     typename accessor_instantiation_traits<void, T, F, IsDirect, Args...>::type;
-
-template <class O>
-concept extended_overload = overload_traits<O>::applicable ||
-    overload_substitution_traits<O>::applicable;
 
 template <bool IsDirect, class D, class... Os>
 struct conv_impl {
@@ -1952,7 +1979,7 @@ struct basic_facade_builder {
   basic_facade_builder() = delete;
 };
 
-template <class F>
+template <facade F>
 struct observer_facade
     : details::instantiated_t<details::observer_facade_conv_impl,
           typename F::convention_types, F>,
