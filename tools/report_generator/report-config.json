@@ -51,13 +51,23 @@
       "BaselineBenchmarkName": "BM_SmallObjectManagementWithUniquePtr"
     },
     {
-      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::shared_ptr` (without memory pool)",
+      "Name": "Basic lifetime management for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (without memory pool)",
       "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
       "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr"
     },
     {
-      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::shared_ptr` (with memory pool)",
+      "Name": "Basic lifetime management for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (with memory pool)",
       "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr_Pooled"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy_Shared",
+      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr"
+    },
+    {
+      "Name": "Basic lifetime management for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
+      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy_SharedPooled",
       "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr_Pooled"
     },
     {
@@ -76,13 +86,23 @@
       "BaselineBenchmarkName": "BM_LargeObjectManagementWithUniquePtr"
     },
     {
-      "Name": "Basic lifetime management for large objects with `proxy` vs. `std::shared_ptr` (both without memory pool)",
+      "Name": "Basic lifetime management for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both without memory pool)",
       "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
       "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr"
     },
     {
-      "Name": "Basic lifetime management for large objects with `proxy` vs. `std::shared_ptr` (both with memory pool)",
+      "Name": "Basic lifetime management for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both with memory pool)",
       "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr_Pooled"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Shared",
+      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr"
+    },
+    {
+      "Name": "Basic lifetime management for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
+      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_SharedPooled",
       "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr_Pooled"
     },
     {
