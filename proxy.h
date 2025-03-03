@@ -1507,13 +1507,6 @@ constexpr proxy<F> make_proxy(T&& value)
   return details::make_proxy_impl<F, std::decay_t<T>>(std::forward<T>(value));
 }
 
-template <class T, class F>
-concept shared_proxiable_target = facade<F> &&
-    ((details::weak_ownership_support_traits<F>::applicable &&
-        proxiable<details::strong_compact_ptr<T, std::allocator<void>>, F>) ||
-    (!details::weak_ownership_support_traits<F>::applicable &&
-        proxiable<details::shared_compact_ptr<T, std::allocator<void>>, F>));
-
 template <facade F, class T, class Alloc, class... Args>
 constexpr proxy<F> allocate_proxy_shared(const Alloc& alloc, Args&&... args)
     requires(std::is_constructible_v<T, Args...>) {
