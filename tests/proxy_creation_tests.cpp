@@ -115,7 +115,7 @@ struct TestSharedStringable : pro::facade_builder
 
 struct TestWeakSharedStringable: pro::facade_builder
     ::add_facade<TestSharedStringable>
-    ::support_weak_ownership
+    ::support_weak
     ::build {};
 
 }  // namespace proxy_creation_tests_details

@@ -1232,7 +1232,7 @@ class ___PRO_ENFORCE_EBO allocated_ptr
       requires(std::is_copy_constructible_v<T>)
       : alloc_aware<Alloc>(rhs), indirect_ptr<inplace_ptr<T>>(
             rhs.ptr_ == nullptr ? nullptr : allocate<inplace_ptr<T>>(
-                this->alloc, std::as_const(*rhs.ptr_))) {}
+                this->alloc, std::in_place, *rhs)) {}
   allocated_ptr(allocated_ptr&& rhs)
       noexcept(std::is_nothrow_move_constructible_v<Alloc>)
       : alloc_aware<Alloc>(rhs),
@@ -2251,8 +2251,7 @@ struct basic_facade_builder {
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
 #if __STDC_HOSTED__
-  using support_weak_ownership = add_direct_convention<
-      details::weak_conversion_dispatch,
+  using support_weak = add_direct_convention<details::weak_conversion_dispatch,
       facade_aware_overload_t<details::weak_conversion_overload>>;
   using support_format = add_convention<
       details::format_dispatch, details::format_overload_t<char>>;
