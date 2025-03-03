@@ -1175,6 +1175,23 @@ const proxy<F>&& access_proxy(const A&& a) noexcept {
 
 namespace details {
 
+template <class LR, class CLR, class RR, class CRR>
+struct observer_ptr {
+ public:
+  explicit observer_ptr(LR lr) : lr_(lr) {}
+  observer_ptr(const observer_ptr&) = default;
+  auto operator->() noexcept { return std::addressof(lr_); }
+  auto operator->() const noexcept
+      { return std::addressof(static_cast<CLR>(lr_)); }
+  LR operator*() & noexcept { return static_cast<LR>(lr_); }
+  CLR operator*() const& noexcept { return static_cast<CLR>(lr_); }
+  RR operator*() && noexcept { return static_cast<RR>(lr_); }
+  CRR operator*() const&& noexcept { return static_cast<CRR>(lr_); }
+
+ private:
+  LR lr_;
+};
+
 #if __STDC_HOSTED__
 template <class T, class Alloc, class... Args>
 T* allocate(const Alloc& alloc, Args&&... args) {
@@ -1443,6 +1460,9 @@ constexpr proxy<F> make_proxy_shared_impl(Args&&... args) {
 
 }  // namespace details
 
+template <facade F> struct observer_facade;
+template <facade F> using proxy_view = proxy<observer_facade<F>>;
+
 template <class T, class F>
 concept inplace_proxiable_target = proxiable<details::inplace_ptr<T>, F>;
 
@@ -1470,10 +1490,19 @@ constexpr proxy<F> make_proxy_inplace(T&& value)
       std::in_place, std::forward<T>(value)};
 }
 
-#if __STDC_HOSTED__
 template <class T, class F>
-concept proxiable_target = inplace_proxiable_target<T, F> ||
-    proxiable<details::allocated_ptr<T, std::allocator<void>>, F>;
+concept proxiable_target = proxiable<
+    details::observer_ptr<T&, const T&, T&&, const T&&>, observer_facade<F>>;
+
+template <facade F, class T>
+constexpr proxy_view<F> make_proxy_view(T& value) noexcept {
+  return proxy_view<F>{
+      details::observer_ptr<T&, const T&, T&&, const T&&>{value}};
+}
+
+#if __STDC_HOSTED__
+template <facade F> struct weak_facade;
+template <facade F> using weak_proxy = proxy<weak_facade<F>>;
 
 template <facade F, class T, class Alloc, class... Args>
 constexpr proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args)
@@ -1543,13 +1572,7 @@ constexpr proxy<F> make_proxy_shared(T&& value)
   return details::make_proxy_shared_impl<F, std::decay_t<T>>(
       std::forward<T>(value));
 }
-
-template <facade F> struct weak_facade;
-template <facade F> using weak_proxy = proxy<weak_facade<F>>;
 #endif  // __STDC_HOSTED__
-
-template <facade F> struct observer_facade;
-template <facade F> using proxy_view = proxy<observer_facade<F>>;
 
 #ifdef __cpp_rtti
 class bad_proxy_cast : public std::bad_cast {
@@ -1905,29 +1928,13 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
         F::constraints.copyability != constraint_level::trivial) ?
         F::constraints.relocatability : constraint_level::none>::type;
 
-template <class LR, class CLR, class RR, class CRR>
-struct observer_ptr {
- public:
-  explicit observer_ptr(std::remove_reference_t<LR>* ptr) : ptr_(ptr) {}
-  observer_ptr(const observer_ptr&) = default;
-  auto operator->() noexcept { return std::addressof(static_cast<LR>(*ptr_)); }
-  auto operator->() const noexcept
-      { return std::addressof(static_cast<CLR>(*ptr_)); }
-  LR operator*() & noexcept { return static_cast<LR>(*ptr_); }
-  CLR operator*() const& noexcept { return static_cast<CLR>(*ptr_); }
-  RR operator*() && noexcept { return static_cast<RR>(*ptr_); }
-  CRR operator*() const&& noexcept { return static_cast<CRR>(*ptr_); }
-
- private:
-  std::remove_reference_t<LR>* ptr_;
-};
 struct proxy_view_dispatch : cast_dispatch_base<false, true> {
   template <class T>
   auto operator()(T& value) const noexcept
       requires(requires { { std::addressof(*value) } noexcept; }) {
     return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
         decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
-        {std::addressof(*value)};
+        {*value};
   }
 };
 
