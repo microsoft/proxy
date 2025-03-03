@@ -19,6 +19,10 @@ struct InvocationTestBase {
 };
 
 std::vector<pro::proxy<InvocationTestFacade>> GenerateSmallObjectInvocationProxyTestData();
+std::vector<pro::proxy<InvocationTestFacade>> GenerateSmallObjectInvocationProxyTestData_Shared();
 std::vector<std::unique_ptr<InvocationTestBase>> GenerateSmallObjectInvocationVirtualFunctionTestData();
+std::vector<std::shared_ptr<InvocationTestBase>> GenerateSmallObjectInvocationVirtualFunctionTestData_Shared();
 std::vector<pro::proxy<InvocationTestFacade>> GenerateLargeObjectInvocationProxyTestData();
+std::vector<pro::proxy<InvocationTestFacade>> GenerateLargeObjectInvocationProxyTestData_Shared();
 std::vector<std::unique_ptr<InvocationTestBase>> GenerateLargeObjectInvocationVirtualFunctionTestData();
+std::vector<std::shared_ptr<InvocationTestBase>> GenerateLargeObjectInvocationVirtualFunctionTestData_Shared();

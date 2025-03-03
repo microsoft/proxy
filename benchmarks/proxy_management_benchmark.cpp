@@ -58,6 +58,34 @@ void BM_SmallObjectManagementWithProxy(benchmark::State& state) {
   }
 }
 
+void BM_SmallObjectManagementWithProxy_Shared(benchmark::State& state) {
+  for (auto _ : state) {
+    std::vector<pro::proxy<DefaultFacade>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.push_back(pro::make_proxy_shared<DefaultFacade, SmallObject1>());
+      data.push_back(pro::make_proxy_shared<DefaultFacade, SmallObject2>());
+      data.push_back(pro::make_proxy_shared<DefaultFacade, SmallObject3>());
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
+void BM_SmallObjectManagementWithProxy_SharedPooled(benchmark::State& state) {
+  static std::pmr::unsynchronized_pool_resource pool;
+  std::pmr::polymorphic_allocator<> alloc{&pool};
+  for (auto _ : state) {
+    std::vector<pro::proxy<DefaultFacade>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject1>(alloc));
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject2>(alloc));
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject3>(alloc));
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
 void BM_SmallObjectManagementWithUniquePtr(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<std::unique_ptr<PolymorphicObjectBase>> data;
@@ -140,6 +168,34 @@ void BM_LargeObjectManagementWithProxy_Pooled(benchmark::State& state) {
   }
 }
 
+void BM_LargeObjectManagementWithProxy_Shared(benchmark::State& state) {
+  for (auto _ : state) {
+    std::vector<pro::proxy<DefaultFacade>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.push_back(pro::make_proxy_shared<DefaultFacade, LargeObject1>());
+      data.push_back(pro::make_proxy_shared<DefaultFacade, LargeObject2>());
+      data.push_back(pro::make_proxy_shared<DefaultFacade, LargeObject3>());
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
+void BM_LargeObjectManagementWithProxy_SharedPooled(benchmark::State& state) {
+  static std::pmr::unsynchronized_pool_resource pool;
+  std::pmr::polymorphic_allocator<> alloc{&pool};
+  for (auto _ : state) {
+    std::vector<pro::proxy<DefaultFacade>> data;
+    data.reserve(TestManagedObjectCount);
+    for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject1>(alloc));
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject2>(alloc));
+      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject3>(alloc));
+    }
+    benchmark::DoNotOptimize(data);
+  }
+}
+
 void BM_LargeObjectManagementWithUniquePtr(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<std::unique_ptr<PolymorphicObjectBase>> data;
@@ -195,12 +251,16 @@ void BM_LargeObjectManagementWithAny(benchmark::State& state) {
 }
 
 BENCHMARK(BM_SmallObjectManagementWithProxy);
+BENCHMARK(BM_SmallObjectManagementWithProxy_Shared);
+BENCHMARK(BM_SmallObjectManagementWithProxy_SharedPooled);
 BENCHMARK(BM_SmallObjectManagementWithUniquePtr);
 BENCHMARK(BM_SmallObjectManagementWithSharedPtr);
 BENCHMARK(BM_SmallObjectManagementWithSharedPtr_Pooled);
 BENCHMARK(BM_SmallObjectManagementWithAny);
 BENCHMARK(BM_LargeObjectManagementWithProxy);
 BENCHMARK(BM_LargeObjectManagementWithProxy_Pooled);
+BENCHMARK(BM_LargeObjectManagementWithProxy_Shared);
+BENCHMARK(BM_LargeObjectManagementWithProxy_SharedPooled);
 BENCHMARK(BM_LargeObjectManagementWithUniquePtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr_Pooled);
