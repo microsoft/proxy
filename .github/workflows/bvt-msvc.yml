@@ -7,7 +7,7 @@ on:
 
 jobs:
   bvt-msvc:
-    runs-on: windows-2022
+    runs-on: windows-2025
     steps:
     - uses: actions/checkout@v4
       with:
@@ -15,7 +15,7 @@ jobs:
 
     - name: build and run test with MSVC
       run: |
-        cmake -B build
+        cmake -B build -DCMAKE_CXX_STANDARD=23
         cmake --build build --config Release -j
         ctest --test-dir build -j
 

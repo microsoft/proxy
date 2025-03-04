@@ -28,6 +28,10 @@ jobs:
     uses: ./.github/workflows/bvt-nvhpc.yml
     name: Run BVT with NVHPC
 
+  run-bvt-compatibility:
+    uses: ./.github/workflows/bvt-compatibility.yml
+    name: Run BVT for compatibility
+
   report:
     uses: ./.github/workflows/bvt-report.yml
     name: Generate report
