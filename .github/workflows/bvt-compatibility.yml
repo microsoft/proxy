@@ -6,7 +6,7 @@ on:
         required: false
 
 jobs:
-  bvt-gcc:
+  bvt-compatibility:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
