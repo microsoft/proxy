@@ -975,3 +975,24 @@ TEST(ProxyCreationTests, TestStdWeakPtrCompatibility) {
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
+
+TEST(ProxyCreationTests, TestMakeProxyView) {
+  struct TestFacade : pro::facade_builder
+      ::add_convention<pro::operator_dispatch<"()">, int()&, int() const&, int() && noexcept, int() const&&>
+      ::build {};
+
+  struct {
+    int operator()()& noexcept { return 0; }
+    int operator()() const& noexcept { return 1; }
+    int operator()() && noexcept { return 2; }
+    int operator()() const&& noexcept { return 3; }
+  } test_callable;
+
+  pro::proxy_view<TestFacade> p = pro::make_proxy_view<TestFacade>(test_callable);
+  static_assert(!noexcept((*p)()));
+  static_assert(noexcept((*std::move(p))()));
+  ASSERT_EQ((*p)(), 0);
+  ASSERT_EQ((*std::as_const(p))(), 1);
+  ASSERT_EQ((*std::move(p))(), 2);
+  ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
+}
