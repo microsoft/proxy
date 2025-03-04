@@ -1341,6 +1341,8 @@ class strong_compact_ptr
   using Storage = strong_weak_compact_ptr_storage<T, Alloc>;
 
  public:
+  using weak_type = weak_compact_ptr<T, Alloc>;
+
   template <class... Args>
   strong_compact_ptr(const Alloc& alloc, Args&&... args)
       : indirect_ptr<Storage>(allocate<Storage>(
@@ -2023,12 +2025,11 @@ sign(const char (&str)[N]) -> sign<N>;
 
 #if __STDC_HOSTED__
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
-  template <class T>
-  auto operator()(const std::shared_ptr<T>& self) const noexcept
-      { return std::weak_ptr<T>{self}; }
-  template <class T, class Alloc>
-  auto operator()(const strong_compact_ptr<T, Alloc>& self) const noexcept
-      { return weak_compact_ptr<T, Alloc>{self}; }
+  template <class P>
+  auto operator()(const P& self) const noexcept
+      requires(requires { typename P::weak_type; } &&
+          std::is_convertible_v<const P&, typename P::weak_type>)
+      { return typename P::weak_type{self}; }
 };
 template <class F>
 using weak_conversion_overload = weak_proxy<F>() const noexcept;
@@ -2050,11 +2051,9 @@ class nullable_ptr_adapter {
  private:
   P ptr_;
 };
-template <class T>
-auto weak_lock_impl(const std::weak_ptr<T>& self) noexcept
-    { return nullable_ptr_adapter{self.lock()}; }
-template <class T, class Alloc>
-auto weak_lock_impl(const weak_compact_ptr<T, Alloc>& self) noexcept
+template <class P>
+auto weak_lock_impl(const P& self) noexcept
+    requires(requires { static_cast<bool>(self.lock()); })
     { return nullable_ptr_adapter{self.lock()}; }
 PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
