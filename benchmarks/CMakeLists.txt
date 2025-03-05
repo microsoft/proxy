@@ -26,6 +26,8 @@ target_link_libraries(msft_proxy_benchmarks PRIVATE msft_proxy benchmark::benchm
 
 if (MSVC)
   target_compile_options(msft_proxy_benchmarks PRIVATE /W4)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(msft_proxy_benchmarks PRIVATE -Wall -Wextra -Wpedantic -Wno-c++2b-extensions)
 else()
   target_compile_options(msft_proxy_benchmarks PRIVATE -Wall -Wextra -Wpedantic)
 endif()

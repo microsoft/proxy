@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
+#include <unordered_map>
 #include <vector>
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push)
@@ -11,6 +12,10 @@
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #endif  // defined(_MSC_VER) && !defined(__clang__)
+
+#if __cpp_lib_mdspan >= 202207L
+#include <mdspan>
+#endif  // __cpp_lib_mdspan >= 202207L
 
 namespace proxy_dispatch_tests_details {
 
@@ -333,7 +338,7 @@ TEST(ProxyDispatchTests, TestOpParentheses) {
   ASSERT_EQ((*p)(2, 3), 5);
 }
 
-TEST(ProxyDispatchTests, TestOpBrackets) {
+TEST(ProxyDispatchTests, TestOpBrackets_OneDimensional) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<"[]">, int&(int idx)>::build {};
   std::unordered_map<int, int> v;
   pro::proxy<TestFacade> p = &v;
@@ -341,6 +346,19 @@ TEST(ProxyDispatchTests, TestOpBrackets) {
   ASSERT_EQ(v.size(), 1u);
   ASSERT_EQ(v.at(3), 12);
 }
+
+#if __cpp_lib_mdspan >= 202207L
+TEST(ProxyDispatchTests, TestOpBrackets_Multidimensional) {
+  struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<"[]">, int&(int i, int j, int k)>::build {};
+  std::vector v(12, 1);
+  auto view = std::mdspan(v.data(), 2, 2, 3);
+  pro::proxy<TestFacade> p = &view;
+  (*p)[1, 1, 1] = 123;
+  for (std::size_t i = 0u; i < v.size(); ++i) {
+    ASSERT_EQ(v[i], i == 10 ? 123 : 1);
+  }
+}
+#endif  // __cpp_lib_mdspan >= 202207L
 
 TEST(ProxyDispatchTests, TestRhsOpPlus) {
   struct TestFacade : pro::facade_builder::add_convention<pro::operator_dispatch<"+", true>, int(int val)>::build {};

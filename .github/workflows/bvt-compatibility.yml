@@ -1,0 +1,64 @@
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+        required: false
+
+jobs:
+  bvt-compatibility:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
+
+    - name: install compilers
+      run: |
+        sudo apt install -y gcc-13 g++-13 gcc-14 g++-14 clang-16 clang-17 clang-18 clang-19 libc++-19-dev
+
+    - name: check compiler versions
+      run: |
+        g++-13 --version
+        g++-14 --version
+        clang++-16 --version
+        clang++-17 --version
+        clang++-18 --version
+        clang++-19 --version
+
+    - name: build and run test with gcc 13
+      run: |
+        cmake -B build-gcc-13 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-gcc-13 -j
+        ctest --test-dir build-gcc-13 -j
+
+    - name: build and run test with gcc 14
+      run: |
+        cmake -B build-gcc-14 -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-gcc-14 -j
+        ctest --test-dir build-gcc-14 -j
+
+    # Note that libc++ in Clang 19 is not compatible with Clang 16. Therefore, we fallback to libstdc++.
+    - name: build and run test with clang 16
+      run: |
+        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-clang-16 -j
+        ctest --test-dir build-clang-16 -j
+
+    - name: build and run test with clang 17
+      run: |
+        cmake -B build-clang-17 -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-clang-17 -j
+        ctest --test-dir build-clang-17 -j
+
+    - name: build and run test with clang 18
+      run: |
+        cmake -B build-clang-18 -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-clang-18 -j
+        ctest --test-dir build-clang-18 -j
+
+    - name: build and run test with clang 19
+      run: |
+        cmake -B build-clang-19 -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-clang-19 -j
+        ctest --test-dir build-clang-19 -j
