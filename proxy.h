@@ -1465,8 +1465,15 @@ constexpr proxy<F> make_proxy_shared_impl(Args&&... args) {
 template <facade F> struct observer_facade;
 template <facade F> using proxy_view = proxy<observer_facade<F>>;
 
+template <facade F> struct weak_facade;
+template <facade F> using weak_proxy = proxy<weak_facade<F>>;
+
 template <class T, class F>
 concept inplace_proxiable_target = proxiable<details::inplace_ptr<T>, F>;
+
+template <class T, class F>
+concept proxiable_target = proxiable<
+    details::observer_ptr<T&, const T&, T&&, const T&&>, observer_facade<F>>;
 
 template <facade F, class T, class... Args>
 constexpr proxy<F> make_proxy_inplace(Args&&... args)
@@ -1492,10 +1499,6 @@ constexpr proxy<F> make_proxy_inplace(T&& value)
       std::in_place, std::forward<T>(value)};
 }
 
-template <class T, class F>
-concept proxiable_target = proxiable<
-    details::observer_ptr<T&, const T&, T&&, const T&&>, observer_facade<F>>;
-
 template <facade F, class T>
 constexpr proxy_view<F> make_proxy_view(T& value) noexcept {
   return proxy_view<F>{
@@ -1503,9 +1506,6 @@ constexpr proxy_view<F> make_proxy_view(T& value) noexcept {
 }
 
 #if __STDC_HOSTED__
-template <facade F> struct weak_facade;
-template <facade F> using weak_proxy = proxy<weak_facade<F>>;
-
 template <facade F, class T, class Alloc, class... Args>
 constexpr proxy<F> allocate_proxy(const Alloc& alloc, Args&&... args)
     requires(std::is_constructible_v<T, Args...>) {
@@ -2029,12 +2029,13 @@ struct sign {
 template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
-#if __STDC_HOSTED__
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
   template <class P>
   ___PRO_STATIC_CALL(auto, const P& self) noexcept
-      requires(requires { typename P::weak_type; } &&
-          std::is_convertible_v<const P&, typename P::weak_type>)
+      requires(
+          requires(const typename P::weak_type& w)
+              { { w.lock() } noexcept -> std::same_as<P>; }) &&
+          std::is_convertible_v<const P&, typename P::weak_type>
       { return typename P::weak_type{self}; }
 };
 template <class F>
@@ -2063,6 +2064,7 @@ auto weak_lock_impl(const P& self) noexcept
     { return nullable_ptr_adapter{self.lock()}; }
 PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
+#if __STDC_HOSTED__
 template <class CharT> struct format_overload_traits;
 template <>
 struct format_overload_traits<char>
@@ -2263,8 +2265,6 @@ struct basic_facade_builder {
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
 #if __STDC_HOSTED__
-  using support_weak = add_direct_convention<details::weak_conversion_dispatch,
-      facade_aware_overload_t<details::weak_conversion_overload>>;
   using support_format = add_convention<
       details::format_dispatch, details::format_overload_t<char>>;
   using support_wformat = add_convention<
@@ -2289,6 +2289,8 @@ struct basic_facade_builder {
 #endif  // __cpp_rtti >= 199711L
   using support_view = add_direct_convention<details::proxy_view_dispatch,
       facade_aware_overload_t<details::proxy_view_overload>>;
+  using support_weak = add_direct_convention<details::weak_conversion_dispatch,
+      facade_aware_overload_t<details::weak_conversion_overload>>;
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
   basic_facade_builder() = delete;
 };
@@ -2299,16 +2301,6 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
         .copyability = details::invalid_cl,
         .relocatability = details::invalid_cl,
         .destructibility = details::invalid_cl}>;
-
-#if __STDC_HOSTED__
-template <facade F>
-struct weak_facade {
-  using convention_types = std::tuple<details::conv_impl<
-      true, details::weak_mem_lock, proxy<F>() const noexcept>>;
-  using reflection_types = std::tuple<>;
-  static constexpr auto constraints = F::constraints;
-};
-#endif  // __STDC_HOSTED__
 
 template <facade F>
 struct observer_facade
@@ -2321,6 +2313,14 @@ struct observer_facade
       .copyability = constraint_level::trivial,
       .relocatability = constraint_level::trivial,
       .destructibility = constraint_level::trivial};
+};
+
+template <facade F>
+struct weak_facade {
+  using convention_types = std::tuple<details::conv_impl<
+      true, details::weak_mem_lock, proxy<F>() const noexcept>>;
+  using reflection_types = std::tuple<>;
+  static constexpr auto constraints = F::constraints;
 };
 
 template <details::sign Sign, bool Rhs = false>
