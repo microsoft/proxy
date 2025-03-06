@@ -2034,8 +2034,8 @@ struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
   ___PRO_STATIC_CALL(auto, const P& self) noexcept
       requires(
           requires(const typename P::weak_type& w)
-              { { w.lock() } noexcept -> std::same_as<P>; }) &&
-          std::is_convertible_v<const P&, typename P::weak_type>
+              { { w.lock() } noexcept -> std::same_as<P>; } &&
+          std::is_convertible_v<const P&, typename P::weak_type>)
       { return typename P::weak_type{self}; }
 };
 template <class F>
