@@ -41,6 +41,12 @@
 #define ___PRO_THROW(...) std::abort()
 #endif  // __cpp_exceptions >= 199711L
 
+#if __cpp_static_call_operator >= 202207L
+#define ___PRO_STATIC_CALL(__R, ...) static __R operator()(__VA_ARGS__)
+#else
+#define ___PRO_STATIC_CALL(__R, ...) __R operator()(__VA_ARGS__) const
+#endif  // __cpp_static_call_operator >= 202207L
+
 #ifdef _MSC_VER
 #define ___PRO_ENFORCE_EBO __declspec(empty_bases)
 #else
@@ -213,10 +219,6 @@ concept invocable_dispatch_ptr_direct = invocable_dispatch<
         (NE && std::is_nothrow_destructible_v<P>) ||
         (!NE && std::is_destructible_v<P>));
 
-template <bool NE, class R, class... Args>
-using func_ptr_t = std::conditional_t<
-    NE, R (*)(Args...) noexcept, R (*)(Args...)>;
-
 template <class D, class R, class... Args>
 R invoke_dispatch(Args&&... args) {
   if constexpr (std::is_void_v<R>) {
@@ -250,52 +252,14 @@ template <class D, qualifier_type Q, class R, class... Args>
 R default_conv_dispatcher(add_qualifier_t<std::byte, Q>, Args... args)
     noexcept(invocable_dispatch<D, true, R, std::nullptr_t, Args...>)
     { return invoke_dispatch<D, R>(nullptr, std::forward<Args>(args)...); }
-template <class P>
-void copying_dispatcher(std::byte& self, const std::byte& rhs)
-    noexcept(has_copyability<P>(constraint_level::nothrow)) {
-  std::construct_at(reinterpret_cast<P*>(&self),
-      *std::launder(reinterpret_cast<const P*>(&rhs)));
-}
-template <std::size_t Len, std::size_t Align>
-void copying_default_dispatcher(std::byte& self, const std::byte& rhs)
-    noexcept {
-  std::uninitialized_copy_n(
-      std::assume_aligned<Align>(&rhs), Len, std::assume_aligned<Align>(&self));
-}
-template <class P>
-void relocation_dispatcher(std::byte& self, const std::byte& rhs)
-    noexcept(has_relocatability<P>(constraint_level::nothrow)) {
-  P* other = std::launder(reinterpret_cast<P*>(const_cast<std::byte*>(&rhs)));
-  destruction_guard guard{other};
-  std::construct_at(reinterpret_cast<P*>(&self), std::move(*other));
-}
-template <class P>
-void destruction_dispatcher(std::byte& self)
-    noexcept(has_destructibility<P>(constraint_level::nothrow))
-    { std::destroy_at(std::launder(reinterpret_cast<P*>(&self))); }
-inline void destruction_default_dispatcher(std::byte&) noexcept {}
 
 template <class O> struct overload_traits : inapplicable_traits {};
 template <qualifier_type Q, bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
-  template <bool IsDirect, class D>
-  struct meta_provider {
-    template <class P>
-    static consteval auto get()
-        -> func_ptr_t<NE, R, add_qualifier_t<std::byte, Q>, Args...> {
-      if constexpr (!IsDirect &&
-          invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
-        return &indirect_conv_dispatcher<D, P, Q, R, Args...>;
-      } else if constexpr (IsDirect &&
-          invocable_dispatch_ptr_direct<D, P, Q, NE, R, Args...>) {
-        return &direct_conv_dispatcher<D, P, Q, R, Args...>;
-      } else {
-        return &default_conv_dispatcher<D, Q, R, Args...>;
-      }
-    }
-  };
   using return_type = R;
   using view_type = R(Args...) const noexcept(NE);
+  using dispatcher_type =
+      R (*)(add_qualifier_t<std::byte, Q>, Args...) noexcept(NE);
 
   template <bool IsDirect, class D, class P>
   static consteval bool is_applicable_ptr() {
@@ -306,12 +270,23 @@ struct overload_traits_impl : applicable_traits {
         return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
       }
     } else {
-      if constexpr (
-          invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
+      if constexpr (invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
         return true;
       } else {
         return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
       }
+    }
+  }
+  template <bool IsDirect, class D, class P>
+  static consteval dispatcher_type get_dispatcher() {
+    if constexpr (!IsDirect &&
+        invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
+      return &indirect_conv_dispatcher<D, P, Q, R, Args...>;
+    } else if constexpr (IsDirect &&
+        invocable_dispatch_ptr_direct<D, P, Q, NE, R, Args...>) {
+      return &direct_conv_dispatcher<D, P, Q, R, Args...>;
+    } else {
+      return &default_conv_dispatcher<D, Q, R, Args...>;
     }
   }
 
@@ -377,14 +352,15 @@ consteval bool diagnose_proxiable_required_convention_not_implemented() {
   return verdict;
 }
 
-template <class MP>
-struct dispatcher_meta {
-  constexpr dispatcher_meta() noexcept : dispatcher(nullptr) {}
+template <bool IsDirect, class D, class O>
+struct invocation_meta {
+  constexpr invocation_meta() noexcept : dispatcher(nullptr) {}
   template <class P>
-  constexpr explicit dispatcher_meta(std::in_place_type_t<P>) noexcept
-      : dispatcher(MP::template get<P>()) {}
+  constexpr explicit invocation_meta(std::in_place_type_t<P>) noexcept
+      : dispatcher(overload_traits<O>
+            ::template get_dispatcher<IsDirect, D, P>()) {}
 
-  decltype(MP::template get<void>()) dispatcher;
+  typename overload_traits<O>::dispatcher_type dispatcher;
 };
 
 template <class... Ms>
@@ -439,9 +415,8 @@ struct conv_traits_impl : inapplicable_traits {};
 template <class C, class F, class... Os>
     requires(overload_traits<substituted_overload_t<Os, F>>::applicable && ...)
 struct conv_traits_impl<C, F, Os...> : applicable_traits {
-  using meta = composite_meta_impl<dispatcher_meta<typename overload_traits<
-      substituted_overload_t<Os, F>>::template meta_provider<
-          C::is_direct, typename C::dispatch_type>>...>;
+  using meta = composite_meta_impl<invocation_meta<C::is_direct,
+      typename C::dispatch_type, substituted_overload_t<Os, F>>...>;
 
   template <class P>
   static consteval bool diagnose_proxiable() {
@@ -516,49 +491,28 @@ struct refl_traits {
       is_reflector_well_formed<P, R::is_direct, typename R::reflector_type>();
 };
 
-template <bool NE>
-struct copyability_meta_provider {
-  template <class P>
-  static consteval func_ptr_t<NE, void, std::byte&, const std::byte&> get() {
-    if constexpr (has_copyability<P>(constraint_level::trivial)) {
-      return &copying_default_dispatcher<sizeof(P), alignof(P)>;
-    } else {
-      return &copying_dispatcher<P>;
-    }
-  }
+struct copy_dispatch {
+  template <class T, class F>
+  ___PRO_STATIC_CALL(void, T&& self, proxy<F>& rhs)
+      noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
+      requires(std::is_constructible_v<std::decay_t<T>, T>)
+      { std::construct_at(&rhs, std::forward<T>(self)); }
 };
-template <bool NE>
-struct relocatability_meta_provider {
-  template <class P>
-  static consteval func_ptr_t<NE, void, std::byte&, const std::byte&> get() {
-    if constexpr (has_relocatability<P>(constraint_level::trivial)) {
-      return &copying_default_dispatcher<sizeof(P), alignof(P)>;
-    } else {
-      return &relocation_dispatcher<P>;
-    }
-  }
+struct destroy_dispatch {
+  template <class T>
+  ___PRO_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
+      requires(std::is_destructible_v<T>) { std::destroy_at(&self); }
 };
-template <bool NE>
-struct destructibility_meta_provider {
-  template <class P>
-  static consteval func_ptr_t<NE, void, std::byte&> get() {
-    if constexpr (has_destructibility<P>(constraint_level::trivial)) {
-      return &destruction_default_dispatcher;
-    } else {
-      return &destruction_dispatcher<P>;
-    }
-  }
-};
-template <template <bool> class MP, constraint_level C>
+template <class D, class ONE, class OE, constraint_level C>
 struct lifetime_meta_traits : std::type_identity<void> {};
-template <template <bool> class MP>
-struct lifetime_meta_traits<MP, constraint_level::nothrow>
-    : std::type_identity<dispatcher_meta<MP<true>>> {};
-template <template <bool> class MP>
-struct lifetime_meta_traits<MP, constraint_level::nontrivial>
-    : std::type_identity<dispatcher_meta<MP<false>>> {};
-template <template <bool> class MP, constraint_level C>
-using lifetime_meta_t = typename lifetime_meta_traits<MP, C>::type;
+template <class D, class ONE, class OE>
+struct lifetime_meta_traits<D, ONE, OE, constraint_level::nothrow>
+    : std::type_identity<invocation_meta<true, D, ONE>> {};
+template <class D, class ONE, class OE>
+struct lifetime_meta_traits<D, ONE, OE, constraint_level::nontrivial>
+    : std::type_identity<invocation_meta<true, D, OE>> {};
+template <class D, class ONE, class OE, constraint_level C>
+using lifetime_meta_t = typename lifetime_meta_traits<D, ONE, OE, C>::type;
 
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
@@ -705,9 +659,8 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
   static constexpr bool conv_applicable_ptr =
       (conv_traits<Cs, F>::template applicable_ptr<P> && ...);
   template <bool IsDirect, class D, class O>
-  static constexpr bool is_invocable = std::is_base_of_v<dispatcher_meta<
-      typename overload_traits<O>::template meta_provider<IsDirect, D>>,
-      conv_meta>;
+  static constexpr bool is_invocable = std::is_base_of_v<
+      invocation_meta<IsDirect, D, O>, conv_meta>;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl {
@@ -732,15 +685,13 @@ template <class F> requires(instantiated_t<
 struct facade_traits<F>
     : instantiated_t<facade_conv_traits_impl, typename F::convention_types, F>,
       instantiated_t<facade_refl_traits_impl, typename F::reflection_types, F> {
-  using copyability_meta = lifetime_meta_t<
-      copyability_meta_provider, F::constraints.copyability>;
-  using relocatability_meta = lifetime_meta_t<relocatability_meta_provider,
-      F::constraints.copyability == constraint_level::trivial ?
-          constraint_level::trivial : F::constraints.relocatability>;
-  using destructibility_meta = lifetime_meta_t<
-      destructibility_meta_provider, F::constraints.destructibility>;
-  using meta = composite_meta<copyability_meta, relocatability_meta,
-      destructibility_meta, typename facade_traits::conv_meta,
+  using meta = composite_meta<
+      lifetime_meta_t<copy_dispatch, void(proxy<F>&) const noexcept,
+          void(proxy<F>&) const, F::constraints.copyability>,
+      lifetime_meta_t<copy_dispatch, void(proxy<F>&) && noexcept,
+          void(proxy<F>&) &&, F::constraints.relocatability>,
+      lifetime_meta_t<destroy_dispatch, void() noexcept, void(),
+          F::constraints.destructibility>, typename facade_traits::conv_meta,
       typename facade_traits::refl_meta>;
   using indirect_accessor = merged_composite_accessor<
       typename facade_traits::conv_indirect_accessor,
@@ -802,10 +753,12 @@ struct meta_ptr_direct_impl : private M {
 };
 template <class M>
 struct meta_ptr_traits_impl : std::type_identity<meta_ptr_indirect_impl<M>> {};
-template <class MP, class... Ms>
-struct meta_ptr_traits_impl<composite_meta_impl<dispatcher_meta<MP>, Ms...>>
+template <bool IsDirect, class D, class O, class... Ms>
+struct meta_ptr_traits_impl<
+    composite_meta_impl<invocation_meta<IsDirect, D, O>, Ms...>>
     : std::type_identity<meta_ptr_direct_impl<composite_meta_impl<
-          dispatcher_meta<MP>, Ms...>, dispatcher_meta<MP>>> {};
+          invocation_meta<IsDirect, D, O>, Ms...>,
+          invocation_meta<IsDirect, D, O>>> {};
 template <class M>
 struct meta_ptr_traits : std::type_identity<meta_ptr_indirect_impl<M>> {};
 template <class M>
@@ -836,9 +789,8 @@ struct proxy_helper {
   }
   template <bool IsDirect, class D, class O, qualifier_type Q, class... Args>
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    auto dispatcher = get_meta(p)
-        .template dispatcher_meta<typename overload_traits<O>
-        ::template meta_provider<IsDirect, D>>::dispatcher;
+    auto dispatcher = get_meta(p).template invocation_meta<IsDirect, D, O>
+        ::dispatcher;
     if constexpr (
         IsDirect && overload_traits<O>::qualifier == qualifier_type::rv) {
       meta_ptr_reset_guard guard{p.meta_};
@@ -931,6 +883,60 @@ template <facade F>
 struct proxy_indirect_accessor : details::facade_traits<F>::indirect_accessor
     { friend class details::inplace_ptr<proxy_indirect_accessor>; };
 
+template <bool IsDirect, class D, class O, facade F, class... Args>
+auto proxy_invoke(proxy<F>& p, Args&&... args)
+    -> typename details::overload_traits<O>::return_type {
+  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
+      details::qualifier_type::lv>(p, std::forward<Args>(args)...);
+}
+template <bool IsDirect, class D, class O, facade F, class... Args>
+auto proxy_invoke(const proxy<F>& p, Args&&... args)
+    -> typename details::overload_traits<O>::return_type {
+  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
+      details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
+}
+template <bool IsDirect, class D, class O, facade F, class... Args>
+auto proxy_invoke(proxy<F>&& p, Args&&... args)
+    -> typename details::overload_traits<O>::return_type {
+  return details::proxy_helper<F>::template invoke<
+      IsDirect, D, O, details::qualifier_type::rv>(
+      std::move(p), std::forward<Args>(args)...);
+}
+template <bool IsDirect, class D, class O, facade F, class... Args>
+auto proxy_invoke(const proxy<F>&& p, Args&&... args)
+    -> typename details::overload_traits<O>::return_type {
+  return details::proxy_helper<F>::template invoke<
+      IsDirect, D, O, details::qualifier_type::const_rv>(
+      std::move(p), std::forward<Args>(args)...);
+}
+
+template <bool IsDirect, class R, facade F>
+const R& proxy_reflect(const proxy<F>& p) noexcept {
+  return static_cast<const details::refl_meta<IsDirect, R>&>(
+      details::proxy_helper<F>::get_meta(p)).reflector;
+}
+
+template <facade F, class A>
+proxy<F>& access_proxy(A& a) noexcept {
+  return details::proxy_helper<F>::template access<
+      A, details::qualifier_type::lv>(a);
+}
+template <facade F, class A>
+const proxy<F>& access_proxy(const A& a) noexcept {
+  return details::proxy_helper<F>::template access<
+      A, details::qualifier_type::const_lv>(a);
+}
+template <facade F, class A>
+proxy<F>&& access_proxy(A&& a) noexcept {
+  return details::proxy_helper<F>::template access<
+      A, details::qualifier_type::rv>(std::forward<A>(a));
+}
+template <facade F, class A>
+const proxy<F>&& access_proxy(const A&& a) noexcept {
+  return details::proxy_helper<F>::template access<
+      A, details::qualifier_type::const_rv>(std::forward<const A>(a));
+}
+
 template <facade F>
 class proxy : public details::facade_traits<F>::direct_accessor,
     public details::inplace_ptr<proxy_indirect_accessor<F>> {
@@ -949,8 +955,8 @@ class proxy : public details::facade_traits<F>::direct_accessor,
           F::constraints.copyability == constraint_level::nothrow)
       : details::inplace_ptr<proxy_indirect_accessor<F>>() {  // Make GCC happy
     if (rhs.meta_.has_value()) {
-      rhs.meta_->_Traits::copyability_meta::dispatcher(*ptr_, *rhs.ptr_);
-      meta_ = rhs.meta_;
+      proxy_invoke<true, details::copy_dispatch, void(proxy&) const noexcept(
+          F::constraints.copyability == constraint_level::nothrow)>(rhs, *this);
     }
   }
   proxy(proxy&& rhs)
@@ -962,10 +968,12 @@ class proxy : public details::facade_traits<F>::direct_accessor,
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
+        meta_ = rhs.meta_;
       } else {
-        rhs.meta_->_Traits::relocatability_meta::dispatcher(*ptr_, *rhs.ptr_);
+        proxy_invoke<true, details::copy_dispatch, void(proxy&) && noexcept(
+            F::constraints.relocatability == constraint_level::nothrow)>(
+            std::move(rhs), *this);
       }
-      meta_ = rhs.meta_;
     }
   }
   template <class P>
@@ -1041,8 +1049,10 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   ~proxy() noexcept(F::constraints.destructibility == constraint_level::nothrow)
       requires(F::constraints.destructibility == constraint_level::nontrivial ||
           F::constraints.destructibility == constraint_level::nothrow) {
-    if (meta_.has_value())
-        { meta_->_Traits::destructibility_meta::dispatcher(*ptr_); }
+    if (meta_.has_value()) {
+      proxy_invoke<true, details::destroy_dispatch, void() noexcept(
+          F::constraints.destructibility == constraint_level::nothrow)>(*this);
+    }
   }
 
   bool has_value() const noexcept { return meta_.has_value(); }
@@ -1118,60 +1128,6 @@ ___PRO_DEBUG(
   details::meta_ptr<typename _Traits::meta> meta_;
   alignas(F::constraints.max_align) std::byte ptr_[F::constraints.max_size];
 };
-
-template <bool IsDirect, class D, class O, facade F, class... Args>
-auto proxy_invoke(proxy<F>& p, Args&&... args)
-    -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
-      details::qualifier_type::lv>(p, std::forward<Args>(args)...);
-}
-template <bool IsDirect, class D, class O, facade F, class... Args>
-auto proxy_invoke(const proxy<F>& p, Args&&... args)
-    -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
-      details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
-}
-template <bool IsDirect, class D, class O, facade F, class... Args>
-auto proxy_invoke(proxy<F>&& p, Args&&... args)
-    -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<
-      IsDirect, D, O, details::qualifier_type::rv>(
-      std::move(p), std::forward<Args>(args)...);
-}
-template <bool IsDirect, class D, class O, facade F, class... Args>
-auto proxy_invoke(const proxy<F>&& p, Args&&... args)
-    -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<
-      IsDirect, D, O, details::qualifier_type::const_rv>(
-      std::move(p), std::forward<Args>(args)...);
-}
-
-template <bool IsDirect, class R, facade F>
-const R& proxy_reflect(const proxy<F>& p) noexcept {
-  return static_cast<const details::refl_meta<IsDirect, R>&>(
-      details::proxy_helper<F>::get_meta(p)).reflector;
-}
-
-template <facade F, class A>
-proxy<F>& access_proxy(A& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::lv>(a);
-}
-template <facade F, class A>
-const proxy<F>& access_proxy(const A& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::const_lv>(a);
-}
-template <facade F, class A>
-proxy<F>&& access_proxy(A&& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::rv>(std::forward<A>(a));
-}
-template <facade F, class A>
-const proxy<F>&& access_proxy(const A&& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::const_rv>(std::forward<const A>(a));
-}
 
 namespace details {
 
@@ -1582,12 +1538,6 @@ class bad_proxy_cast : public std::bad_cast {
   char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti >= 199711L
-
-#if __cpp_static_call_operator >= 202207L
-#define ___PRO_STATIC_CALL(__R, ...) static __R operator()(__VA_ARGS__)
-#else
-#define ___PRO_STATIC_CALL(__R, ...) __R operator()(__VA_ARGS__) const
-#endif  // __cpp_static_call_operator >= 202207L
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
