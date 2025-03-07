@@ -13,37 +13,63 @@
 
 #include <nlohmann/json.hpp>
 
-struct EnvironmentInfo {
+struct Environment {
   std::string Description;
-  std::string Path;
+  std::string InfoPath;
+  std::string BenchmarkingResultsPath;
+
+  friend void to_json(nlohmann::json& j, const Environment& e) {
+    j = nlohmann::json{
+        {"Description", e.Description},
+        {"InfoPath", e.InfoPath},
+        {"BenchmarkingResultsPath", e.BenchmarkingResultsPath},
+    };
+  }
+
+  friend void from_json(const nlohmann::json& j, Environment& e) {
+    j.at("Description").get_to(e.Description);
+    j.at("InfoPath").get_to(e.InfoPath);
+    j.at("BenchmarkingResultsPath").get_to(e.BenchmarkingResultsPath);
+  }
+};
+
+struct EnvironmentInfo {
+  std::string OS;
+  std::string KernelVersion;
+  std::string Architecture;
+  std::string Compiler;
 
   friend void to_json(nlohmann::json& j, const EnvironmentInfo& e) {
     j = nlohmann::json{
-        {"Description", e.Description},
-        {"Path", e.Path}
+        {"OS", e.OS},
+        {"KernelVersion", e.KernelVersion},
+        {"Architecture", e.Architecture},
+        {"Compiler", e.Compiler},
     };
   }
 
   friend void from_json(const nlohmann::json& j, EnvironmentInfo& e) {
-    j.at("Description").get_to(e.Description);
-    j.at("Path").get_to(e.Path);
+    j.at("OS").get_to(e.OS);
+    j.at("KernelVersion").get_to(e.KernelVersion);
+    j.at("Architecture").get_to(e.Architecture);
+    j.at("Compiler").get_to(e.Compiler);
   }
 };
 
-struct MetricInfo {
+struct Metric {
   std::string Name;
   std::string TargetBenchmarkName;
   std::string BaselineBenchmarkName;
 
-  friend void to_json(nlohmann::json& j, const MetricInfo& m) {
+  friend void to_json(nlohmann::json& j, const Metric& m) {
     j = nlohmann::json{
         {"Name", m.Name},
         {"TargetBenchmarkName", m.TargetBenchmarkName},
-        {"BaselineBenchmarkName", m.BaselineBenchmarkName}
+        {"BaselineBenchmarkName", m.BaselineBenchmarkName},
     };
   }
 
-  friend void from_json(const nlohmann::json& j, MetricInfo& m) {
+  friend void from_json(const nlohmann::json& j, Metric& m) {
     j.at("Name").get_to(m.Name);
     j.at("TargetBenchmarkName").get_to(m.TargetBenchmarkName);
     j.at("BaselineBenchmarkName").get_to(m.BaselineBenchmarkName);
@@ -54,8 +80,8 @@ struct ReportConfig {
   std::string TargetName;
   double YellowIndicatorThreshold;
   std::string OutputPath;
-  std::vector<EnvironmentInfo> Environments;
-  std::vector<MetricInfo> Metrics;
+  std::vector<Environment> Environments;
+  std::vector<Metric> Metrics;
 
   friend void to_json(nlohmann::json& j, const ReportConfig& rc) {
     j = nlohmann::json{
@@ -63,7 +89,7 @@ struct ReportConfig {
         {"YellowIndicatorThreshold", rc.YellowIndicatorThreshold},
         {"OutputPath", rc.OutputPath},
         {"Environments", rc.Environments},
-        {"Metrics", rc.Metrics}
+        {"Metrics", rc.Metrics},
     };
   }
 
@@ -78,7 +104,16 @@ struct ReportConfig {
 
 const std::string_view MedianSuffix = "_median";
 
-std::unordered_map<std::string, double> Parse(const std::filesystem::path& file) {
+EnvironmentInfo ParseEnvironmentInfo(const std::filesystem::path& file) {
+  nlohmann::json obj;
+  std::ifstream in;
+  in.exceptions(std::ios_base::failbit | std::ios_base::badbit);
+  in.open(file, std::ios_base::in | std::ios_base::binary);
+  in >> obj;
+  return obj.get<EnvironmentInfo>();
+}
+
+std::unordered_map<std::string, double> ParseBenchmarkingResults(const std::filesystem::path& file) {
   nlohmann::json obj;
   {
     std::ifstream in;
@@ -111,7 +146,7 @@ void GenerateReport(const std::filesystem::path& config_path) {
   std::vector<std::unordered_map<std::string, double>> benchmarks;
   benchmarks.reserve(config.Environments.size());
   for (auto& environment : config.Environments) {
-    benchmarks.push_back(Parse(environment.Path));
+    benchmarks.push_back(ParseBenchmarkingResults(environment.BenchmarkingResultsPath));
   }
   std::ofstream out;
   out.exceptions(std::ios_base::failbit | std::ios_base::badbit);
@@ -154,6 +189,13 @@ void GenerateReport(const std::filesystem::path& config_path) {
       out << " |";
     }
     out << "\n";
+  }
+  out << "\n## Environments\n\n";
+  out << "| | Operating System | Kernel Version | Architecture | Compiler |\n";
+  out << "| - | - | - | - | - |\n";
+  for (auto& environment : config.Environments) {
+    EnvironmentInfo env_info = ParseEnvironmentInfo(environment.InfoPath);
+    out << "| **" << environment.Description << "** | " << env_info.OS << " | " << env_info.KernelVersion << " | " << env_info.Architecture << " | " << env_info.Compiler << " |\n";
   }
 }
 
