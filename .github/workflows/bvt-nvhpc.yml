@@ -26,14 +26,16 @@ jobs:
         cmake -B build -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j
         ctest --test-dir build -j
+        mkdir build/drop
+        chmod +x tools/dump_build_env.sh
+        ./tools/dump_build_env.sh nvc++ build/drop/env-info.json
 
     - name: run benchmarks
       run: |
-        cd build/benchmarks
-        ./msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > benchmarking-results.json
+        build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
-        name: benchmarking-results-nvhpc
-        path: build/benchmarks/benchmarking-results.json
+        name: drop-nvhpc
+        path: build/drop/
