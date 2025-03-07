@@ -5,7 +5,6 @@ param(
 )
 
 $osInfo = Get-CimInstance Win32_OperatingSystem
-cl /? | Out-String
 $compiler = ((cl /? 2>&1 | Out-String) -split '\r')[0] -replace '^cl\s:\s',''
 $jsonObject = [ordered]@{
     OS = $osInfo.Caption
