@@ -27,7 +27,7 @@ jobs:
     - name: generate report
       run: |
         cat <<EOF > benchmarking-report.md
-        ## Benchmarking Report
+        # Benchmarking Report
 
         - Generated for: [Microsoft "Proxy" library](https://github.com/microsoft/proxy)
         - Commit ID: [${{ github.sha }}](https://github.com/microsoft/proxy/commit/${{ github.sha }})
