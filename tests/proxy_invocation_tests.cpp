@@ -333,6 +333,7 @@ TEST(ProxyInvocationTests, TestQualifiedConvention_Member) {
   ASSERT_EQ((*p)(), 0);
   ASSERT_EQ((*std::as_const(p))(), 1);
   ASSERT_EQ((*std::move(p))(), 2);
+  p = pro::make_proxy<TestFacade, TestCallable>();
   ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
 }
 
@@ -347,5 +348,6 @@ TEST(ProxyInvocationTests, TestQualifiedConvention_Free) {
   ASSERT_EQ(Dump(*p), "is_const=false, is_ref=true, value=123");
   ASSERT_EQ(Dump(*std::as_const(p)), "is_const=true, is_ref=true, value=123");
   ASSERT_EQ(Dump(*std::move(p)), "is_const=false, is_ref=false, value=123");
+  p = pro::make_proxy<TestFacade>(123);
   ASSERT_EQ(Dump(*std::move(std::as_const(p))), "is_const=true, is_ref=false, value=123");
 }

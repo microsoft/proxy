@@ -994,5 +994,6 @@ TEST(ProxyCreationTests, TestMakeProxyView) {
   ASSERT_EQ((*p)(), 0);
   ASSERT_EQ((*std::as_const(p))(), 1);
   ASSERT_EQ((*std::move(p))(), 2);
+  p = pro::make_proxy_view<TestFacade>(test_callable);
   ASSERT_EQ((*std::move(std::as_const(p)))(), 3);
 }
