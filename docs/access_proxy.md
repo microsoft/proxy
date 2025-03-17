@@ -1,20 +1,20 @@
 # Function template `access_proxy`
 
 ```cpp
-template <class F, class A>
+template <facade F, class A>
 proxy<F>& access_proxy(A& a) noexcept;
 
-template <class F, class A>
+template <facade F, class A>
 const proxy<F>& access_proxy(const A& a) noexcept;
 
-template <class F, class A>
+template <facade F, class A>
 proxy<F>&& access_proxy(A&& a) noexcept;
 
-template <class F, class A>
+template <facade F, class A>
 const proxy<F>&& access_proxy(const A&& a) noexcept;
 ```
 
-Accesses a `proxy` object from an [accessor](ProAccessible.md) instantiated from the `proxy`. `F` shall model concept [`facade`](facade.md). As per `facade<F>`, `typename F::convention_types` shall be a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type containing distinct types `Cs`. There shall be a type `C` in `Cs` where `A` is the same type as `typename C::template accessor<F>`. The behavior is undefined if `a` is not instantiated from a `proxy`.
+Accesses a `proxy` object from an [accessor](ProAccessible.md) instantiated from the `proxy`. As per `facade<F>`, `typename F::convention_types` shall be a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type containing distinct types `Cs`. There shall be a type `C` in `Cs` where `A` is the same type as `typename C::template accessor<F>`. The behavior is undefined if `a` is not instantiated from a `proxy`.
 
 ## Return Value
 

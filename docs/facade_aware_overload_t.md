@@ -21,7 +21,7 @@ Class template `facade_aware_overload_t<O>` specifies a facade-aware overload te
 template <class F>
 using BinaryOverload = pro::proxy<F>(const pro::proxy_indirect_accessor<F>& rhs) const;
 
-template <class T, class F>
+template <class T, pro::facade F>
 pro::proxy<F> operator+(const T& value, const pro::proxy_indirect_accessor<F>& rhs)
     requires(!std::is_same_v<T, pro::proxy_indirect_accessor<F>>)
     { return pro::make_proxy<F, T>(value + proxy_cast<const T&>(rhs)); }

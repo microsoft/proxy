@@ -2,10 +2,10 @@
 
 ```cpp
 template <class T, class F>
-concept inplace_proxiable_target = proxiable</* inplace-ptr<T> */, F>;
+concept inplace_proxiable_target = proxiable<inplace-ptr<T>, F>;
 ```
 
-The concept `inplace_proxiable_target<T, F>` specifies that a value type `T`, when wrapped by an implementation-defined non-allocating pointer type, models a contained value type of [`proxy<F>`](proxy.md). The size and alignment of this implementation-defined pointer type are guaranteed to be equal to those of type `T`.
+See [`make_proxy_inplace`](make_proxy_inplace.md) for the definition of the exposition-only class template *inplace-ptr*.
 
 ## Example
 
@@ -31,4 +31,4 @@ int main() {
 ## See Also
 
 - [concept `proxiable`](proxiable.md)
-- [function template `make_proxy_inplacce`](make_proxy_inplace.md)
+- [concept `proxiable_target`](proxiable_target.md)

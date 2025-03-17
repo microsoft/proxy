@@ -8,4 +8,4 @@ A type `R` meets the *ProReflection* requirements of a type `P` if `R` meets the
 
 ## See Also
 
-[*ProFacade* requirements](ProFacade.md)
+- [*ProFacade* requirements](ProFacade.md)

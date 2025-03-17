@@ -2,7 +2,7 @@
 
 ```cpp
 // (1)
-template <proxiable<F> P, class... Args>
+template <class P, class... Args>
 P& emplace(Args&&... args)
     noexcept(std::is_nothrow_constructible_v<P, Args...> &&
         F::constraints.destructibility >= constraint_level::nothrow)
@@ -10,7 +10,7 @@ P& emplace(Args&&... args)
         F::constraints.destructibility >= constraint_level::nontrivial);
 
 // (2)
-template <proxiable<F> P, class U, class... Args>
+template <class P, class U, class... Args>
 P& emplace(std::initializer_list<U> il, Args&&... args)
     noexcept(std::is_nothrow_constructible_v<
         P, std::initializer_list<U>&, Args...> &&
@@ -25,6 +25,8 @@ First, the current contained value (if any) is destroyed as if by calling [reset
 
 - `(1)` Sets the contained value to an object of type `P` and direct-non-list-initialized with `std::forward<Args>(args)...`.
 - `(2)` Sets the contained value to an object of type `P` and direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+
+*Since 3.3.0*: For `(1-2)`, if [`proxiable<P, F>`](../proxiable.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
 ## Return Value
 

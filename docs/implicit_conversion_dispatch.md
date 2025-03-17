@@ -22,7 +22,6 @@ Class `implicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type fo
 ## Example
 
 ```cpp
-#include <iomanip>
 #include <iostream>
 
 #include "proxy.h"
