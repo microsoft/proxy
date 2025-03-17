@@ -91,8 +91,7 @@ TEST(ProxyRttiTests, TestIndirectCast_Move_Succeed) {
   auto p = pro::make_proxy<details::TestFacade>(v1);
   auto v2 = proxy_cast<std::vector<int>>(std::move(*p));
   ASSERT_EQ(v2, v1);
-  v2 = proxy_cast<std::vector<int>>(std::move(*p));
-  ASSERT_TRUE(v2.empty());
+  ASSERT_FALSE(p.has_value());
 }
 
 TEST(ProxyRttiTests, TestIndirectCast_Move_Fail) {

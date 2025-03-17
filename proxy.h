@@ -198,25 +198,24 @@ class destruction_guard {
   T* p_;
 };
 
-template <class P, qualifier_type Q, bool NE>
-struct ptr_traits : inapplicable_traits {};
-template <class P, qualifier_type Q, bool NE>
-    requires(requires { *std::declval<add_qualifier_t<P, Q>>(); } &&
-        (!NE || noexcept(*std::declval<add_qualifier_t<P, Q>>())))
-struct ptr_traits<P, Q, NE> : applicable_traits
-    { using target_type = decltype(*std::declval<add_qualifier_t<P, Q>>()); };
+template <bool IsDirect, class P, qualifier_type Q>
+struct operand_traits : add_qualifier_traits<P, Q> {};
+template <class P, qualifier_type Q>
+struct operand_traits<false, P, Q>
+    : std::type_identity<decltype(*std::declval<add_qualifier_t<P, Q>>())> {};
+template <bool IsDirect, class P, qualifier_type Q>
+using operand_t = typename operand_traits<IsDirect, P, Q>::type;
 
 template <class D, bool NE, class R, class... Args>
 concept invocable_dispatch = (NE && std::is_nothrow_invocable_r_v<
     R, D, Args...>) || (!NE && std::is_invocable_r_v<R, D, Args...>);
-template <class D, class P, qualifier_type Q, bool NE, class R, class... Args>
-concept invocable_dispatch_ptr_indirect = ptr_traits<P, Q, NE>::applicable &&
-    invocable_dispatch<
-        D, NE, R, typename ptr_traits<P, Q, NE>::target_type, Args...>;
-template <class D, class P, qualifier_type Q, bool NE, class R, class... Args>
-concept invocable_dispatch_ptr_direct = invocable_dispatch<
-    D, NE, R, add_qualifier_t<P, Q>, Args...> && (Q != qualifier_type::rv ||
-        (NE && std::is_nothrow_destructible_v<P>) ||
+template <bool IsDirect, class D, class P, qualifier_type Q, bool NE, class R,
+    class... Args>
+concept invocable_dispatch_ptr =
+    (IsDirect || (requires { *std::declval<add_qualifier_t<P, Q>>(); } &&
+        (!NE || noexcept(*std::declval<add_qualifier_t<P, Q>>())))) &&
+    invocable_dispatch<D, NE, R, operand_t<IsDirect, P, Q>, Args...> &&
+    (Q != qualifier_type::rv || (NE && std::is_nothrow_destructible_v<P>) ||
         (!NE && std::is_destructible_v<P>));
 
 template <class D, class R, class... Args>
@@ -227,25 +226,27 @@ R invoke_dispatch(Args&&... args) {
     return D{}(std::forward<Args>(args)...);
   }
 }
-template <class D, class P, qualifier_type Q, class R, class... Args>
-R indirect_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
-    noexcept(invocable_dispatch_ptr_indirect<D, P, Q, true, R, Args...>) {
-  auto& qp = *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
-  if constexpr (std::is_constructible_v<bool, decltype(qp)>) { assert(qp); }
-  return invoke_dispatch<D, R>(*std::forward<add_qualifier_t<P, Q>>(qp),
-      std::forward<Args>(args)...);
+template <bool IsDirect, class P, qualifier_type Q, class T>
+decltype(auto) get_operand(T& ptr) {
+  if constexpr (IsDirect) {
+    return std::forward<add_qualifier_t<P, Q>>(ptr);
+  } else {
+    if constexpr (std::is_constructible_v<bool, T&>) { assert(ptr); }
+    return *std::forward<add_qualifier_t<P, Q>>(ptr);
+  }
 }
-template <class D, class P, qualifier_type Q, class R, class... Args>
-R direct_conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
-    noexcept(invocable_dispatch_ptr_direct<D, P, Q, true, R, Args...>) {
+template <bool IsDirect, class D, class P, qualifier_type Q, class R,
+    class... Args>
+R conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
+    noexcept(invocable_dispatch_ptr<IsDirect, D, P, Q, true, R, Args...>) {
   auto& qp = *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
   if constexpr (Q == qualifier_type::rv) {
     destruction_guard guard{&qp};
-    return invoke_dispatch<D, R>(
-        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
+    return invoke_dispatch<D, R>(get_operand<IsDirect, P, Q>(qp),
+        std::forward<Args>(args)...);
   } else {
-    return invoke_dispatch<D, R>(
-        std::forward<add_qualifier_t<P, Q>>(qp), std::forward<Args>(args)...);
+    return invoke_dispatch<D, R>(get_operand<IsDirect, P, Q>(qp),
+        std::forward<Args>(args)...);
   }
 }
 template <class D, qualifier_type Q, class R, class... Args>
@@ -263,28 +264,16 @@ struct overload_traits_impl : applicable_traits {
 
   template <bool IsDirect, class D, class P>
   static consteval bool is_applicable_ptr() {
-    if constexpr (IsDirect) {
-      if constexpr (invocable_dispatch_ptr_direct<D, P, Q, NE, R, Args...>) {
-        return true;
-      } else {
-        return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
-      }
+    if constexpr (invocable_dispatch_ptr<IsDirect, D, P, Q, NE, R, Args...>) {
+      return true;
     } else {
-      if constexpr (invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
-        return true;
-      } else {
-        return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
-      }
+      return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
     }
   }
   template <bool IsDirect, class D, class P>
   static consteval dispatcher_type get_dispatcher() {
-    if constexpr (!IsDirect &&
-        invocable_dispatch_ptr_indirect<D, P, Q, NE, R, Args...>) {
-      return &indirect_conv_dispatcher<D, P, Q, R, Args...>;
-    } else if constexpr (IsDirect &&
-        invocable_dispatch_ptr_direct<D, P, Q, NE, R, Args...>) {
-      return &direct_conv_dispatcher<D, P, Q, R, Args...>;
+    if constexpr (invocable_dispatch_ptr<IsDirect, D, P, Q, NE, R, Args...>) {
+      return &conv_dispatcher<IsDirect, D, P, Q, R, Args...>;
     } else {
       return &default_conv_dispatcher<D, Q, R, Args...>;
     }
@@ -791,8 +780,7 @@ struct proxy_helper {
   static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
     auto dispatcher = get_meta(p).template invocation_meta<IsDirect, D, O>
         ::dispatcher;
-    if constexpr (
-        IsDirect && overload_traits<O>::qualifier == qualifier_type::rv) {
+    if constexpr (overload_traits<O>::qualifier == qualifier_type::rv) {
       meta_ptr_reset_guard guard{p.meta_};
       return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
           std::forward<Args>(args)...);
@@ -1327,8 +1315,8 @@ class strong_compact_ptr
       { return std::launder(reinterpret_cast<const T*>(&this->ptr_->value)); }
   T& operator*() & noexcept { return *operator->(); }
   const T& operator*() const& noexcept { return *operator->(); }
-  T&& operator*() && noexcept { return std::move(operator->()); }
-  const T&& operator*() const&& noexcept { return std::move(operator->()); }
+  T&& operator*() && noexcept { return std::move(*operator->()); }
+  const T&& operator*() const&& noexcept { return std::move(*operator->()); }
 
  private:
   explicit strong_compact_ptr(Storage* ptr) noexcept
