@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 // This file contains example code from implicit_conversion_dispatch.md.
 
-#include <iomanip>
 #include <iostream>
 
 #include "proxy.h"

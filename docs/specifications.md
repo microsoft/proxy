@@ -4,11 +4,12 @@ This document provides the API specifications for the C++ library Proxy (version
 
 ## Concepts
 
-| Name                                                      | Description                                                  |
-| --------------------------------------------------------- | ------------------------------------------------------------ |
-| [`facade`](facade.md)                                     | Specifies that a type models a "facade"                      |
-| [`inplace_proxiable_target`](inplace_proxiable_target.md) | Specifies that a value type can instantiate a `proxy` without allocation |
-| [`proxiable`](proxiable.md)                               | Specifies that a pointer type can instantiate a `proxy`      |
+| Name                                                         | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [`facade`](facade.md)                                        | Specifies that a type models a "facade"                      |
+| [`inplace_proxiable_target`](inplace_proxiable_target.md)    | Specifies that a value type can instantiate a `proxy` without allocation |
+| [`proxiable_target`](proxiable_target.md)<br />*(since 3.3.0)* | Specifies that a reference type can instantiate a `proxy_view` |
+| [`proxiable`](proxiable.md)                                  | Specifies that a pointer type can instantiate a `proxy`      |
 
 ## Classes
 
@@ -24,21 +25,25 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`operator_dispatch`](operator_dispatch.md)                  | Dispatch type for operator expressions with accessibility    |
 | [`proxiable_ptr_constraints`](proxiable_ptr_constraints.md)  | Defines the constraints of a pointer type to instantiate a `proxy` |
 | [`proxy_indirect_accessor`](proxy_indirect_accessor.md)<br />*(since 3.2.0)* | Provides indirection accessibility for `proxy`               |
-| [`proxy_view`<br />`observer_facade`](proxy_view.md)<br />*(since 3.2.0)* | Non-owning proxy optimized for raw pointers                  |
+| [`proxy_view`<br />`observer_facade`](proxy_view.md)<br />*(since 3.2.0)* | Non-owning `proxy` optimized for raw pointer types           |
 | [`proxy`](proxy.md)                                          | Wraps a pointer object matching specified facade             |
 | [`std::formatter<proxy_indirect_accessor>`](formatter_proxy_indirect_accessor.md)<br />*(since 3.2.0)* | Formatting support for `proxy_indirect_accessor`             |
 | [`weak_dispatch`](weak_dispatch.md)<br />*(since 3.2.0)*     | Weak dispatch type with a default implementation that throws `not_implemented` |
+| [`weak_proxy`<br />`weak_facade`](weak_proxy.md)<br />*(since 3.3.0)* | `proxy` with weak ownership                                  |
 
 ## Functions
 
-| Name                                          | Description                                                  |
-| --------------------------------------------- | ------------------------------------------------------------ |
-| [`access_proxy`](access_proxy.md)             | Accesses a `proxy` object via an accessor                    |
-| [`allocate_proxy`](allocate_proxy.md)         | Creates a `proxy` object with an allocator                   |
-| [`make_proxy_inplace`](make_proxy_inplace.md) | Creates a `proxy` object with strong no-allocation guarantee |
-| [`make_proxy`](make_proxy.md)                 | Creates a `proxy` object potentially with heap allocation    |
-| [`proxy_invoke`](proxy_invoke.md)             | Invokes a `proxy` with a specified convention                |
-| [`proxy_reflect`](proxy_reflect.md)           | Acquires reflection information of the underlying pointer type |
+| Name                                                         | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [`access_proxy`](access_proxy.md)                            | Accesses a `proxy` object via an accessor                    |
+| [`allocate_proxy_shared`](allocate_proxy_shared.md)<br />*(since 3.3.0)* | Creates a `proxy` object with shared ownership using an allocator |
+| [`allocate_proxy`](allocate_proxy.md)                        | Creates a `proxy` object with an allocator                   |
+| [`make_proxy_inplace`](make_proxy_inplace.md)                | Creates a `proxy` object with strong no-allocation guarantee |
+| [`make_proxy_shared`](make_proxy_shared.md)<br />*(since 3.3.0)* | Creates a `proxy` object with shared ownership               |
+| [`make_proxy_view`](make_proxy_view.md)<br />*(since 3.3.0)* | Creates a `proxy_view` object                                |
+| [`make_proxy`](make_proxy.md)                                | Creates a `proxy` object potentially with heap allocation    |
+| [`proxy_invoke`](proxy_invoke.md)                            | Invokes a `proxy` with a specified convention                |
+| [`proxy_reflect`](proxy_reflect.md)                          | Acquires reflection information of the underlying pointer type |
 
 ## Macros
 

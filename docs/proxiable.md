@@ -5,7 +5,7 @@ template <class P, class F>
 concept proxiable = /* see-below */;
 ```
 
-The concept `proxiable<P, F>` specifies that [`proxy<F>`](proxy.md) can potentially contain a value of type `P`. For a type `P`, if `P` is an incomplete type, the behavior of evaluating `proxiable<P, F>` is undefined. `proxiable<P, F>` is `true` when `F` meets the [*ProFacade* requirements](ProFacade.md) of `P`; otherwise, it is `false`.
+The concept `proxiable<P, F>` specifies that [`proxy<F>`](proxy.md) can potentially contain a value of type `P`. If `P` is an incomplete type, the behavior of evaluating `proxiable<P, F>` is undefined. `proxiable<P, F>` is `true` when `F` meets the [*ProFacade* requirements](ProFacade.md) of `P`; otherwise, it is `false`.
 
 ## Example
 

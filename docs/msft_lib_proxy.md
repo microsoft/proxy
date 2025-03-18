@@ -8,6 +8,7 @@ Similar to the standard [feature test macros](https://en.cppreference.com/w/cpp/
 
 | Version | Value of `__msft_lib_proxy` |
 | ------- | --------------------------- |
+| 3.3.0   | `202503L`                   |
 | 3.2.1   | `202502L`                   |
 | 3.2.0   | `202501L`                   |
 | 3.1.0   | `202410L`                   |

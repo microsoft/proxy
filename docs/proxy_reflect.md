@@ -1,7 +1,7 @@
 # Function template `proxy_reflect`
 
 ```cpp
-template <bool IsDirect, class R, class F>
+template <bool IsDirect, class R, facade F>
 const R& proxy_reflect(const proxy<F>& p) noexcept;
 ```
 

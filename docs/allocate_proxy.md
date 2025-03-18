@@ -22,6 +22,8 @@ proxy<F> allocate_proxy(const Alloc& alloc, T&& value);  // freestanding-deleted
 
 `(3)` Creates a `proxy<F>` object containing a value `p` of type `allocated-ptr<std::decay_t<T>, Alloc>`, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
 
+*Since 3.3.0*: For `(1-3)`, if [`proxiable_target<std::decay_t<T>, F>`](proxiable_target.md) is `false`, the program is ill-formed and diagnostic messages are generated.
+
 ## Return Value
 
 The constructed `proxy` object.

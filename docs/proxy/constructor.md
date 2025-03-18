@@ -22,17 +22,16 @@ proxy(proxy&& rhs)
 // (4)
 template <class P>
 proxy(P&& ptr) noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
-    requires(proxiable<std::decay_t<P>, F> &&
-        std::is_constructible_v<std::decay_t<P>, P>);
+    requires(std::is_constructible_v<std::decay_t<P>, P>);
 
 // (5)
-template <proxiable<F> P, class... Args>
+template <class P, class... Args>
 explicit proxy(std::in_place_type_t<P>, Args&&... args)
     noexcept(std::is_nothrow_constructible_v<P, Args...>)
     requires(std::is_constructible_v<P, Args...>);
 
 // (6)
-template <proxiable<F> P, class U, class... Args>
+template <class P, class U, class... Args>
 explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
         Args&&... args)
     noexcept(std::is_nothrow_constructible_v<
@@ -45,9 +44,11 @@ Creates a new `proxy`.
 - `(1)` Default constructor and the constructor taking `nullptr` construct a `proxy` that does not contain a value.
 - `(2)` Copy constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. As per the `requires` clause, the copy constructor is trivial when `F::constraints.copyability == constraint_level::trivial`.
 - `(3)` Move constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. `rhs` is in a valid but unspecified state after move construction. As per the `requires` clause, the move constructor does not participate in overload resolution when `F::constraints.copyability == constraint_level::trivial`, so that a move construction falls back to the trivial copy constructor.
-- `(4)` Let `VP` be `std::decay_t<P>`. Constructor taking a value of pointer constructs a `proxy` whose contained value is of type `VP` and direct-non-list-initialized with `std::forward<P>(ptr)`. This overload participates in overload resolution only if `std::decay_t<P>` is not the same type as `proxy` nor a specialization of `std::in_place_type_t`.
+- `(4)` Let `VP` be `std::decay_t<P>`. Constructor taking a value of pointer constructs a `proxy` whose contained value is of type `VP` and direct-non-list-initialized with `std::forward<P>(ptr)`. This overload participates in overload resolution only if `std::decay_t<P>` is not a specialization of `proxy` nor a specialization of `std::in_place_type_t`.
 - `(5)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `std::forward<Args>(args)...`.
 - `(6)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+
+*Since 3.3.0*: For `(4-6)`, if [`proxiable<std::decay_t<P>, F>`](../proxiable.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
 ## Comparing with Other Standard Polymorphic Wrappers
 

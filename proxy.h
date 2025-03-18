@@ -59,7 +59,7 @@
 #define ___PRO_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202502L
+#define __msft_lib_proxy 202503L
 
 namespace pro {
 
@@ -2508,7 +2508,7 @@ struct weak_dispatch : D {
 #if __STDC_HOSTED__
 namespace std {
 
-template <class F, class CharT>
+template <pro::facade F, class CharT>
     requires(pro::details::facade_traits<F>::template is_invocable<false,
         pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
 struct formatter<pro::proxy_indirect_accessor<F>, CharT> {

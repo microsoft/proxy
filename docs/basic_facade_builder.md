@@ -33,6 +33,7 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
 | [`support_format`<br />`support_wformat`](basic_facade_builder/support_format.md)<br />*(since 3.2.0)* | Specifies the capability of formatting (via [formatting functions](https://en.cppreference.com/w/cpp/utility/format)) to the template parameters |
 | [`support_rtti`<br />`support_indirect_rtti`<br />`support_direct_rtti`](basic_facade_builder/support_rtti.md)<br />*(since 3.2.0)* | Specifies the capability of RTTI (via `proxy_cast` and `proxy_typeid`) to the template parameters |
 | [`support_view` ](basic_facade_builder/support_view.md)<br />*(since 3.2.1)* | Specifies the capability of implicit conversion to `proxy_view` to the template parameters |
+| [`support_weak`](basic_facade_builder/support_weak.md)<br />*(since 3.3.0)* | Specifies the capability of implicit conversion to `weak_proxy` to the template parameters |
 
 ## Member Alias Templates
 

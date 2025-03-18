@@ -1,16 +1,16 @@
 # Function template `proxy_invoke`
 
 ```cpp
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 /* see below */ proxy_invoke(proxy<F>& p, Args&&... args);
 
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 /* see below */ proxy_invoke(const proxy<F>& p, Args&&... args);
 
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 /* see below */ proxy_invoke(proxy<F>&& p, Args&&... args);
 
-template <bool IsDirect, class D, class O, class F, class... Args>
+template <bool IsDirect, class D, class O, facade F, class... Args>
 /* see below */ proxy_invoke(const proxy<F>&& p, Args&&... args);
 ```
 

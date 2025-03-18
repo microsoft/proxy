@@ -31,7 +31,7 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
 ### Hello World
 
-Let's get started with the following "Hello World" example:
+Let's get started with the following "Hello World" example ([run](https://godbolt.org/z/jr81Poz83)):
 
 ```cpp
 #include <format>
@@ -80,7 +80,7 @@ Here is a step-by-step explanation:
 
 ### Hello World (Stream Version)
 
-In the previous "Hello Word" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation:
+In the previous "Hello Word" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation ([run](https://godbolt.org/z/q1b14WGff)):
 
 ```cpp
 #include <iomanip>
@@ -136,7 +136,7 @@ In addition to the operator expressions demonstrated in the previous examples, t
 - [class template `pro::operator_dispatch`](https://microsoft.github.io/proxy/docs/operator_dispatch.html): Dispatch type for operator expressions.
 - [class `explicit_conversion_dispatch` (aka. `conversion_dispatch`)](https://microsoft.github.io/proxy/docs/explicit_conversion_dispatch.html) and [class `implicit_conversion_dispatch`](https://microsoft.github.io/proxy/docs/implicit_conversion_dispatch.html): Dispatch type for conversion expressions.
 
-Note that some facilities are provided as macro, because C++ templates today do not support generating a function with an arbitrary name. Here is another example that makes member function call expressions polymorphic:
+Note that some facilities are provided as macro, because C++ templates today do not support generating a function with an arbitrary name. Here is another example that makes member function call expressions polymorphic ([run](https://godbolt.org/z/xcEeYrjnY)):
 
 ```cpp
 #include <iostream>
@@ -205,11 +205,13 @@ The "Proxy" library is a self-contained solution for runtime polymorphism in C++
 
 - **Overloading**: [`facade_builder::add_convention`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_convention.html) is more powerful than demonstrated above. It can take any number of overload types (formally, any type meeting the [*ProOverload* requirements](https://microsoft.github.io/proxy/docs/ProOverload.html)) and perform standard overload resolution when invoking a `proxy`.
 - **Facade composition**: [`facade_builder::add_facade`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_facade.html) allows flexible composition of different abstractions.
+- **Concepts**: To facilitate template programming with "Proxy", 3 concepts are exported from a facade type. Namely, [`proxiable`](https://microsoft.github.io/proxy/docs/proxiable.html), [`proxiable_target`](https://microsoft.github.io/proxy/docs/proxiable_target.html) and [`inplace_proxiable_target`](https://microsoft.github.io/proxy/docs/inplace_proxiable_target.html).
 - **Allocator awareness**: [function template `allocate_proxy`](https://microsoft.github.io/proxy/docs/allocate_proxy.html) is able to create a `proxy` from a value with any custom allocator. In C++11, [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and [`std::packaged_task`](https://en.cppreference.com/w/cpp/thread/packaged_task) had constructors that accepted custom allocators for performance tuning, but these were [removed in C++17](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0302r1.html) because "the semantics are unclear, and there are technical issues with storing an allocator in a type-erased context and then recovering that allocator later for any allocations needed during copy assignment". These issues do not apply to `allocate_proxy`.
 - **Configurable constraints**: [`facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html) provides full support for constraints configuration, including memory layout (by [`restrict_layout`](https://microsoft.github.io/proxy/docs/basic_facade_builder/restrict_layout.html)), copyability (by [`support_copy`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_copy.html)), relocatability (by [`support_relocation`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_relocation.html)), and destructibility (by [`support_destruction`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_destruction.html)).
 - **Reflection**: `proxy` supports type-based compile-time reflection for runtime queries. Please refer to [`facade_builder::add_reflection`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_reflection.html) and [function template `proxy_reflect`](https://microsoft.github.io/proxy/docs/proxy_reflect.html) for more details.
-- **Non-owning proxy**: Although `proxy` can manage the lifetime of an object effectively, similar to a smart pointer, we sometimes want to dereference it before passing to a non-owning context. This has been implemented as an extension since 3.2. Please refer to [alias template `proxy_view`, class template `observer_facade`](https://microsoft.github.io/proxy/docs/proxy_view.html) and [`facade_builder::support_view`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_view.html) for more details.
+- **Non-owning proxy**: Although `proxy` can manage the lifetime of an object effectively, similar to a smart pointer, we sometimes want to dereference it before passing to a non-owning context. This has been implemented as an extension since 3.2.0. Please refer to [function template `make_proxy_view`](https://microsoft.github.io/proxy/docs/make_proxy_view.html), [alias template `proxy_view`, class template `observer_facade`](https://microsoft.github.io/proxy/docs/proxy_view.html) and [`facade_builder::support_view`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_view.html) for more details.
 - **RTTI**: [RTTI (run-time type information)](https://en.wikipedia.org/wiki/Run-time_type_information) provides "weak" reflection capability in C++ since the last century. Although it is not as powerful as reflection in some other languages (like `Object.GetType()` in C# or `Object.getClass()` in Java), it offers the basic infrastructure for type-safe casting at runtime. Since 3.2, "RTTI for `proxy`" has been implemented as an extension and allows users to opt-in for each facade definition. Please refer to [`facade_builder::support_rtti`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_rtti.html) for more details.
+- **Shared and weak ownership**: Although `proxy` can be created from a [`std::shared_ptr`](https://en.cppreference.com/w/cpp/memory/shared_ptr), extensions are available to create `proxy` objects with shared and weak ownership in a more efficient way since 3.3.0. Please refer to [function template `make_proxy_shared`](https://microsoft.github.io/proxy/docs/make_proxy_shared.html), [`allocate_proxy_shared`](https://microsoft.github.io/proxy/docs/allocate_proxy_shared.html), [alias template `weak_proxy`, class template `weak_facade`](https://microsoft.github.io/proxy/docs/weak_proxy.html) and [`facade_builder::support_weak`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_weak.html) for more details.
 - **Weak dispatch**: When an object does not implement a convention, and we do not want it to trigger a hard compile error, it is allowed to specify a [`weak_dispatch`](https://microsoft.github.io/proxy/docs/weak_dispatch.html) that throws when invoked.
 
 ## <a name="compiler-req">Minimum Requirements for Compilers</a>

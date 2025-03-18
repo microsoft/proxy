@@ -1,14 +1,14 @@
 # Alias template `proxy_view`<br />Class template `observer_facade`
 
 ```cpp
-template <class F>
+template <facade F>
 struct observer_facade;  // since 3.2.0
 
-template <class F>
+template <facade F>
 using proxy_view = proxy<observer_facade<F>>;  // since 3.2.0
 ```
 
-Class template `observer_facade` is a [facade](facade.md) type for observer pointers (e.g., raw pointers) potentially dereferenced from a `proxy` object. To instantiate `observer_facade<F>`, `F` shall model [concept `facade`](facade.md).
+Class template `observer_facade` is a [facade](facade.md) type for observer pointers (e.g., raw pointers) potentially dereferenced from a `proxy` object.
 
 ## Member Types of `observer_facade`
 
@@ -45,4 +45,5 @@ int main() {
 
 ## See Also
 
-[`basic_facade_builder::support_view`](basic_facade_builder/support_view.md)
+- [`basic_facade_builder::support_view`](basic_facade_builder/support_view.md)
+- [function template `make_proxy_view`](make_proxy_view.md)

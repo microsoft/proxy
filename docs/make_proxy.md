@@ -3,12 +3,12 @@
 The definitions of `make_proxy` make use of the following exposition-only function:
 
 ```cpp
-template <class F, class T, class... Args>
+template <facade F, class T, class... Args>
 proxy<F> make-proxy-internal(Args&&... args) {
   if constexpr (inplace_proxiable_target<T, F>) {
     return make_proxy_inplace<F, T>(std::forward<Args>(args)...);
   } else {
-    return allocate_proxy<F, T>(std::allocator<T>{}, std::forward<Args>(args)...);
+    return allocate_proxy<F, T>(std::allocator<void>{}, std::forward<Args>(args)...);
   }
 }
 ```
@@ -32,6 +32,8 @@ proxy<F> make_proxy(T&& value);  // freestanding-deleted
 `(2)` Equivalent to `return make-proxy-internal<F, T>(il, std::forward<Args>(args)...)`.
 
 `(3)` Equivalent to `return make-proxy-internal<F, std::decay_t<T>>(std::forward<T>(value))`.
+
+*Since 3.3.0*: For `(1-3)`, if [`proxiable_target<std::decay_t<T>, F>`](proxiable_target.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
 ## Return Value
 
