@@ -772,8 +772,6 @@ struct meta_ptr_reset_guard {
 
 template <class T>
 class inplace_ptr {
-  template <class> friend struct proxy_helper;
-
  public:
   template <class... Args>
   explicit inplace_ptr(std::in_place_t, Args&&... args)
