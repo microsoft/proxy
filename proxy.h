@@ -770,71 +770,6 @@ struct meta_ptr_reset_guard {
   MP& meta_;
 };
 
-template <class F>
-struct proxy_helper {
-  static inline const auto& get_meta(const proxy<F>& p) noexcept {
-    assert(p.has_value());
-    return *p.meta_.operator->();
-  }
-  template <bool IsDirect, class D, class O, qualifier_type Q, class... Args>
-  static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    auto dispatcher = get_meta(p).template invocation_meta<IsDirect, D, O>
-        ::dispatcher;
-    if constexpr (overload_traits<O>::qualifier == qualifier_type::rv) {
-      meta_ptr_reset_guard guard{p.meta_};
-      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-          std::forward<Args>(args)...);
-    } else {
-      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-          std::forward<Args>(args)...);
-    }
-  }
-  template <class A, qualifier_type Q>
-  static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
-    if constexpr (std::is_base_of_v<A, proxy<F>>) {
-      return static_cast<add_qualifier_t<proxy<F>, Q>>(
-          std::forward<add_qualifier_t<A, Q>>(a));
-    } else {
-      // Note: The use of offsetof below is technically undefined until C++20
-      // because proxy may not be a standard layout type. However, all compilers
-      // currently provide well-defined behavior as an extension (which is
-      // demonstrated since constexpr evaluation must diagnose all undefined
-      // behavior). However, various compilers also warn about this use of
-      // offsetof, which must be suppressed.
-#if defined(__INTEL_COMPILER)
-#pragma warning push
-#pragma warning(disable : 1875)
-#elif defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif  // defined(__INTEL_COMPILER)
-#if defined(__NVCC__)
-#pragma nv_diagnostic push
-#pragma nv_diag_suppress 1427
-#endif  // defined(__NVCC__)
-#if defined(__NVCOMPILER)
-#pragma diagnostic push
-#pragma diag_suppress offset_in_non_POD_nonstandard
-#endif  // defined(__NVCOMPILER)
-      constexpr std::size_t offset = offsetof(proxy<F>, value_);
-#if defined(__INTEL_COMPILER)
-#pragma warning pop
-#elif defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif  // defined(__INTEL_COMPILER)
-#if defined(__NVCC__)
-#pragma nv_diagnostic pop
-#endif  // defined(__NVCC__)
-#if defined(__NVCOMPILER)
-#pragma diagnostic pop
-#endif  // defined(__NVCOMPILER)
-      return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(*(reinterpret_cast<
-          add_qualifier_ptr_t<std::byte, Q>>(static_cast<add_qualifier_ptr_t<
-              proxy_indirect_accessor<F>, Q>>(std::addressof(a))) - offset));
-    }
-  }
-};
-
 template <class T>
 class inplace_ptr {
   template <class> friend struct proxy_helper;
@@ -859,6 +794,38 @@ class inplace_ptr {
  private:
   [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   T value_;
+};
+
+template <class F>
+struct proxy_helper {
+  static inline const auto& get_meta(const proxy<F>& p) noexcept {
+    assert(p.has_value());
+    return *p.meta_.operator->();
+  }
+  template <bool IsDirect, class D, class O, qualifier_type Q, class... Args>
+  static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
+    auto dispatcher = get_meta(p).template invocation_meta<IsDirect, D, O>
+        ::dispatcher;
+    if constexpr (overload_traits<O>::qualifier == qualifier_type::rv) {
+      meta_ptr_reset_guard guard{p.meta_};
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
+          std::forward<Args>(args)...);
+    } else {
+      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
+          std::forward<Args>(args)...);
+    }
+  }
+  template <class A, qualifier_type Q>
+  static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
+    if constexpr (std::is_base_of_v<A, proxy<F>>) {
+      return static_cast<add_qualifier_t<proxy<F>, Q>>(a);
+    } else {
+      using IA = proxy_indirect_accessor<F>;
+      return static_cast<add_qualifier_t<proxy<F>, Q>>(
+          *reinterpret_cast<add_qualifier_ptr_t<inplace_ptr<IA>, Q>>(
+              static_cast<add_qualifier_ptr_t<IA, Q>>(std::addressof(a))));
+    }
+  }
 };
 
 }  // namespace details
