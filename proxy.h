@@ -770,6 +770,30 @@ struct meta_ptr_reset_guard {
   MP& meta_;
 };
 
+template <class T>
+class inplace_ptr {
+ public:
+  template <class... Args>
+  explicit inplace_ptr(std::in_place_t, Args&&... args)
+      : value_(std::forward<Args>(args)...) {}
+  inplace_ptr() = default;
+  inplace_ptr(const inplace_ptr&) = default;
+  inplace_ptr(inplace_ptr&&) = default;
+  inplace_ptr& operator=(const inplace_ptr&) = default;
+  inplace_ptr& operator=(inplace_ptr&&) = default;
+
+  T* operator->() noexcept { return std::addressof(value_); }
+  const T* operator->() const noexcept { return std::addressof(value_); }
+  T& operator*() & noexcept { return value_; }
+  const T& operator*() const& noexcept { return value_; }
+  T&& operator*() && noexcept { return std::move(value_); }
+  const T&& operator*() const&& noexcept { return std::move(value_); }
+
+ private:
+  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
+  T value_;
+};
+
 template <class F>
 struct proxy_helper {
   static inline const auto& get_meta(const proxy<F>& p) noexcept {
@@ -792,73 +816,14 @@ struct proxy_helper {
   template <class A, qualifier_type Q>
   static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
     if constexpr (std::is_base_of_v<A, proxy<F>>) {
-      return static_cast<add_qualifier_t<proxy<F>, Q>>(
-          std::forward<add_qualifier_t<A, Q>>(a));
+      return static_cast<add_qualifier_t<proxy<F>, Q>>(a);
     } else {
-      // Note: The use of offsetof below is technically undefined until C++20
-      // because proxy may not be a standard layout type. However, all compilers
-      // currently provide well-defined behavior as an extension (which is
-      // demonstrated since constexpr evaluation must diagnose all undefined
-      // behavior). However, various compilers also warn about this use of
-      // offsetof, which must be suppressed.
-#if defined(__INTEL_COMPILER)
-#pragma warning push
-#pragma warning(disable : 1875)
-#elif defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#endif  // defined(__INTEL_COMPILER)
-#if defined(__NVCC__)
-#pragma nv_diagnostic push
-#pragma nv_diag_suppress 1427
-#endif  // defined(__NVCC__)
-#if defined(__NVCOMPILER)
-#pragma diagnostic push
-#pragma diag_suppress offset_in_non_POD_nonstandard
-#endif  // defined(__NVCOMPILER)
-      constexpr std::size_t offset = offsetof(proxy<F>, value_);
-#if defined(__INTEL_COMPILER)
-#pragma warning pop
-#elif defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif  // defined(__INTEL_COMPILER)
-#if defined(__NVCC__)
-#pragma nv_diagnostic pop
-#endif  // defined(__NVCC__)
-#if defined(__NVCOMPILER)
-#pragma diagnostic pop
-#endif  // defined(__NVCOMPILER)
-      return reinterpret_cast<add_qualifier_t<proxy<F>, Q>>(*(reinterpret_cast<
-          add_qualifier_ptr_t<std::byte, Q>>(static_cast<add_qualifier_ptr_t<
-              proxy_indirect_accessor<F>, Q>>(std::addressof(a))) - offset));
+      using IA = proxy_indirect_accessor<F>;
+      return static_cast<add_qualifier_t<proxy<F>, Q>>(
+          *reinterpret_cast<add_qualifier_ptr_t<inplace_ptr<IA>, Q>>(
+              static_cast<add_qualifier_ptr_t<IA, Q>>(std::addressof(a))));
     }
   }
-};
-
-template <class T>
-class inplace_ptr {
-  template <class> friend struct proxy_helper;
-
- public:
-  template <class... Args>
-  explicit inplace_ptr(std::in_place_t, Args&&... args)
-      : value_(std::forward<Args>(args)...) {}
-  inplace_ptr() = default;
-  inplace_ptr(const inplace_ptr&) = default;
-  inplace_ptr(inplace_ptr&&) = default;
-  inplace_ptr& operator=(const inplace_ptr&) = default;
-  inplace_ptr& operator=(inplace_ptr&&) = default;
-
-  T* operator->() noexcept { return std::addressof(value_); }
-  const T* operator->() const noexcept { return std::addressof(value_); }
-  T& operator*() & noexcept { return value_; }
-  const T& operator*() const& noexcept { return value_; }
-  T&& operator*() && noexcept { return std::move(value_); }
-  const T&& operator*() const&& noexcept { return std::move(value_); }
-
- private:
-  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
-  T value_;
 };
 
 }  // namespace details
