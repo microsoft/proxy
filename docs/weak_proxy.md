@@ -10,14 +10,14 @@ using weak_proxy = proxy<weak_facade<F>>;  // since 3.3.0
 
 Class template `weak_facade` is a [facade](facade.md) type for weak pointers (e.g., [`std::weak_ptr`](https://en.cppreference.com/w/cpp/memory/weak_ptr)) potentially converted from a `proxy` object.
 
-## Member Types of `observer_facade`
+## Member Types of `weak_facade`
 
 | Name               | Description                                                  |
 | ------------------ | ------------------------------------------------------------ |
 | `convention_types` | A [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type that contains one convention type `C`, where`C::is_direct` is `false`, `C::dispatch_type` is of member function `lock` with accessibility, and `C::overload_types` is a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type that contains type `proxy<F>() const noexcept`. |
 | `reflection_types` | A [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type that contains no types. |
 
-## Member Constants of `observer_facade`
+## Member Constants of `weak_facade`
 
 | Name                               | Description                    |
 | ---------------------------------- | ------------------------------ |
