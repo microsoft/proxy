@@ -11,6 +11,8 @@ namespace proxy_traits_tests_details {
 
 template <bool kNothrowRelocatable, bool kCopyable, bool kTrivial, std::size_t kSize, std::size_t kAlignment>
 struct MockPtr {
+  using element_type = MockPtr;
+
   MockPtr() = default;
   MockPtr(int) noexcept {}
   MockPtr(const MockPtr&) requires(kCopyable && !kTrivial) {}

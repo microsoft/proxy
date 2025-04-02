@@ -41,6 +41,8 @@ class LifetimeTracker {
 
   class Session {
    public:
+    using element_type = Session;
+
     Session(LifetimeTracker* host)
         : id_(host->AllocateId(LifetimeOperationType::kValueConstruction)),
           host_(host) {}

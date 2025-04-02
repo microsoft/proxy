@@ -424,16 +424,14 @@ template <class C, class F>
 struct conv_traits
     : instantiated_t<conv_traits_impl, typename C::overload_types, C, F> {};
 
-template <class P>
-using ptr_element_t = typename std::pointer_traits<P>::element_type;
 template <bool IsDirect, class R>
 struct refl_meta {
   template <class P> requires(IsDirect)
   constexpr explicit refl_meta(std::in_place_type_t<P>)
       : reflector(std::in_place_type<P>) {}
   template <class P> requires(!IsDirect)
-  constexpr explicit refl_meta(std::in_place_type_t<P>)
-      : reflector(std::in_place_type<ptr_element_t<P>>) {}
+  constexpr explicit refl_meta(std::in_place_type_t<P>) : reflector(
+      std::in_place_type<typename std::pointer_traits<P>::element_type>) {}
 
   R reflector;
 };
@@ -452,8 +450,9 @@ consteval bool is_reflector_well_formed() {
         return true;
       }
     }
-  } else if constexpr (requires { typename ptr_element_t<T>; }) {
-    return is_reflector_well_formed<ptr_element_t<T>, true, R>();
+  } else {
+    return is_reflector_well_formed<
+        typename std::pointer_traits<T>::element_type, true, R>();
   }
   return false;
 }
@@ -555,13 +554,11 @@ template <class A1, class A2>
 using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
 
-template <class T> struct in_place_type_traits : inapplicable_traits {};
-template <class T>
-struct in_place_type_traits<std::in_place_type_t<T>> : applicable_traits {};
-
-template <class P> struct proxy_traits : inapplicable_traits {};
-template <class F>
-struct proxy_traits<proxy<F>> : applicable_traits { using facade_type = F; };
+template <class P> struct ptr_traits : inapplicable_traits {};
+template <class P>
+    requires(requires { typename std::pointer_traits<P>::element_type; })
+struct ptr_traits<P> : applicable_traits {};
+template <class F> struct ptr_traits<proxy<F>> : inapplicable_traits {};
 
 template <class P, class F, std::size_t ActualSize, std::size_t MaxSize>
 consteval bool diagnose_proxiable_size_too_large() {
@@ -898,6 +895,8 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   static_assert(_Traits::applicable);
 
  public:
+  using facade_type = F;
+
   proxy() noexcept { ___PRO_DEBUG(std::ignore = &_symbol_guard;) }
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept requires(F::constraints.copyability ==
@@ -932,21 +931,22 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   template <class P>
   constexpr proxy(P&& ptr)
       noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P>)
-      requires(!details::proxy_traits<std::decay_t<P>>::applicable &&
-          !details::in_place_type_traits<std::decay_t<P>>::applicable &&
+      requires(details::ptr_traits<std::decay_t<P>>::applicable &&
           std::is_constructible_v<std::decay_t<P>, P>)
       : proxy() { initialize<std::decay_t<P>>(std::forward<P>(ptr)); }
   template <class P, class... Args>
   constexpr explicit proxy(std::in_place_type_t<P>, Args&&... args)
       noexcept(std::is_nothrow_constructible_v<P, Args...>)
-      requires(std::is_constructible_v<P, Args...>)
+      requires(details::ptr_traits<P>::applicable &&
+          std::is_constructible_v<P, Args...>)
       : proxy() { initialize<P>(std::forward<Args>(args)...); }
   template <class P, class U, class... Args>
   constexpr explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
           Args&&... args)
       noexcept(std::is_nothrow_constructible_v<
           P, std::initializer_list<U>&, Args...>)
-      requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...>)
+      requires(details::ptr_traits<P>::applicable &&
+          std::is_constructible_v<P, std::initializer_list<U>&, Args...>)
       : proxy() { initialize<P>(il, std::forward<Args>(args)...); }
   proxy& operator=(std::nullptr_t)
       noexcept(F::constraints.destructibility >= constraint_level::nothrow)
@@ -986,7 +986,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   constexpr proxy& operator=(P&& ptr)
       noexcept(std::is_nothrow_constructible_v<std::decay_t<P>, P> &&
           F::constraints.destructibility >= constraint_level::nothrow)
-      requires(!details::proxy_traits<std::decay_t<P>>::applicable &&
+      requires(details::ptr_traits<std::decay_t<P>>::applicable &&
           std::is_constructible_v<std::decay_t<P>, P> &&
           F::constraints.destructibility >= constraint_level::nontrivial) {
     if constexpr (std::is_nothrow_constructible_v<std::decay_t<P>, P>) {
@@ -1041,7 +1041,8 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   constexpr P& emplace(Args&&... args)
       noexcept(std::is_nothrow_constructible_v<P, Args...> &&
           F::constraints.destructibility >= constraint_level::nothrow)
-      requires(std::is_constructible_v<P, Args...> &&
+      requires(details::ptr_traits<P>::applicable &&
+          std::is_constructible_v<P, Args...> &&
           F::constraints.destructibility >= constraint_level::nontrivial)
       { reset(); return initialize<P>(std::forward<Args>(args)...); }
   template <class P, class U, class... Args>
@@ -1049,7 +1050,8 @@ class proxy : public details::facade_traits<F>::direct_accessor,
       noexcept(std::is_nothrow_constructible_v<
           P, std::initializer_list<U>&, Args...> &&
           F::constraints.destructibility >= constraint_level::nothrow)
-      requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
+      requires(details::ptr_traits<P>::applicable &&
+          std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
           F::constraints.destructibility >= constraint_level::nontrivial)
       { reset(); return initialize<P>(il, std::forward<Args>(args)...); }
 
@@ -1850,8 +1852,8 @@ struct proxy_view_dispatch : cast_dispatch_base<false, true> {
 };
 
 template <class O>
-using observer_upward_conversion_overload = proxy_view<typename proxy_traits<
-    typename overload_traits<O>::return_type>::facade_type>() const noexcept;
+using observer_upward_conversion_overload = proxy_view<
+    typename overload_traits<O>::return_type::facade_type>() const noexcept;
 
 template <class O, class I>
 struct observer_upward_conversion_conv_reduction : std::type_identity<O> {};
