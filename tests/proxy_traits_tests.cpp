@@ -11,6 +11,8 @@ namespace proxy_traits_tests_details {
 
 template <bool kNothrowRelocatable, bool kCopyable, bool kTrivial, std::size_t kSize, std::size_t kAlignment>
 struct MockPtr {
+  using element_type = MockPtr;
+
   MockPtr() = default;
   MockPtr(int) noexcept {}
   MockPtr(const MockPtr&) requires(kCopyable && !kTrivial) {}
@@ -28,6 +30,7 @@ using MockTrivialPtr = MockPtr<true, true, true, sizeof(void*), alignof(void*)>;
 using MockFunctionPtr = void(*)();
 
 struct DefaultFacade : pro::facade_builder::build {};
+static_assert(std::is_same_v<pro::proxy<DefaultFacade>::facade_type, DefaultFacade>);
 static_assert(DefaultFacade::constraints.copyability == pro::constraint_level::none);
 static_assert(DefaultFacade::constraints.relocatability == pro::constraint_level::nothrow);
 static_assert(DefaultFacade::constraints.destructibility == pro::constraint_level::nothrow);
