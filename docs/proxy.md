@@ -11,6 +11,12 @@ As per `facade<F>`, `typename F::convention_types` shall be a [tuple-like](https
 
 Any instance of `proxy<F>` at any given point in time either *contains a value* or *does not contain a value*. If a `proxy<F>` *contains a value*, the type of the value shall be a pointer type `P`  where [`proxiable<P, F>`](proxiable.md) is `true`, and the value is guaranteed to be allocated as part of the `proxy` object footprint, i.e. no dynamic memory allocation occurs. However, `P` may allocate during its construction, depending on its implementation.
 
+## Member Types
+
+| Name                               | Description |
+| ---------------------------------- | ----------- |
+| `facade_type`<br />*(since 3.3.1)* | `F`         |
+
 ## Member Functions
 
 | Name                                                       | Description                                        |
