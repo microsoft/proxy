@@ -100,7 +100,9 @@ struct Weak : pro::facade_builder
 template <class F, class T>
 pro::proxy<Weak<F>> GetWeakImpl(const std::shared_ptr<T>& p) { return pro::make_proxy<Weak<F>, std::weak_ptr<T>>(p); }
 template <class F>
-pro::proxy<Weak<F>> GetWeakImpl(std::nullptr_t) { return nullptr; }
+pro::proxy<Weak<F>> GetWeakImpl(const pro::proxy<F>&) { return nullptr; }
+template <class F, class T>
+void GetWeakImpl(T&&) = delete;
 
 template <class F>
 PRO_DEF_FREE_DISPATCH(FreeGetWeak, GetWeakImpl<F>, GetWeak);

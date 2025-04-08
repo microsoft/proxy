@@ -186,16 +186,41 @@ consteval bool has_destructibility(constraint_level level) {
   }
 }
 
-template <class T>
-class destruction_guard {
+template <class F>
+struct proxy_helper {
+  static inline const auto& get_meta(const proxy<F>& p) noexcept {
+    assert(p.has_value());
+    return *p.meta_.operator->();
+  }
+  static inline void reset_meta(proxy<F>& p) noexcept { p.meta_.reset(); }
+  template <class P, qualifier_type Q>
+  static add_qualifier_t<P, Q> get_ptr(add_qualifier_t<proxy<F>, Q> p) {
+    if constexpr (std::is_same_v<P, proxy<F>>) {
+      return std::forward<add_qualifier_t<P, Q>>(p);
+    } else {
+      return static_cast<add_qualifier_t<P, Q>>(
+          *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(p.ptr_)));
+    }
+  }
+};
+
+template <class F, class P>
+class proxy_resetting_guard {
  public:
-  explicit destruction_guard(T* p) noexcept : p_(p) {}
-  destruction_guard(const destruction_guard&) = delete;
-  ~destruction_guard() noexcept(std::is_nothrow_destructible_v<T>)
-      { std::destroy_at(p_); }
+  explicit proxy_resetting_guard(proxy<F>& p) noexcept : p_(p) {}
+  proxy_resetting_guard(const proxy_resetting_guard&) = delete;
+  ~proxy_resetting_guard() noexcept(false) {
+    if constexpr (std::is_same_v<P, proxy<F>>) {
+      p_.reset();
+    } else {
+      std::destroy_at(std::addressof(
+          proxy_helper<F>::template get_ptr<P, qualifier_type::lv>(p_)));
+      proxy_helper<F>::reset_meta(p_);
+    }
+  }
 
  private:
-  T* p_;
+  proxy<F>& p_;
 };
 
 template <bool IsDirect, class P, qualifier_type Q>
@@ -226,56 +251,56 @@ R invoke_dispatch(Args&&... args) {
     return D{}(std::forward<Args>(args)...);
   }
 }
-template <bool IsDirect, class P, qualifier_type Q, class T>
-decltype(auto) get_operand(T& ptr) {
+template <bool IsDirect, class P>
+decltype(auto) get_operand(P&& ptr) {
   if constexpr (IsDirect) {
-    return std::forward<add_qualifier_t<P, Q>>(ptr);
+    return std::forward<P>(ptr);
   } else {
-    if constexpr (std::is_constructible_v<bool, T&>) { assert(ptr); }
-    return *std::forward<add_qualifier_t<P, Q>>(ptr);
+    if constexpr (std::is_constructible_v<bool, P&>) { assert(ptr); }
+    return *std::forward<P>(ptr);
   }
 }
-template <bool IsDirect, class D, class P, qualifier_type Q, class R,
+template <class F, bool IsDirect, class D, class P, qualifier_type Q, class R,
     class... Args>
-R conv_dispatcher(add_qualifier_t<std::byte, Q> self, Args... args)
+R conv_dispatcher(add_qualifier_t<proxy<F>, Q> self, Args... args)
     noexcept(invocable_dispatch_ptr<IsDirect, D, P, Q, true, R, Args...>) {
-  auto& qp = *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(&self));
   if constexpr (Q == qualifier_type::rv) {
-    destruction_guard guard{&qp};
-    return invoke_dispatch<D, R>(get_operand<IsDirect, P, Q>(qp),
+    proxy_resetting_guard<F, P> guard{self};
+    return invoke_dispatch<D, R>(
+        get_operand<IsDirect>(proxy_helper<F>::template get_ptr<P, Q>(
+            std::move(self))),
         std::forward<Args>(args)...);
   } else {
-    return invoke_dispatch<D, R>(get_operand<IsDirect, P, Q>(qp),
+    return invoke_dispatch<D, R>(
+        get_operand<IsDirect>(proxy_helper<F>::template get_ptr<P, Q>(
+            std::forward<add_qualifier_t<proxy<F>, Q>>(self))),
         std::forward<Args>(args)...);
   }
 }
-template <class D, qualifier_type Q, class R, class... Args>
-R default_conv_dispatcher(add_qualifier_t<std::byte, Q>, Args... args)
-    noexcept(invocable_dispatch<D, true, R, std::nullptr_t, Args...>)
-    { return invoke_dispatch<D, R>(nullptr, std::forward<Args>(args)...); }
 
 template <class O> struct overload_traits : inapplicable_traits {};
 template <qualifier_type Q, bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
   using return_type = R;
   using view_type = R(Args...) const noexcept(NE);
+  template <class F>
   using dispatcher_type =
-      R (*)(add_qualifier_t<std::byte, Q>, Args...) noexcept(NE);
+      R (*)(add_qualifier_t<proxy<F>, Q>, Args...) noexcept(NE);
 
-  template <bool IsDirect, class D, class P>
+  template <class F, bool IsDirect, class D, class P>
   static consteval bool is_applicable_ptr() {
     if constexpr (invocable_dispatch_ptr<IsDirect, D, P, Q, NE, R, Args...>) {
       return true;
     } else {
-      return invocable_dispatch<D, NE, R, std::nullptr_t, Args...>;
+      return invocable_dispatch_ptr<IsDirect, D, proxy<F>, Q, NE, R, Args...>;
     }
   }
-  template <bool IsDirect, class D, class P>
-  static consteval dispatcher_type get_dispatcher() {
+  template <class F, bool IsDirect, class D, class P>
+  static consteval dispatcher_type<F> get_dispatcher() {
     if constexpr (invocable_dispatch_ptr<IsDirect, D, P, Q, NE, R, Args...>) {
-      return &conv_dispatcher<IsDirect, D, P, Q, R, Args...>;
+      return &conv_dispatcher<F, IsDirect, D, P, Q, R, Args...>;
     } else {
-      return &default_conv_dispatcher<D, Q, R, Args...>;
+      return &conv_dispatcher<F, IsDirect, D, proxy<F>, Q, R, Args...>;
     }
   }
 
@@ -335,21 +360,21 @@ consteval bool diagnose_proxiable_required_convention_not_implemented() {
   constexpr bool verdict =
       overload_traits<substituted_overload_t<O, F>>::applicable &&
       overload_traits<substituted_overload_t<O, F>>
-          ::template is_applicable_ptr<IsDirect, D, P>();
+          ::template is_applicable_ptr<F, IsDirect, D, P>();
   static_assert(verdict,
       "not proxiable due to a required convention not implemented");
   return verdict;
 }
 
-template <bool IsDirect, class D, class O>
+template <class F, bool IsDirect, class D, class O>
 struct invocation_meta {
   constexpr invocation_meta() noexcept : dispatcher(nullptr) {}
   template <class P>
   constexpr explicit invocation_meta(std::in_place_type_t<P>) noexcept
       : dispatcher(overload_traits<O>
-            ::template get_dispatcher<IsDirect, D, P>()) {}
+            ::template get_dispatcher<F, IsDirect, D, P>()) {}
 
-  typename overload_traits<O>::dispatcher_type dispatcher;
+  typename overload_traits<O>::template dispatcher_type<F> dispatcher;
 };
 
 template <class... Ms>
@@ -404,7 +429,7 @@ struct conv_traits_impl : inapplicable_traits {};
 template <class C, class F, class... Os>
     requires(overload_traits<substituted_overload_t<Os, F>>::applicable && ...)
 struct conv_traits_impl<C, F, Os...> : applicable_traits {
-  using meta = composite_meta_impl<invocation_meta<C::is_direct,
+  using meta = composite_meta_impl<invocation_meta<F, C::is_direct,
       typename C::dispatch_type, substituted_overload_t<Os, F>>...>;
 
   template <class P>
@@ -418,7 +443,7 @@ struct conv_traits_impl<C, F, Os...> : applicable_traits {
   template <class P>
   static constexpr bool applicable_ptr = (overload_traits<
       substituted_overload_t<Os, F>>::template is_applicable_ptr<
-      C::is_direct, typename C::dispatch_type, P>() && ...);
+      F, C::is_direct, typename C::dispatch_type, P>() && ...);
 };
 template <class C, class F>
 struct conv_traits
@@ -491,16 +516,16 @@ struct destroy_dispatch {
   ___PRO_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
       requires(std::is_destructible_v<T>) { std::destroy_at(&self); }
 };
-template <class D, class ONE, class OE, constraint_level C>
+template <class F, class D, class ONE, class OE, constraint_level C>
 struct lifetime_meta_traits : std::type_identity<void> {};
-template <class D, class ONE, class OE>
-struct lifetime_meta_traits<D, ONE, OE, constraint_level::nothrow>
-    : std::type_identity<invocation_meta<true, D, ONE>> {};
-template <class D, class ONE, class OE>
-struct lifetime_meta_traits<D, ONE, OE, constraint_level::nontrivial>
-    : std::type_identity<invocation_meta<true, D, OE>> {};
-template <class D, class ONE, class OE, constraint_level C>
-using lifetime_meta_t = typename lifetime_meta_traits<D, ONE, OE, C>::type;
+template <class F, class D, class ONE, class OE>
+struct lifetime_meta_traits<F, D, ONE, OE, constraint_level::nothrow>
+    : std::type_identity<invocation_meta<F, true, D, ONE>> {};
+template <class F, class D, class ONE, class OE>
+struct lifetime_meta_traits<F, D, ONE, OE, constraint_level::nontrivial>
+    : std::type_identity<invocation_meta<F, true, D, OE>> {};
+template <class F, class D, class ONE, class OE, constraint_level C>
+using lifetime_meta_t = typename lifetime_meta_traits<F, D, ONE, OE, C>::type;
 
 template <class... As>
 class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
@@ -646,7 +671,7 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
       (conv_traits<Cs, F>::template applicable_ptr<P> && ...);
   template <bool IsDirect, class D, class O>
   static constexpr bool is_invocable = std::is_base_of_v<
-      invocation_meta<IsDirect, D, O>, conv_meta>;
+      invocation_meta<F, IsDirect, D, O>, conv_meta>;
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl {
@@ -672,11 +697,11 @@ struct facade_traits<F>
     : instantiated_t<facade_conv_traits_impl, typename F::convention_types, F>,
       instantiated_t<facade_refl_traits_impl, typename F::reflection_types, F> {
   using meta = composite_meta<
-      lifetime_meta_t<copy_dispatch, void(proxy<F>&) const noexcept,
+      lifetime_meta_t<F, copy_dispatch, void(proxy<F>&) const noexcept,
           void(proxy<F>&) const, F::constraints.copyability>,
-      lifetime_meta_t<copy_dispatch, void(proxy<F>&) && noexcept,
+      lifetime_meta_t<F, copy_dispatch, void(proxy<F>&) && noexcept,
           void(proxy<F>&) &&, F::constraints.relocatability>,
-      lifetime_meta_t<destroy_dispatch, void() noexcept, void(),
+      lifetime_meta_t<F, destroy_dispatch, void() noexcept, void(),
           F::constraints.destructibility>, typename facade_traits::conv_meta,
       typename facade_traits::refl_meta>;
   using indirect_accessor = merged_composite_accessor<
@@ -739,12 +764,12 @@ struct meta_ptr_direct_impl : private M {
 };
 template <class M>
 struct meta_ptr_traits_impl : std::type_identity<meta_ptr_indirect_impl<M>> {};
-template <bool IsDirect, class D, class O, class... Ms>
+template <class F, bool IsDirect, class D, class O, class... Ms>
 struct meta_ptr_traits_impl<
-    composite_meta_impl<invocation_meta<IsDirect, D, O>, Ms...>>
+    composite_meta_impl<invocation_meta<F, IsDirect, D, O>, Ms...>>
     : std::type_identity<meta_ptr_direct_impl<composite_meta_impl<
-          invocation_meta<IsDirect, D, O>, Ms...>,
-          invocation_meta<IsDirect, D, O>>> {};
+          invocation_meta<F, IsDirect, D, O>, Ms...>,
+          invocation_meta<F, IsDirect, D, O>>> {};
 template <class M>
 struct meta_ptr_traits : std::type_identity<meta_ptr_indirect_impl<M>> {};
 template <class M>
@@ -755,17 +780,6 @@ template <class M>
 struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
 template <class M>
 using meta_ptr = typename meta_ptr_traits<M>::type;
-
-template <class MP>
-struct meta_ptr_reset_guard {
- public:
-  explicit meta_ptr_reset_guard(MP& meta) noexcept : meta_(meta) {}
-  meta_ptr_reset_guard(const meta_ptr_reset_guard&) = delete;
-  ~meta_ptr_reset_guard() { meta_.reset(); }
-
- private:
-  MP& meta_;
-};
 
 template <class T>
 class inplace_ptr {
@@ -791,37 +805,23 @@ class inplace_ptr {
   T value_;
 };
 
-template <class F>
-struct proxy_helper {
-  static inline const auto& get_meta(const proxy<F>& p) noexcept {
-    assert(p.has_value());
-    return *p.meta_.operator->();
+template <class F, bool IsDirect, class D, class O, class P, class... Args>
+decltype(auto) invoke_impl(P&& p, Args&&... args) {
+  auto dispatcher = proxy_helper<F>::get_meta(p)
+      .template invocation_meta<F, IsDirect, D, O>::dispatcher;
+  return dispatcher(std::forward<P>(p), std::forward<Args>(args)...);
+}
+template <class F, class A, qualifier_type Q>
+add_qualifier_t<proxy<F>, Q> access_impl(add_qualifier_t<A, Q> a) {
+  if constexpr (std::is_base_of_v<A, proxy<F>>) {
+    return static_cast<add_qualifier_t<proxy<F>, Q>>(a);
+  } else {
+    using IA = proxy_indirect_accessor<F>;
+    return static_cast<add_qualifier_t<proxy<F>, Q>>(
+        *reinterpret_cast<add_qualifier_ptr_t<inplace_ptr<IA>, Q>>(
+            static_cast<add_qualifier_ptr_t<IA, Q>>(std::addressof(a))));
   }
-  template <bool IsDirect, class D, class O, qualifier_type Q, class... Args>
-  static decltype(auto) invoke(add_qualifier_t<proxy<F>, Q> p, Args&&... args) {
-    auto dispatcher = get_meta(p).template invocation_meta<IsDirect, D, O>
-        ::dispatcher;
-    if constexpr (overload_traits<O>::qualifier == qualifier_type::rv) {
-      meta_ptr_reset_guard guard{p.meta_};
-      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-          std::forward<Args>(args)...);
-    } else {
-      return dispatcher(std::forward<add_qualifier_t<std::byte, Q>>(*p.ptr_),
-          std::forward<Args>(args)...);
-    }
-  }
-  template <class A, qualifier_type Q>
-  static add_qualifier_t<proxy<F>, Q> access(add_qualifier_t<A, Q> a) {
-    if constexpr (std::is_base_of_v<A, proxy<F>>) {
-      return static_cast<add_qualifier_t<proxy<F>, Q>>(a);
-    } else {
-      using IA = proxy_indirect_accessor<F>;
-      return static_cast<add_qualifier_t<proxy<F>, Q>>(
-          *reinterpret_cast<add_qualifier_ptr_t<inplace_ptr<IA>, Q>>(
-              static_cast<add_qualifier_ptr_t<IA, Q>>(std::addressof(a))));
-    }
-  }
-};
+}
 
 }  // namespace details
 
@@ -836,27 +836,25 @@ struct proxy_indirect_accessor : details::facade_traits<F>::indirect_accessor
 template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(proxy<F>& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
-      details::qualifier_type::lv>(p, std::forward<Args>(args)...);
+  return details::invoke_impl<F, IsDirect, D, O>(
+      p, std::forward<Args>(args)...);
 }
 template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(const proxy<F>& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<IsDirect, D, O,
-      details::qualifier_type::const_lv>(p, std::forward<Args>(args)...);
+  return details::invoke_impl<F, IsDirect, D, O>(
+      p, std::forward<Args>(args)...);
 }
 template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(proxy<F>&& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<
-      IsDirect, D, O, details::qualifier_type::rv>(
+  return details::invoke_impl<F, IsDirect, D, O>(
       std::move(p), std::forward<Args>(args)...);
 }
 template <bool IsDirect, class D, class O, facade F, class... Args>
 auto proxy_invoke(const proxy<F>&& p, Args&&... args)
     -> typename details::overload_traits<O>::return_type {
-  return details::proxy_helper<F>::template invoke<
-      IsDirect, D, O, details::qualifier_type::const_rv>(
+  return details::invoke_impl<F, IsDirect, D, O>(
       std::move(p), std::forward<Args>(args)...);
 }
 
@@ -867,24 +865,19 @@ const R& proxy_reflect(const proxy<F>& p) noexcept {
 }
 
 template <facade F, class A>
-proxy<F>& access_proxy(A& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::lv>(a);
-}
+proxy<F>& access_proxy(A& a) noexcept
+    { return details::access_impl<F, A, details::qualifier_type::lv>(a); }
 template <facade F, class A>
-const proxy<F>& access_proxy(const A& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::const_lv>(a);
-}
+const proxy<F>& access_proxy(const A& a) noexcept
+    { return details::access_impl<F, A, details::qualifier_type::const_lv>(a); }
 template <facade F, class A>
 proxy<F>&& access_proxy(A&& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::rv>(std::forward<A>(a));
+  return details::access_impl<F, A, details::qualifier_type::rv>(std::move(a));
 }
 template <facade F, class A>
 const proxy<F>&& access_proxy(const A&& a) noexcept {
-  return details::proxy_helper<F>::template access<
-      A, details::qualifier_type::const_rv>(std::forward<const A>(a));
+  return details::access_impl<F, A, details::qualifier_type::const_rv>(
+      std::move(a));
 }
 
 template <facade F>
@@ -916,11 +909,11 @@ class proxy : public details::facade_traits<F>::direct_accessor,
       requires(F::constraints.relocatability >= constraint_level::nontrivial &&
           F::constraints.copyability != constraint_level::trivial) {
     if (rhs.meta_.has_value()) {
-      details::meta_ptr_reset_guard guard{rhs.meta_};
       if constexpr (F::constraints.relocatability ==
           constraint_level::trivial) {
         std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
         meta_ = rhs.meta_;
+        rhs.meta_.reset();
       } else {
         proxy_invoke<true, details::copy_dispatch, void(proxy&) && noexcept(
             F::constraints.relocatability == constraint_level::nothrow)>(
@@ -1580,18 +1573,19 @@ class bad_proxy_cast : public std::bad_cast {
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
     }
-#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, __TTYPE) \
     struct __NAME { \
-      template <class __T, class... __Args> \
+      template <__TTYPE __T, class... __Args> \
       ___PRO_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
               .__FUNC(::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
     }
 #define ___PRO_DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+    ___PRO_DEF_MEM_DISPATCH_IMPL( \
+        __NAME, __FUNC, __FUNC, ::pro::details::non_proxy_arg)
 #define ___PRO_DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, class)
 #define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
@@ -1613,18 +1607,19 @@ ___PRO_DEBUG( \
       } \
 ) \
     }
-#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, __TTYPE) \
     struct __NAME { \
-      template <class __T, class... __Args> \
+      template <__TTYPE __T, class... __Args> \
       ___PRO_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
           ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
       ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_FREE_ACCESSOR, __FNAME) \
     }
 #define ___PRO_DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+    ___PRO_DEF_FREE_DISPATCH_IMPL( \
+        __NAME, __FUNC, __FUNC, ::pro::details::non_proxy_arg)
 #define ___PRO_DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, class)
 #define PRO_DEF_FREE_DISPATCH(__NAME, ...) \
     ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
 
@@ -1649,6 +1644,14 @@ template <class F, bool IsDirect>
 using adl_accessor_arg_t =
     std::conditional_t<IsDirect, proxy<F>, proxy_indirect_accessor<F>>;
 
+template <class T> struct proxy_arg_traits : inapplicable_traits {};
+template <class F>
+struct proxy_arg_traits<proxy<F>> : applicable_traits {};
+template <class F>
+struct proxy_arg_traits<proxy_indirect_accessor<F>> : applicable_traits {};
+template <class T>
+concept non_proxy_arg = !proxy_arg_traits<std::decay_t<T>>::applicable;
+
 #define ___PRO_DEF_CAST_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class T> \
     struct accessor<__F, __IsDirect, __D, T() Q> { \
@@ -1668,7 +1671,7 @@ struct cast_dispatch_base {
 #undef ___PRO_DEF_CAST_ACCESSOR
 
 struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
-  template <class T>
+  template <non_proxy_arg T>
   ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 
@@ -1842,7 +1845,7 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
         F::constraints.relocatability : constraint_level::none>::type;
 
 struct proxy_view_dispatch : cast_dispatch_base<false, true> {
-  template <class T>
+  template <non_proxy_arg T>
   ___PRO_STATIC_CALL(auto, T& value) noexcept
       requires(requires { { std::addressof(*value) } noexcept; }) {
     return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
@@ -1935,7 +1938,7 @@ template <std::size_t N>
 sign(const char (&str)[N]) -> sign<N>;
 
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
-  template <class P>
+  template <non_proxy_arg P>
   ___PRO_STATIC_CALL(auto, const P& self) noexcept
       requires(
           requires(const typename P::weak_type& w)
@@ -2064,7 +2067,7 @@ struct proxy_cast_accessor_impl {
         : proxy_cast_accessor_impl<F, IsDirect, D, \
               void(proxy_cast_context) Q> {}
 struct proxy_cast_dispatch {
-  template <class T>
+  template <non_proxy_arg T>
   ___PRO_STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
     if (typeid(T) == *ctx.type_ptr) {
       if (ctx.is_ref) {
@@ -2250,18 +2253,18 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
-    template <class T> \
+    template <details::non_proxy_arg T> \
     ___PRO_STATIC_CALL(decltype(auto), T&& self) \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
 #define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
-    template <class T> \
+    template <details::non_proxy_arg T> \
     ___PRO_STATIC_CALL(decltype(auto), T&& self) \
         ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
-    template <class T> \
+    template <details::non_proxy_arg T> \
     ___PRO_STATIC_CALL(decltype(auto), T&& self, int) \
         ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
 #define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
-    template <class T, class Arg> \
+    template <details::non_proxy_arg T, class Arg> \
     ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
         ___PRO_DIRECT_FUNC_IMPL( \
             std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
@@ -2296,7 +2299,7 @@ ___PRO_DEBUG( \
 #define ___PRO_RHS_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
-      template <class T, class Arg> \
+      template <details::non_proxy_arg T, class Arg> \
       ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
           ___PRO_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
@@ -2343,7 +2346,7 @@ ___PRO_DEBUG( \
 #define ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
-      template <class T, class Arg> \
+      template <details::non_proxy_arg T, class Arg> \
       ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
           ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
               std::forward<Arg>(arg)) \
@@ -2352,7 +2355,7 @@ ___PRO_DEBUG( \
     }; \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
-      template <class T, class Arg> \
+      template <details::non_proxy_arg T, class Arg> \
       ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
           ___PRO_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
@@ -2397,7 +2400,7 @@ ___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 
 template <>
 struct operator_dispatch<"()", false> {
-  template <class T, class... Args>
+  template <details::non_proxy_arg T, class... Args>
   ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
       ___PRO_DIRECT_FUNC_IMPL(
           std::forward<T>(self)(std::forward<Args>(args)...))
@@ -2406,12 +2409,12 @@ struct operator_dispatch<"()", false> {
 template <>
 struct operator_dispatch<"[]", false> {
 #if __cpp_multidimensional_subscript >= 202110L
-  template <class T, class... Args>
+  template <details::non_proxy_arg T, class... Args>
   ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
       ___PRO_DIRECT_FUNC_IMPL(
           std::forward<T>(self)[std::forward<Args>(args)...])
 #else
-  template <class T, class Arg>
+  template <details::non_proxy_arg T, class Arg>
   ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
       ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // __cpp_multidimensional_subscript >= 202110L
@@ -2438,11 +2441,11 @@ struct operator_dispatch<"[]", false> {
 
 struct implicit_conversion_dispatch
     : details::cast_dispatch_base<false, false> {
-  template <class T>
+  template <details::non_proxy_arg T>
   ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
-  template <class T>
+  template <details::non_proxy_arg T>
   ___PRO_STATIC_CALL(auto, T&& self) noexcept
       { return details::explicit_conversion_adapter<T>{std::forward<T>(self)}; }
 };
@@ -2457,18 +2460,9 @@ template <class D>
 struct weak_dispatch : D {
   using D::operator();
   template <class... Args>
-  [[noreturn]] ___PRO_STATIC_CALL(details::wildcard, std::nullptr_t, Args&&...)
+  [[noreturn]] ___PRO_STATIC_CALL(details::wildcard, Args&&...)
       { ___PRO_THROW(not_implemented{}); }
 };
-
-#define PRO_DEF_WEAK_DISPATCH(__NAME, __D, __FUNC) \
-    struct [[deprecated("'PRO_DEF_WEAK_DISPATCH' is deprecated. " \
-        "Use pro::weak_dispatch<" #__D "> instead.")]] __NAME : __D { \
-      using __D::operator(); \
-      template <class... __Args> \
-      ___PRO_STATIC_CALL(decltype(auto), ::std::nullptr_t, __Args&&... __args) \
-          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
-    }
 
 }  // namespace pro
 
