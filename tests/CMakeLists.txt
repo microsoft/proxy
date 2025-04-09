@@ -15,6 +15,7 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE) # Disable GMock
 FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
 
 add_executable(msft_proxy_tests
   proxy_creation_tests.cpp
@@ -30,8 +31,7 @@ add_executable(msft_proxy_tests
   proxy_view_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
-target_link_libraries(msft_proxy_tests PRIVATE msft_proxy)
-target_link_libraries(msft_proxy_tests PRIVATE gtest_main)
+target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main)
 
 if(MSVC)
   target_compile_options(msft_proxy_tests PRIVATE /W4 /WX)
@@ -41,13 +41,10 @@ else()
   target_compile_options(msft_proxy_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-include(GoogleTest)
 gtest_discover_tests(msft_proxy_tests)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_executable(msft_proxy_freestanding_tests freestanding/proxy_freestanding_tests.cpp)
-  target_include_directories(msft_proxy_freestanding_tests PRIVATE .)
-  target_compile_features(msft_proxy_freestanding_tests PRIVATE cxx_std_20)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(msft_proxy_freestanding_tests PRIVATE -ffreestanding -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic -Wno-c++2b-extensions -Werror)
   else()
