@@ -33,7 +33,7 @@
 #elif __has_cpp_attribute(no_unique_address)
 #define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE no_unique_address
 #else
-#error "Proxy requires C++20 attribute no_unique_address"
+#error Proxy requires C++20 attribute no_unique_address.
 #endif
 
 #if __cpp_exceptions >= 199711L
@@ -510,7 +510,7 @@ struct copy_dispatch {
   ___PRO_STATIC_CALL(void, T&& self, proxy<F>& rhs)
       noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
       requires(std::is_constructible_v<std::decay_t<T>, T>)
-      { std::construct_at(&rhs, std::forward<T>(self)); }
+      { std::construct_at(std::addressof(rhs), std::forward<T>(self)); }
 };
 struct destroy_dispatch {
   template <class T>
@@ -954,7 +954,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
       requires((F::constraints.copyability == constraint_level::nontrivial ||
           F::constraints.copyability == constraint_level::nothrow) &&
           F::constraints.destructibility >= constraint_level::nontrivial) {
-    if (this != &rhs) {
+    if (this != std::addressof(rhs)) [[likely]] {
       if constexpr (F::constraints.copyability == constraint_level::nothrow) {
         std::destroy_at(this);
         std::construct_at(this, rhs);
@@ -970,7 +970,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
       requires(F::constraints.relocatability >= constraint_level::nontrivial &&
           F::constraints.destructibility >= constraint_level::nontrivial &&
           F::constraints.copyability != constraint_level::trivial) {
-    if (this != &rhs) {
+    if (this != std::addressof(rhs)) [[likely]] {
       reset();
       std::construct_at(this, std::move(rhs));
     }
@@ -1022,9 +1022,9 @@ class proxy : public details::facade_traits<F>::direct_accessor,
         if (rhs.meta_.has_value()) {
           proxy temp = std::move(*this);
           std::construct_at(this, std::move(rhs));
-          std::construct_at(&rhs, std::move(temp));
+          std::construct_at(std::addressof(rhs), std::move(temp));
         } else {
-          std::construct_at(&rhs, std::move(*this));
+          std::construct_at(std::addressof(rhs), std::move(*this));
         }
       } else if (rhs.meta_.has_value()) {
         std::construct_at(this, std::move(rhs));
@@ -2030,7 +2030,8 @@ struct proxy_cast_accessor_impl {
   template <class T>
   friend T proxy_cast(_Self self) {
     static_assert(!std::is_rvalue_reference_v<T>);
-    if (!access_proxy<F>(self).has_value()) { ___PRO_THROW(bad_proxy_cast{}); }
+    if (!access_proxy<F>(self).has_value()) [[unlikely]]
+        { ___PRO_THROW(bad_proxy_cast{}); }
     if constexpr (std::is_lvalue_reference_v<T>) {
       using U = std::remove_reference_t<T>;
       void* result = nullptr;
@@ -2038,7 +2039,7 @@ struct proxy_cast_accessor_impl {
           .is_const = std::is_const_v<U>, .result_ptr = &result};
       proxy_invoke<IsDirect, D, O>(
           access_proxy<F>(std::forward<_Self>(self)), ctx);
-      if (result == nullptr) { ___PRO_THROW(bad_proxy_cast{}); }
+      if (result == nullptr) [[unlikely]] { ___PRO_THROW(bad_proxy_cast{}); }
       return *static_cast<U*>(result);
     } else {
       std::optional<std::remove_const_t<T>> result;
@@ -2046,14 +2047,14 @@ struct proxy_cast_accessor_impl {
           .is_const = false, .result_ptr = &result};
       proxy_invoke<IsDirect, D, O>(
           access_proxy<F>(std::forward<_Self>(self)), ctx);
-      if (!result.has_value()) { ___PRO_THROW(bad_proxy_cast{}); }
+      if (!result.has_value()) [[unlikely]] { ___PRO_THROW(bad_proxy_cast{}); }
       return std::move(*result);
     }
   }
   template <class T>
   friend T* proxy_cast(std::remove_reference_t<_Self>* self) noexcept
       requires(std::is_lvalue_reference_v<_Self>) {
-    if (!access_proxy<F>(*self).has_value()) { return nullptr; }
+    if (!access_proxy<F>(*self).has_value()) [[unlikely]] { return nullptr; }
     void* result = nullptr;
     proxy_cast_context ctx{.type_ptr = &typeid(T), .is_ref = true,
         .is_const = std::is_const_v<T>, .result_ptr = &result};
@@ -2070,10 +2071,10 @@ struct proxy_cast_accessor_impl {
 struct proxy_cast_dispatch {
   template <non_proxy_arg T>
   ___PRO_STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
-    if (typeid(T) == *ctx.type_ptr) {
+    if (typeid(T) == *ctx.type_ptr) [[likely]] {
       if (ctx.is_ref) {
         if constexpr (std::is_lvalue_reference_v<T>) {
-          if (ctx.is_const || !std::is_const_v<T>) {
+          if (ctx.is_const || !std::is_const_v<T>) [[likely]] {
             *static_cast<void**>(ctx.result_ptr) = (void*)&self;
           }
         }
@@ -2100,7 +2101,7 @@ struct proxy_typeid_reflector {
     friend const std::type_info& proxy_typeid(
         const adl_accessor_arg_t<F, IsDirect>& self) noexcept {
       const proxy<F>& p = access_proxy<F>(self);
-      if (!p.has_value()) { return typeid(void); }
+      if (!p.has_value()) [[unlikely]] { return typeid(void); }
       const proxy_typeid_reflector& refl = proxy_reflect<IsDirect, R>(p);
       return *refl.info;
     }
@@ -2488,7 +2489,8 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   OutIt format(const pro::proxy_indirect_accessor<F>& ia,
       basic_format_context<OutIt, CharT>& fc) const {
     auto& p = pro::access_proxy<F>(ia);
-    if (!p.has_value()) { ___PRO_THROW(format_error{"null proxy"}); }
+    if (!p.has_value()) [[unlikely]]
+        { ___PRO_THROW(format_error{"null proxy"}); }
     return pro::proxy_invoke<false, pro::details::format_dispatch,
         pro::details::format_overload_t<CharT>>(p, spec_, fc);
   }
