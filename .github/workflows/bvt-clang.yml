@@ -15,20 +15,23 @@ jobs:
 
     - name: install clang
       run: |
-        sudo apt install -y clang-19 libc++-19-dev
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 20
+        sudo apt install libc++-20-dev
 
     - name: check compiler version
       run: |
-        clang++-19 --version
+        clang++-20 --version
 
-    - name: build and run test with clang 19
+    - name: build and run test with clang 20
       run: |
-        cmake -B build -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh clang++-19 build/drop/env-info.json
+        ./tools/dump_build_env.sh clang++-20 build/drop/env-info.json
 
     - name: run benchmarks
       run: |
