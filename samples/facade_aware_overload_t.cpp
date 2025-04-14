@@ -15,8 +15,8 @@ pro::proxy<F> operator+(const T& value, const pro::proxy_indirect_accessor<F>& r
     { return pro::make_proxy<F, T>(value + proxy_cast<const T&>(rhs)); }
 
 struct Addable : pro::facade_builder
-    ::support_rtti
-    ::support_format
+    ::support<pro::skills::rtti>
+    ::support<pro::skills::format>
     ::add_convention<pro::operator_dispatch<"+">, pro::facade_aware_overload_t<BinaryOverload>>
     ::build {};
 

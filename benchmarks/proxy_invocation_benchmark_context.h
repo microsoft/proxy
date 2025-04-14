@@ -10,7 +10,7 @@ PRO_DEF_MEM_DISPATCH(MemFun, Fun);
 
 struct InvocationTestFacade : pro::facade_builder
     ::add_convention<MemFun, int() const>
-    ::support_view
+    ::support<pro::skills::as_view>
     ::build{};
 
 struct InvocationTestBase {

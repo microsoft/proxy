@@ -41,7 +41,7 @@ Let's get started with the following "Hello World" example ([run](https://godbol
 #include "proxy.h"
 
 struct Formattable : pro::facade_builder
-    ::support_format
+    ::support<pro::skills::format>
     ::build {};
 
 int main() {

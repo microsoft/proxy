@@ -20,8 +20,8 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 #include "proxy.h"
 
 struct RttiAware : pro::facade_builder
-    ::support_rtti
-    ::support_view
+    ::support<pro::skills::rtti>
+    ::support<pro::skills::as_view>
     ::build {};
 
 int main() {

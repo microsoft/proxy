@@ -1845,35 +1845,12 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
         F::constraints.copyability != constraint_level::trivial) ?
         F::constraints.relocatability : constraint_level::none>::type;
 
-struct proxy_view_dispatch : cast_dispatch_base<false, true> {
-  template <non_proxy_arg T>
-  ___PRO_STATIC_CALL(auto, T& value) noexcept
-      requires(requires { { std::addressof(*value) } noexcept; }) {
-    return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
-        decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
-        {*value};
-  }
-};
-
 template <class O>
 using observer_upward_conversion_overload = proxy_view<
     typename overload_traits<O>::return_type::facade_type>() const noexcept;
-
-template <class O, class I>
-struct observer_upward_conversion_conv_reduction : std::type_identity<O> {};
-template <class... Os, class O>
-    requires(!std::is_same_v<Os, observer_upward_conversion_overload<O>> && ...)
-struct observer_upward_conversion_conv_reduction<
-    conv_impl<true, upward_conversion_dispatch, Os...>, O>
-    : std::type_identity<conv_impl<true, upward_conversion_dispatch, Os...,
-          observer_upward_conversion_overload<O>>> {};
-template <class O, class I>
-using observer_upward_conversion_conv_reduction_t =
-    typename observer_upward_conversion_conv_reduction<O, I>::type;
 template <class... Os>
-using observer_upward_conversion_conv =
-    recursive_reduction_t<observer_upward_conversion_conv_reduction_t,
-        conv_impl<true, upward_conversion_dispatch>, Os...>;
+using observer_upward_conversion_conv = conv_impl<true,
+    upward_conversion_dispatch, observer_upward_conversion_overload<Os>...>;
 
 template <class D, class F, class... Os>
 using observer_indirect_conv =
@@ -1925,31 +1902,6 @@ struct observer_facade_refl_impl {
       observer_refl_reduction_t, std::tuple<>, Rs...>;
 };
 
-template <class F>
-using proxy_view_overload = proxy_view<F>() noexcept;
-
-template <std::size_t N>
-struct sign {
-  consteval sign(const char (&str)[N])
-      { for (std::size_t i = 0; i < N; ++i) { value[i] = str[i]; } }
-
-  char value[N];
-};
-template <std::size_t N>
-sign(const char (&str)[N]) -> sign<N>;
-
-struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
-  template <non_proxy_arg P>
-  ___PRO_STATIC_CALL(auto, const P& self) noexcept
-      requires(
-          requires(const typename P::weak_type& w)
-              { { w.lock() } noexcept -> std::same_as<P>; } &&
-          std::is_convertible_v<const P&, typename P::weak_type>)
-      { return typename P::weak_type{self}; }
-};
-template <class F>
-using weak_conversion_overload = weak_proxy<F>() const noexcept;
-
 template <class P>
 class nullable_ptr_adapter {
  public:
@@ -1972,6 +1924,131 @@ auto weak_lock_impl(const P& self) noexcept
     requires(requires { static_cast<bool>(self.lock()); })
     { return nullable_ptr_adapter{self.lock()}; }
 PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
+
+template <class O>
+using weak_upward_conversion_overload = weak_proxy<
+    typename overload_traits<O>::return_type::facade_type>() const noexcept;
+template <class... Os>
+using weak_upward_conversion_conv = conv_impl<true,
+    upward_conversion_dispatch, weak_upward_conversion_overload<Os>...>;
+
+template <class O, class I>
+struct weak_conv_reduction : std::type_identity<O> {};
+template <class... Cs, class I>
+    requires(I::is_direct &&
+        std::is_same_v<typename I::dispatch_type, upward_conversion_dispatch>)
+struct weak_conv_reduction<std::tuple<Cs...>, I>
+    : std::type_identity<std::tuple<Cs..., instantiated_t<
+          weak_upward_conversion_conv, typename I::overload_types>>> {};
+template <class O, class I>
+using weak_conv_reduction_t = typename weak_conv_reduction<O, I>::type;
+
+template <class F, class... Cs>
+struct weak_facade_impl {
+  using convention_types = recursive_reduction_t<weak_conv_reduction_t,
+      std::tuple<conv_impl<true, weak_mem_lock, proxy<F>() const noexcept>>,
+      Cs...>;
+  using reflection_types = std::tuple<>;
+  static constexpr auto constraints = F::constraints;
+};
+
+}  // namespace details
+
+template <facade F>
+struct observer_facade
+    : details::instantiated_t<details::observer_facade_conv_impl,
+          typename F::convention_types, F>,
+      details::instantiated_t<details::observer_facade_refl_impl,
+          typename F::reflection_types> {
+  static constexpr proxiable_ptr_constraints constraints{
+      .max_size = sizeof(void*), .max_align = alignof(void*),
+      .copyability = constraint_level::trivial,
+      .relocatability = constraint_level::trivial,
+      .destructibility = constraint_level::trivial};
+};
+
+template <facade F>
+struct weak_facade : details::instantiated_t<
+    details::weak_facade_impl, typename F::convention_types, F> {};
+
+template <class Cs, class Rs, proxiable_ptr_constraints C>
+struct basic_facade_builder {
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
+  using add_indirect_convention = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
+  using add_direct_convention = basic_facade_builder<
+      details::add_conv_t<Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
+  template <class D, details::extended_overload... Os>
+      requires(sizeof...(Os) > 0u)
+  using add_convention = add_indirect_convention<D, Os...>;
+  template <class R>
+  using add_indirect_reflection = basic_facade_builder<
+      Cs, details::add_tuple_t<Rs, details::refl_impl<false, R>>, C>;
+  template <class R>
+  using add_direct_reflection = basic_facade_builder<
+      Cs, details::add_tuple_t<Rs, details::refl_impl<true, R>>, C>;
+  template <class R>
+  using add_reflection = add_indirect_reflection<R>;
+  template <facade F, bool WithUpwardConversion = false>
+  using add_facade = basic_facade_builder<
+      details::merge_facade_conv_t<Cs, F, WithUpwardConversion>,
+      details::merge_tuple_t<Rs, typename F::reflection_types>,
+      details::merge_constraints(C, F::constraints)>;
+  template <std::size_t PtrSize,
+      std::size_t PtrAlign = details::max_align_of(PtrSize)>
+      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
+  using restrict_layout = basic_facade_builder<
+      Cs, Rs, details::make_restricted_layout(C, PtrSize, PtrAlign)>;
+  template <constraint_level CL>
+  using support_copy = basic_facade_builder<
+      Cs, Rs, details::make_copyable(C, CL)>;
+  template <constraint_level CL>
+  using support_relocation = basic_facade_builder<
+      Cs, Rs, details::make_relocatable(C, CL)>;
+  template <constraint_level CL>
+  using support_destruction = basic_facade_builder<
+      Cs, Rs, details::make_destructible(C, CL)>;
+  template <template <class> class Skill>
+  using support = Skill<basic_facade_builder>;
+  using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
+  basic_facade_builder() = delete;
+};
+using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
+    proxiable_ptr_constraints{
+        .max_size = details::invalid_size,
+        .max_align = details::invalid_size,
+        .copyability = details::invalid_cl,
+        .relocatability = details::invalid_cl,
+        .destructibility = details::invalid_cl}>;
+
+namespace details {
+
+struct view_conversion_dispatch : cast_dispatch_base<false, true> {
+  template <non_proxy_arg T>
+  ___PRO_STATIC_CALL(auto, T& value) noexcept
+      requires(requires { { std::addressof(*value) } noexcept; }) {
+    return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
+        decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
+        {*value};
+  }
+};
+template <class F>
+using view_conversion_overload = proxy_view<F>() noexcept;
+
+struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
+  template <non_proxy_arg P>
+  ___PRO_STATIC_CALL(auto, const P& self) noexcept
+      requires(
+          requires(const typename P::weak_type& w)
+              { { w.lock() } noexcept -> std::same_as<P>; } &&
+          std::is_convertible_v<const P&, typename P::weak_type>)
+      { return typename P::weak_type{self}; }
+};
+template <class F>
+using weak_conversion_overload = weak_proxy<F>() const noexcept;
 
 #if __STDC_HOSTED__
 template <class CharT> struct format_overload_traits;
@@ -2119,6 +2196,16 @@ ___PRO_DEBUG(
 };
 #endif  // __cpp_rtti >= 199711L
 
+template <std::size_t N>
+struct sign {
+  consteval sign(const char (&str)[N])
+      { for (std::size_t i = 0; i < N; ++i) { value[i] = str[i]; } }
+
+  char value[N];
+};
+template <std::size_t N>
+sign(const char (&str)[N]) -> sign<N>;
+
 struct wildcard {
   wildcard() = delete;
 
@@ -2134,104 +2221,50 @@ struct wildcard {
 
 }  // namespace details
 
-template <class Cs, class Rs, proxiable_ptr_constraints C>
-struct basic_facade_builder {
-  template <class D, details::extended_overload... Os>
-      requires(sizeof...(Os) > 0u)
-  using add_indirect_convention = basic_facade_builder<
-      details::add_conv_t<Cs, details::conv_impl<false, D, Os...>>, Rs, C>;
-  template <class D, details::extended_overload... Os>
-      requires(sizeof...(Os) > 0u)
-  using add_direct_convention = basic_facade_builder<
-      details::add_conv_t<Cs, details::conv_impl<true, D, Os...>>, Rs, C>;
-  template <class D, details::extended_overload... Os>
-      requires(sizeof...(Os) > 0u)
-  using add_convention = add_indirect_convention<D, Os...>;
-  template <class R>
-  using add_indirect_reflection = basic_facade_builder<
-      Cs, details::add_tuple_t<Rs, details::refl_impl<false, R>>, C>;
-  template <class R>
-  using add_direct_reflection = basic_facade_builder<
-      Cs, details::add_tuple_t<Rs, details::refl_impl<true, R>>, C>;
-  template <class R>
-  using add_reflection = add_indirect_reflection<R>;
-  template <facade F, bool WithUpwardConversion = false>
-  using add_facade = basic_facade_builder<
-      details::merge_facade_conv_t<Cs, F, WithUpwardConversion>,
-      details::merge_tuple_t<Rs, typename F::reflection_types>,
-      details::merge_constraints(C, F::constraints)>;
-  template <std::size_t PtrSize,
-      std::size_t PtrAlign = details::max_align_of(PtrSize)>
-      requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
-  using restrict_layout = basic_facade_builder<
-      Cs, Rs, details::make_restricted_layout(C, PtrSize, PtrAlign)>;
-  template <constraint_level CL>
-  using support_copy = basic_facade_builder<
-      Cs, Rs, details::make_copyable(C, CL)>;
-  template <constraint_level CL>
-  using support_relocation = basic_facade_builder<
-      Cs, Rs, details::make_relocatable(C, CL)>;
-  template <constraint_level CL>
-  using support_destruction = basic_facade_builder<
-      Cs, Rs, details::make_destructible(C, CL)>;
+namespace skills {
+
 #if __STDC_HOSTED__
-  using support_format = add_convention<
-      details::format_dispatch, details::format_overload_t<char>>;
-  using support_wformat = add_convention<
-      details::format_dispatch, details::format_overload_t<wchar_t>>;
+template <class FB>
+using format = typename FB::template add_convention<
+    details::format_dispatch, details::format_overload_t<char>>;
+
+template <class FB>
+using wformat = typename FB::template add_convention<
+    details::format_dispatch, details::format_overload_t<wchar_t>>;
 #endif  // __STDC_HOSTED__
+
 #if __cpp_rtti >= 199711L
-  using support_indirect_rtti = basic_facade_builder<
-      details::add_conv_t<Cs, details::conv_impl<false,
-          details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
-          void(details::proxy_cast_context) const&,
-          void(details::proxy_cast_context) &&>>,
-      details::add_tuple_t<Rs, details::refl_impl<false,
-          details::proxy_typeid_reflector>>, C>;
-  using support_direct_rtti = basic_facade_builder<
-      details::add_conv_t<Cs, details::conv_impl<true,
-          details::proxy_cast_dispatch, void(details::proxy_cast_context) &,
-          void(details::proxy_cast_context) const&,
-          void(details::proxy_cast_context) &&>>,
-      details::add_tuple_t<Rs, details::refl_impl<true,
-          details::proxy_typeid_reflector>>, C>;
-  using support_rtti = support_indirect_rtti;
+template <class FB>
+using indirect_rtti = typename FB
+    ::template add_indirect_convention<details::proxy_cast_dispatch,
+        void(details::proxy_cast_context) &,
+        void(details::proxy_cast_context) const&,
+        void(details::proxy_cast_context) &&>
+    ::template add_indirect_reflection<details::proxy_typeid_reflector>;
+
+template <class FB>
+using direct_rtti = typename FB
+    ::template add_direct_convention<details::proxy_cast_dispatch,
+        void(details::proxy_cast_context) &,
+        void(details::proxy_cast_context) const&,
+        void(details::proxy_cast_context) &&>
+    ::template add_direct_reflection<details::proxy_typeid_reflector>;
+
+template <class FB>
+using rtti = indirect_rtti<FB>;
 #endif  // __cpp_rtti >= 199711L
-  using support_view = add_direct_convention<details::proxy_view_dispatch,
-      facade_aware_overload_t<details::proxy_view_overload>>;
-  using support_weak = add_direct_convention<details::weak_conversion_dispatch,
-      facade_aware_overload_t<details::weak_conversion_overload>>;
-  using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
-  basic_facade_builder() = delete;
-};
-using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
-    proxiable_ptr_constraints{
-        .max_size = details::invalid_size,
-        .max_align = details::invalid_size,
-        .copyability = details::invalid_cl,
-        .relocatability = details::invalid_cl,
-        .destructibility = details::invalid_cl}>;
 
-template <facade F>
-struct observer_facade
-    : details::instantiated_t<details::observer_facade_conv_impl,
-          typename F::convention_types, F>,
-      details::instantiated_t<details::observer_facade_refl_impl,
-          typename F::reflection_types> {
-  static constexpr proxiable_ptr_constraints constraints{
-      .max_size = sizeof(void*), .max_align = alignof(void*),
-      .copyability = constraint_level::trivial,
-      .relocatability = constraint_level::trivial,
-      .destructibility = constraint_level::trivial};
-};
+template <class FB>
+using as_view = typename FB
+    ::template add_direct_convention<details::view_conversion_dispatch,
+        facade_aware_overload_t<details::view_conversion_overload>>;
 
-template <facade F>
-struct weak_facade {
-  using convention_types = std::tuple<details::conv_impl<
-      true, details::weak_mem_lock, proxy<F>() const noexcept>>;
-  using reflection_types = std::tuple<>;
-  static constexpr auto constraints = F::constraints;
-};
+template <class FB>
+using as_weak = typename FB
+    ::template add_direct_convention<details::weak_conversion_dispatch,
+        facade_aware_overload_t<details::weak_conversion_overload>>;
+
+}  // namespace skills
 
 template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;

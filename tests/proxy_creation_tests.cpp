@@ -102,7 +102,7 @@ void SfinaeUnsafeIncrementImpl(T&& value) { ++value; }
 PRO_DEF_FREE_DISPATCH(FreeSfinaeUnsafeIncrement, SfinaeUnsafeIncrementImpl, Increment);
 
 struct SfinaeUnsafeFacade : pro::facade_builder
-    ::support_rtti
+    ::support<pro::skills::rtti>
     ::add_convention<FreeSfinaeUnsafeIncrement, void()>
     ::build {};
 
@@ -115,7 +115,7 @@ struct TestSharedStringable : pro::facade_builder
 
 struct TestWeakSharedStringable: pro::facade_builder
     ::add_facade<TestSharedStringable>
-    ::support_weak
+    ::support<pro::skills::as_weak>
     ::build {};
 
 static_assert(pro::proxiable<int*, TestSharedStringable>);
