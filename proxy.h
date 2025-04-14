@@ -1848,9 +1848,22 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
 template <class O>
 using observer_upward_conversion_overload = proxy_view<
     typename overload_traits<O>::return_type::facade_type>() const noexcept;
+
+template <class O, class I>
+struct observer_upward_conversion_conv_reduction : std::type_identity<O> {};
+template <class... Os, class O>
+    requires(!std::is_same_v<Os, observer_upward_conversion_overload<O>> && ...)
+struct observer_upward_conversion_conv_reduction<
+    conv_impl<true, upward_conversion_dispatch, Os...>, O>
+    : std::type_identity<conv_impl<true, upward_conversion_dispatch, Os...,
+          observer_upward_conversion_overload<O>>> {};
+template <class O, class I>
+using observer_upward_conversion_conv_reduction_t =
+    typename observer_upward_conversion_conv_reduction<O, I>::type;
 template <class... Os>
-using observer_upward_conversion_conv = conv_impl<true,
-    upward_conversion_dispatch, observer_upward_conversion_overload<Os>...>;
+using observer_upward_conversion_conv =
+    recursive_reduction_t<observer_upward_conversion_conv_reduction_t,
+        conv_impl<true, upward_conversion_dispatch>, Os...>;
 
 template <class D, class F, class... Os>
 using observer_indirect_conv =
@@ -1925,33 +1938,6 @@ auto weak_lock_impl(const P& self) noexcept
     { return nullable_ptr_adapter{self.lock()}; }
 PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
-template <class O>
-using weak_upward_conversion_overload = weak_proxy<
-    typename overload_traits<O>::return_type::facade_type>() const noexcept;
-template <class... Os>
-using weak_upward_conversion_conv = conv_impl<true,
-    upward_conversion_dispatch, weak_upward_conversion_overload<Os>...>;
-
-template <class O, class I>
-struct weak_conv_reduction : std::type_identity<O> {};
-template <class... Cs, class I>
-    requires(I::is_direct &&
-        std::is_same_v<typename I::dispatch_type, upward_conversion_dispatch>)
-struct weak_conv_reduction<std::tuple<Cs...>, I>
-    : std::type_identity<std::tuple<Cs..., instantiated_t<
-          weak_upward_conversion_conv, typename I::overload_types>>> {};
-template <class O, class I>
-using weak_conv_reduction_t = typename weak_conv_reduction<O, I>::type;
-
-template <class F, class... Cs>
-struct weak_facade_impl {
-  using convention_types = recursive_reduction_t<weak_conv_reduction_t,
-      std::tuple<conv_impl<true, weak_mem_lock, proxy<F>() const noexcept>>,
-      Cs...>;
-  using reflection_types = std::tuple<>;
-  static constexpr auto constraints = F::constraints;
-};
-
 }  // namespace details
 
 template <facade F>
@@ -1968,8 +1954,12 @@ struct observer_facade
 };
 
 template <facade F>
-struct weak_facade : details::instantiated_t<
-    details::weak_facade_impl, typename F::convention_types, F> {};
+struct weak_facade {
+  using convention_types = std::tuple<details::conv_impl<
+      true, details::weak_mem_lock, proxy<F>() const noexcept>>;
+  using reflection_types = std::tuple<>;
+  static constexpr auto constraints = F::constraints;
+};
 
 template <class Cs, class Rs, proxiable_ptr_constraints C>
 struct basic_facade_builder {
