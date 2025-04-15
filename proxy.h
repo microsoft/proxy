@@ -83,11 +83,9 @@ struct reduction_traits {
   using type = typename R<Args..., O, I>::type;
 };
 
-template <auto V> struct nontype_t;  // For compatibility before C++26
-
 template <class Expr>
 consteval bool is_consteval(Expr)
-    { return requires { typename nontype_t<(Expr{}(), 0)>; }; }
+    { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
 
 template <class T, std::size_t I>
 concept has_tuple_element = requires { typename std::tuple_element_t<I, T>; };
@@ -558,18 +556,18 @@ struct accessor_traits<std::void_t<typename T::template accessor<F>>, T, F>
 template <class T, class F>
 using accessor_t = typename accessor_traits<void, T, F>::type;
 
-template <class NTIsDirect, class F, class O, class I>
+template <class IsDirect, class F, class O, class I>
 struct composite_accessor_reduction : std::type_identity<O> {};
-template <class NTIsDirect, class F, class... As, class I>
-    requires(std::is_same_v<NTIsDirect, nontype_t<I::is_direct>> &&
+template <class IsDirect, class F, class... As, class I>
+    requires(IsDirect::value == I::is_direct &&
         !std::is_void_v<accessor_t<I, F>>)
 struct composite_accessor_reduction<
-    NTIsDirect, F, composite_accessor_impl<As...>, I>
+    IsDirect, F, composite_accessor_impl<As...>, I>
     : std::type_identity<composite_accessor_impl<As..., accessor_t<I, F>>> {};
 template <bool IsDirect, class F, class... Ts>
 using composite_accessor = recursive_reduction_t<reduction_traits<
-    composite_accessor_reduction, nontype_t<IsDirect>, F>::template type,
-    composite_accessor_impl<>, Ts...>;
+    composite_accessor_reduction, std::bool_constant<IsDirect>, F>
+        ::template type, composite_accessor_impl<>, Ts...>;
 
 template <class A1, class A2> struct composite_accessor_merge_traits;
 template <class... A1, class... A2>
