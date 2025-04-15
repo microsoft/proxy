@@ -83,9 +83,6 @@ struct reduction_traits {
   using type = typename R<Args..., O, I>::type;
 };
 
-template <template <class...> class T, class... Args>
-using traits_t = typename T<Args...>::type;
-
 template <auto V> struct nontype_t;  // For compatibility before C++26
 
 template <class Expr>
@@ -579,6 +576,9 @@ template <class... A1, class... A2>
 struct composite_accessor_merge_traits<
     composite_accessor_impl<A1...>, composite_accessor_impl<A2...>>
     : std::type_identity<composite_accessor_impl<A1..., A2...>> {};
+template <class A1, class A2>
+using merged_composite_accessor =
+    typename composite_accessor_merge_traits<A1, A2>::type;
 
 template <class P> struct ptr_traits : inapplicable_traits {};
 template <class P>
@@ -705,10 +705,10 @@ struct facade_traits<F>
       lifetime_meta_t<F, destroy_dispatch, void() noexcept, void(),
           F::constraints.destructibility>, typename facade_traits::conv_meta,
       typename facade_traits::refl_meta>;
-  using indirect_accessor = traits_t<composite_accessor_merge_traits,
+  using indirect_accessor = merged_composite_accessor<
       typename facade_traits::conv_indirect_accessor,
       typename facade_traits::refl_indirect_accessor>;
-  using direct_accessor = traits_t<composite_accessor_merge_traits,
+  using direct_accessor = merged_composite_accessor<
       typename facade_traits::conv_direct_accessor,
       typename facade_traits::refl_direct_accessor>;
 
@@ -779,7 +779,7 @@ template <class M>
         std::is_nothrow_default_constructible_v<M> &&
         std::is_trivially_copyable_v<M>)
 struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
-template <class M> using meta_ptr = traits_t<meta_ptr_traits, M>;
+template <class M> using meta_ptr = typename meta_ptr_traits<M>::type;
 
 template <class T>
 class inplace_ptr {
