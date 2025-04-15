@@ -46,7 +46,7 @@ The implementation of `strong-compact-ptr` may vary depending on the definition 
 
 struct RttiAware : pro::facade_builder
     ::support_copy<pro::constraint_level::nothrow>
-    ::support_rtti
+    ::support<pro::skills::rtti>
     ::build {};
 
 int main() {

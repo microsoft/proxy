@@ -8,8 +8,8 @@
 namespace proxy_rtti_tests_details {
 
 struct TestFacade : pro::facade_builder
-    ::support_rtti
-    ::support_direct_rtti
+    ::support<pro::skills::rtti>
+    ::support<pro::skills::direct_rtti>
     ::build {};
 
 }  // namespace proxy_rtti_tests_details

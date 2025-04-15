@@ -64,12 +64,12 @@ For example, when defining a `Formattable` facade, the following two definitions
 ```cpp
 // (1) Recommended
 struct Formattable : pro::facade_builder
-    ::support_format
+    ::support<pro::skills::format>
     ::build {};
 
 // (2) Discouraged
 using Formattable = pro::facade_builder
-    ::support_format
+    ::support<pro::skills::format>
     ::build;
 ```
 

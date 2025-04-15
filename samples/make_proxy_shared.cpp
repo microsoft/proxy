@@ -8,8 +8,8 @@
 
 struct RttiAware : pro::facade_builder
     ::support_copy<pro::constraint_level::nothrow>
-    ::support_rtti
-    ::support_weak
+    ::support<pro::skills::rtti>
+    ::support<pro::skills::as_weak>
     ::build {};
 
 int main() {

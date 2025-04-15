@@ -7,8 +7,8 @@
 #include "proxy.h"
 
 struct Formattable : pro::facade_builder
-    ::support_format
-    ::support_weak
+    ::support<pro::skills::format>
+    ::support<pro::skills::as_weak>
     ::build {};
 
 int main() {

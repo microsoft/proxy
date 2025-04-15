@@ -20,8 +20,8 @@ Let `p` be a value of type `proxy<F>`, `ptr` of type `P` be the contained value 
 #include "proxy.h"
 
 struct Formattable : pro::facade_builder
-    ::support_format
-    ::support_weak
+    ::support<pro::skills::format>
+    ::support<pro::skills::as_weak>
     ::build {};
 
 int main() {

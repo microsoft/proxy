@@ -7,8 +7,8 @@
 #include "proxy.h"
 
 struct RttiAware : pro::facade_builder
-    ::support_rtti
-    ::support_direct_rtti
+    ::support<pro::skills::rtti>
+    ::support<pro::skills::direct_rtti>
     ::build {};
 
 int main() {
