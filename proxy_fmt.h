@@ -38,8 +38,8 @@ using fmt_format_overload_t = typename fmt_format_overload_traits<CharT>::type;
 
 struct fmt_format_dispatch {
   template <class T, class CharT, class FormatContext>
-  auto operator()(const T& self, std::basic_string_view<CharT> spec,
-      FormatContext& fc) const
+  ___PRO_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
+      FormatContext& fc)
       requires(std::is_default_constructible_v<fmt::formatter<T, CharT>>) {
     fmt::formatter<T, CharT> impl;
     {
