@@ -87,7 +87,8 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   auto format(const pro::proxy_indirect_accessor<F>& ia, FormatContext& fc)
       const -> typename FormatContext::iterator {
     auto& p = pro::access_proxy<F>(ia);
-    if (!p.has_value()) { ___PRO_THROW(format_error{"null proxy"}); }
+    if (!p.has_value()) [[unlikely]]
+        { ___PRO_THROW(format_error{"null proxy"}); }
     return pro::proxy_invoke<false, pro::details::fmt_format_dispatch,
         pro::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
   }
