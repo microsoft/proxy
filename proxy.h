@@ -77,6 +77,12 @@ struct recursive_reduction<R, O, I, Is...>
 template <template <class, class> class R, class O, class... Is>
 using recursive_reduction_t = typename recursive_reduction<R, O, Is...>::type;
 
+template <template <class...> class R, class... Args>
+struct reduction_traits {
+  template <class O, class I>
+  using type = typename R<Args..., O, I>::type;
+};
+
 template <class Expr>
 consteval bool is_consteval(Expr)
     { return requires { typename std::bool_constant<(Expr{}(), false)>; }; }
@@ -283,7 +289,6 @@ template <class O> struct overload_traits : inapplicable_traits {};
 template <qualifier_type Q, bool NE, class R, class... Args>
 struct overload_traits_impl : applicable_traits {
   using return_type = R;
-  using view_type = R(Args...) const noexcept(NE);
   template <class F>
   using dispatcher_type =
       R (*)(add_qualifier_t<proxy<F>, Q>, Args...) noexcept(NE);
@@ -392,11 +397,9 @@ struct meta_reduction<composite_meta_impl<Ms...>, I>
 template <class... Ms1, class... Ms2>
 struct meta_reduction<composite_meta_impl<Ms1...>, composite_meta_impl<Ms2...>>
     : std::type_identity<composite_meta_impl<Ms1..., Ms2...>> {};
-template <class O, class I>
-using meta_reduction_t = typename meta_reduction<O, I>::type;
 template <class... Ms>
-using composite_meta =
-    recursive_reduction_t<meta_reduction_t, composite_meta_impl<>, Ms...>;
+using composite_meta = recursive_reduction_t<reduction_traits<
+    meta_reduction>::template type, composite_meta_impl<>, Ms...>;
 
 template <class T>
 consteval bool is_is_direct_well_formed() {
@@ -553,23 +556,18 @@ struct accessor_traits<std::void_t<typename T::template accessor<F>>, T, F>
 template <class T, class F>
 using accessor_t = typename accessor_traits<void, T, F>::type;
 
-template <bool IsDirect, class F, class O, class I>
+template <class IsDirect, class F, class O, class I>
 struct composite_accessor_reduction : std::type_identity<O> {};
-template <bool IsDirect, class F, class... As, class I>
-    requires(IsDirect == I::is_direct && !std::is_void_v<accessor_t<I, F>>)
+template <class IsDirect, class F, class... As, class I>
+    requires(IsDirect::value == I::is_direct &&
+        !std::is_void_v<accessor_t<I, F>>)
 struct composite_accessor_reduction<
     IsDirect, F, composite_accessor_impl<As...>, I>
     : std::type_identity<composite_accessor_impl<As..., accessor_t<I, F>>> {};
-template <bool IsDirect, class F>
-struct composite_accessor_helper {
-  template <class O, class I>
-  using reduction_t =
-      typename composite_accessor_reduction<IsDirect, F, O, I>::type;
-};
 template <bool IsDirect, class F, class... Ts>
-using composite_accessor = recursive_reduction_t<
-      composite_accessor_helper<IsDirect, F>::template reduction_t,
-      composite_accessor_impl<>, Ts...>;
+using composite_accessor = recursive_reduction_t<reduction_traits<
+    composite_accessor_reduction, std::bool_constant<IsDirect>, F>
+        ::template type, composite_accessor_impl<>, Ts...>;
 
 template <class A1, class A2> struct composite_accessor_merge_traits;
 template <class... A1, class... A2>
@@ -779,8 +777,7 @@ template <class M>
         std::is_nothrow_default_constructible_v<M> &&
         std::is_trivially_copyable_v<M>)
 struct meta_ptr_traits<M> : meta_ptr_traits_impl<M> {};
-template <class M>
-using meta_ptr = typename meta_ptr_traits<M>::type;
+template <class M> using meta_ptr = typename meta_ptr_traits<M>::type;
 
 template <class T>
 class inplace_ptr {
@@ -1848,7 +1845,6 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
 template <class O>
 using observer_upward_conversion_overload = proxy_view<
     typename overload_traits<O>::return_type::facade_type>() const noexcept;
-
 template <class O, class I>
 struct observer_upward_conversion_conv_reduction : std::type_identity<O> {};
 template <class... Os, class O>
@@ -1857,13 +1853,10 @@ struct observer_upward_conversion_conv_reduction<
     conv_impl<true, upward_conversion_dispatch, Os...>, O>
     : std::type_identity<conv_impl<true, upward_conversion_dispatch, Os...,
           observer_upward_conversion_overload<O>>> {};
-template <class O, class I>
-using observer_upward_conversion_conv_reduction_t =
-    typename observer_upward_conversion_conv_reduction<O, I>::type;
 template <class... Os>
-using observer_upward_conversion_conv =
-    recursive_reduction_t<observer_upward_conversion_conv_reduction_t,
-        conv_impl<true, upward_conversion_dispatch>, Os...>;
+using observer_upward_conversion_conv = recursive_reduction_t<
+    reduction_traits<observer_upward_conversion_conv_reduction>::template type,
+    conv_impl<true, upward_conversion_dispatch>, Os...>;
 
 template <class D, class F, class... Os>
 using observer_indirect_conv =
@@ -1890,10 +1883,11 @@ template <class F, class... Cs, class I>
 struct observer_conv_reduction<F, std::tuple<Cs...>, I>
     : std::type_identity<
           std::tuple<Cs..., typename observer_conv_traits<I, F>::type>> {};
-template <class F>
-struct observer_conv_reduction_helper {
-  template <class O, class I>
-  using type = typename observer_conv_reduction<F, O, I>::type;
+template <class F, class... Cs>
+struct observer_facade_conv_impl {
+  using convention_types = recursive_reduction_t<
+      reduction_traits<observer_conv_reduction, F>::template type,
+      std::tuple<>, Cs...>;
 };
 
 template <class O, class I>
@@ -1901,18 +1895,11 @@ struct observer_refl_reduction : std::type_identity<O> {};
 template <class... Rs, class R> requires(!R::is_direct)
 struct observer_refl_reduction<std::tuple<Rs...>, R>
     : std::type_identity<std::tuple<Rs..., R>> {};
-template <class O, class I>
-using observer_refl_reduction_t = typename observer_refl_reduction<O, I>::type;
-
-template <class F, class... Cs>
-struct observer_facade_conv_impl {
-  using convention_types = recursive_reduction_t<
-      observer_conv_reduction_helper<F>::template type, std::tuple<>, Cs...>;
-};
 template <class... Rs>
 struct observer_facade_refl_impl {
   using reflection_types = recursive_reduction_t<
-      observer_refl_reduction_t, std::tuple<>, Rs...>;
+      reduction_traits<observer_refl_reduction>::template type,
+      std::tuple<>, Rs...>;
 };
 
 template <class P>
@@ -1938,6 +1925,41 @@ auto weak_lock_impl(const P& self) noexcept
     { return nullable_ptr_adapter{self.lock()}; }
 PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
+template <class O> struct weak_upward_conversion_overload_traits;
+template <class F>
+struct weak_upward_conversion_overload_traits<proxy<F>() const&>
+    : std::type_identity<weak_proxy<F>() const&> {};
+template <class F>
+struct weak_upward_conversion_overload_traits<proxy<F>() const& noexcept>
+    : std::type_identity<weak_proxy<F>() const& noexcept> {};
+template <class F>
+struct weak_upward_conversion_overload_traits<proxy<F>() &&>
+    : std::type_identity<weak_proxy<F>() &&> {};
+template <class F>
+struct weak_upward_conversion_overload_traits<proxy<F>() && noexcept>
+    : std::type_identity<weak_proxy<F>() && noexcept> {};
+template <class... Os>
+using weak_upward_conversion_conv = conv_impl<true, upward_conversion_dispatch,
+    typename weak_upward_conversion_overload_traits<Os>::type...>;
+
+template <class O, class I>
+struct weak_conv_reduction : std::type_identity<O> {};
+template <class... Cs, class I>
+    requires(I::is_direct &&
+        std::is_same_v<typename I::dispatch_type, upward_conversion_dispatch>)
+struct weak_conv_reduction<std::tuple<Cs...>, I>
+    : std::type_identity<std::tuple<Cs..., instantiated_t<
+          weak_upward_conversion_conv, typename I::overload_types>>> {};
+template <class F, class... Cs>
+struct weak_facade_impl {
+  using convention_types = recursive_reduction_t<
+      reduction_traits<weak_conv_reduction>::template type,
+      std::tuple<conv_impl<true, weak_mem_lock, proxy<F>() const noexcept>>,
+      Cs...>;
+  using reflection_types = std::tuple<>;
+  static constexpr auto constraints = F::constraints;
+};
+
 }  // namespace details
 
 template <facade F>
@@ -1954,12 +1976,8 @@ struct observer_facade
 };
 
 template <facade F>
-struct weak_facade {
-  using convention_types = std::tuple<details::conv_impl<
-      true, details::weak_mem_lock, proxy<F>() const noexcept>>;
-  using reflection_types = std::tuple<>;
-  static constexpr auto constraints = F::constraints;
-};
+struct weak_facade : details::instantiated_t<
+    details::weak_facade_impl, typename F::convention_types, F> {};
 
 template <class Cs, class Rs, proxiable_ptr_constraints C>
 struct basic_facade_builder {
