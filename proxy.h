@@ -2545,7 +2545,6 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 }  // namespace std
 #endif  // __STDC_HOSTED__ && __has_include(<format>)
 
-#undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
 #endif  // _MSFT_PROXY_

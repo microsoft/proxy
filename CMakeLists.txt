@@ -10,7 +10,7 @@ target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURREN
 include(GNUInstallDirs)
 install(TARGETS msft_proxy
         EXPORT proxyConfig)
-install(FILES proxy.h
+install(FILES proxy.h proxy_fmt.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/proxy)
 install(EXPORT proxyConfig DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy)
 export(TARGETS msft_proxy FILE proxyConfig.cmake)
