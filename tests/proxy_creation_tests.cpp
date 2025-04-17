@@ -114,7 +114,7 @@ struct TestSharedStringable : pro::facade_builder
     ::build {};
 
 struct TestWeakSharedStringable: pro::facade_builder
-    ::add_facade<TestSharedStringable>
+    ::add_facade<TestSharedStringable, true>
     ::support<pro::skills::as_weak>
     ::build {};
 
@@ -949,6 +949,31 @@ TEST(ProxyCreationTests, TestMakeProxyShared_StrongCompact_Lifetime_WeakAccess) 
     expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
     auto p4 = p2.lock();
     ASSERT_FALSE(p4.has_value());
+    ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+  }
+  ASSERT_TRUE(tracker.GetOperations() == expected_ops);
+}
+
+TEST(ProxyCreationTests, TestMakeProxyShared_StrongCompact_Lifetime_WeakConversion) {
+  utils::LifetimeTracker tracker;
+  std::vector<utils::LifetimeOperation> expected_ops;
+  {
+    auto p1 = pro::make_proxy_shared<details::TestWeakSharedStringable, utils::LifetimeTracker::Session>(&tracker);
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kValueConstruction);
+    pro::weak_proxy<details::TestWeakSharedStringable> p2 = p1;
+    pro::weak_proxy<details::TestSharedStringable> p3 = std::move(p2);
+    ASSERT_TRUE(p1.has_value());
+    ASSERT_FALSE(p2.has_value());
+    ASSERT_TRUE(p3.has_value());
+    auto p4 = p3.lock();
+    ASSERT_TRUE(p4.has_value());
+    ASSERT_EQ(ToString(*p4), "Session 1");
+    ASSERT_EQ(p4.GetLifetimeType(), details::LifetimeModelType::kStrongCompact);
+    p4.reset();
+    p1.reset();
+    expected_ops.emplace_back(1, utils::LifetimeOperationType::kDestruction);
+    auto p5 = p3.lock();
+    ASSERT_FALSE(p5.has_value());
     ASSERT_TRUE(tracker.GetOperations() == expected_ops);
   }
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
