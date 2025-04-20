@@ -39,7 +39,7 @@ add_executable(msft_proxy_tests
   proxy_view_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
-target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main fmt)
+target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main fmt::fmt)
 
 if(MSVC)
   target_compile_options(msft_proxy_tests PRIVATE /W4 /WX)
