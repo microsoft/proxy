@@ -17,9 +17,17 @@ set(BUILD_GMOCK OFF CACHE BOOL "" FORCE) # Disable GMock
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
+FetchContent_Declare(
+  fmt
+  URL https://github.com/fmtlib/fmt/archive/refs/tags/11.1.4.tar.gz
+  URL_HASH SHA256=ac366b7b4c2e9f0dde63a59b3feb5ee59b67974b14ee5dc9ea8ad78aa2c1ee1e
+)
+FetchContent_MakeAvailable(fmt)
+
 add_executable(msft_proxy_tests
   proxy_creation_tests.cpp
   proxy_dispatch_tests.cpp
+  proxy_fmt_format_tests.cpp
   proxy_format_tests.cpp
   proxy_integration_tests.cpp
   proxy_invocation_tests.cpp
@@ -31,7 +39,7 @@ add_executable(msft_proxy_tests
   proxy_view_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
-target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main)
+target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main fmt::fmt)
 
 if(MSVC)
   target_compile_options(msft_proxy_tests PRIVATE /W4 /WX)

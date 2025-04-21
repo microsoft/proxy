@@ -15,7 +15,7 @@
 
 ### <a name="what">What is "Proxy" and how does it work?</a>
 
-"Proxy" is a single-header, cross-platform C++20 template library for modern runtime polymorphism based on pointer-semantics. Similar with C++ [virtual functions](https://en.cppreference.com/w/cpp/language/virtual), it generates indirect functions behind the scenes at compile-time but does not require inheritance. It also has [GC](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))-like behavior that allows different objects of the same `proxy` type to have different lifetime models without requiring runtime GC overhead.
+"Proxy" is a header-only, cross-platform C++20 template library for modern runtime polymorphism based on pointer-semantics. Similar with C++ [virtual functions](https://en.cppreference.com/w/cpp/language/virtual), it generates indirect functions behind the scenes at compile-time but does not require inheritance. It also has [GC](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science))-like behavior that allows different objects of the same `proxy` type to have different lifetime models without requiring runtime GC overhead.
 
 ### <a name="why-popular">Why is "Proxy" so popular?</a>
 
@@ -35,7 +35,7 @@ The fundamental abstraction of "Proxy" is called "facade". It is recommended for
 
 ### <a name="how-integrate">How to integrate "Proxy" into my project?</a>
 
-Since "Proxy" is a single-header library, you can simply navigate to the [latest release](https://github.com/microsoft/proxy/releases), download the source code, and include "proxy.h" in your project. Make sure your compiler version meets the [minimum requirements for compilers](../README.md#compiler-req). If your project has already integrated with [vcpkg](https://vcpkg.io/) or [conan](https://conan.io/), just search for the keyword "proxy" and install it. Thanks to the community that helped port "Proxy" to these platforms!
+Since "Proxy" is a header-only library, you can simply navigate to the [latest release](https://github.com/microsoft/proxy/releases), download the source code, and include "proxy.h" in your project. Make sure your compiler version meets the [minimum requirements for compilers](../README.md#compiler-req). If your project has already integrated with [vcpkg](https://vcpkg.io/) or [conan](https://conan.io/), just search for the keyword "proxy" and install it. Thanks to the community that helped port "Proxy" to these platforms!
 
 ### <a name="how-migrate">My existing project uses virtual functions. How should I migrate to "Proxy"?</a>
 
