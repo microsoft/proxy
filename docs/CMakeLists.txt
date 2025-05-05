@@ -5,7 +5,6 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 file(GLOB_RECURSE DOC_FILES "*.md")
 set(EXTRACTION_SCRIPT ${CMAKE_SOURCE_DIR}/tools/extract_example_code_from_docs.py)
 set(EXAMPLES_DIR ${CMAKE_BINARY_DIR}/examples_from_docs)
-set(EXTRACTION_MARKER ${EXAMPLES_DIR}/.marker)
 file(MAKE_DIRECTORY "${EXAMPLES_DIR}")
 execute_process(
   COMMAND ${Python3_EXECUTABLE} ${EXTRACTION_SCRIPT} ${CMAKE_CURRENT_SOURCE_DIR} ${EXAMPLES_DIR}
