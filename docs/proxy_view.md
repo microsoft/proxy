@@ -28,7 +28,7 @@ Class template `observer_facade` is a [facade](facade.md) type for observer poin
 ```cpp
 #include <map>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 template <class K, class V>
 struct FMap : pro::facade_builder

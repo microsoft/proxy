@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include <gtest/gtest.h>
-#include "proxy.h"
 #include "utils.h"
+#include <gtest/gtest.h>
+#include <proxy/proxy.h>
 
 namespace proxy_lifetime_tests_details {
 

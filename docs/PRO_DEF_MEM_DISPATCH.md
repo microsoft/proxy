@@ -52,7 +52,7 @@ struct dispatch_name {
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 

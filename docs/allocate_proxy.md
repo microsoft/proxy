@@ -41,7 +41,7 @@ The implementation of `allocated-ptr` may vary depending on the definition of `F
 ```cpp
 #include <array>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 // By default, the maximum pointer size defined by pro::facade_builder
 // is 2 * sizeof(void*). This value can be overridden by `restrict_layout`.

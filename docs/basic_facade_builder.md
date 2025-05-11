@@ -115,7 +115,7 @@ struct CopyableCallable : pro::facade_builder
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 template <class... Overloads>
 struct MovableCallable : pro::facade_builder

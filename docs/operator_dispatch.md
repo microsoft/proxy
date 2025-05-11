@@ -120,7 +120,7 @@ Let `self` be the operand of [`proxy`](proxy.md), and `other` and `others...` be
 #include <iostream>
 #include <numbers>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Number : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"*=">, void(int)>

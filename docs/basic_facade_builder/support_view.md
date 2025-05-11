@@ -17,7 +17,7 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct RttiAware : pro::facade_builder
     ::support<pro::skills::rtti>

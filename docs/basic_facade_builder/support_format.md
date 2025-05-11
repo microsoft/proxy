@@ -16,7 +16,7 @@ The member types `support_format` and `support_wformat` of `basic_facade_builder
 #include <format>
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Formattable : pro::facade_builder
     ::support<pro::skills::format>

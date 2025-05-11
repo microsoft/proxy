@@ -16,8 +16,8 @@
 #pragma diagnostic pop
 #endif  // defined(__NVCOMPILER)
 
-#include "proxy.h"
-#include "proxy_fmt.h"
+#include <proxy/proxy.h>
+#include <proxy/proxy_fmt.h>
 
 namespace proxy_fmt_format_tests_details {
 

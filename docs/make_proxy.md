@@ -50,7 +50,7 @@ Throws any exception thrown by allocation and the constructor of `T`.
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Printable : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"<<", true>, std::ostream&(std::ostream&) const>

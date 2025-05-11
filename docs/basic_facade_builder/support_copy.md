@@ -16,7 +16,7 @@ If no copyability support is applied before specifying [`build`](build.md), the 
 ```cpp
 #include <memory>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Movable : pro::facade_builder::build {};
 
