@@ -2,7 +2,7 @@
 
 proxy ships with `.cppm` files starting with version **3.4.0**. Compared to traditional headers, modules offer faster compilation speed and isolation against preprocessor macro definitions.
 
-As of 2025-05-11, CMake lacks support for forward compatibility when consuming C++ modules, which causes consumers with newer C++ standard to be unable to use modules with older standard. Until this is implemented by CMake, a CMake target containing the module can be manually using the following CMake script:
+As of 2025-05-11, CMake lacks support for forward compatibility when consuming C++ modules, which causes consumers with newer C++ standard to be unable to use modules with older standard. Until this is implemented by CMake, a CMake target containing the module can be manually declared using the following CMake script:
 
 ```cmake
 find_package(proxy REQUIRED)
