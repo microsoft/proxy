@@ -12,4 +12,4 @@ target_sources(msft_proxy_tests_cpp20_modules
     impl.cpp
 )
 
-target_link_libraries(msft_proxy_tests_cpp20_modules PRIVATE msft_proxy)
+target_link_libraries(msft_proxy_tests_cpp20_modules PRIVATE msft_proxy msft_proxy::module)

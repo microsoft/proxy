@@ -27,7 +27,21 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
 ## Quick Start
 
-"Proxy" is a header-only C++20 library. To use the library, make sure your compiler meets the [minimum requirements](#compiler-req) and just include the header file [proxy.h](https://github.com/microsoft/proxy/blob/main/proxy.h) in your source code. Alternatively, you can install the library via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), by searching for "proxy" (see [vcpkg.io](https://vcpkg.io/en/package/proxy) and [conan.io](https://conan.io/center/recipes/proxy)).
+"Proxy" is a header-only C++20 library. To use the library, make sure your compiler meets the [minimum requirements](#compiler-req) and just put the [proxy](https://github.com/microsoft/proxy/tree/main/include/proxy) directory in your project's include directory. Alternatively, you can install the library via:
+
+- [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview): [proxy port on vcpkg.io](https://vcpkg.io/en/package/proxy)
+- [conan](https://conan.io/): [proxy recipe on conan.io](https://conan.io/center/recipes/proxy)
+- [CPM](https://github.com/cpm-cmake/CPM.cmake) / CMake [FetchContent_Declare](https://cmake.org/cmake/help/latest/module/FetchContent.html):
+
+    ```cmake
+    CPMAddPackage(
+      NAME proxy
+      GIT_TAG 3.3.0
+      GIT_REPOSITORY https://github.com/microsoft/proxy.git
+    )
+
+    target_link_libraries(main PRIVATE msft_proxy)
+    ```
 
 ### Hello World
 
@@ -38,7 +52,7 @@ Let's get started with the following "Hello World" example ([run](https://godbol
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Formattable : pro::facade_builder
     ::support<pro::skills::format>
@@ -62,7 +76,7 @@ Here is a step-by-step explanation:
 - `#include <format>`: For [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
-- `#include "proxy.h"`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`. If the library is consumed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), this line should be changed into `#include <proxy/proxy.h>`.
+- `#include <proxy/proxy.h>`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`.
 - `struct Formattable : pro::facade_builder ... ::build {}`: Defines a facade type `Formattable`. The term "facade", formally defined as the [*ProFacade* requirements](https://microsoft.github.io/proxy/docs/ProFacade.html), is how the "Proxy" library models runtime abstraction. Specifically,
   - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Provides capability to build a facade type at compile-time.
   - [`support_format`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_format.html): Specifies the capability of formatting (via [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format)).
@@ -77,6 +91,8 @@ Here is a step-by-step explanation:
   - The "Proxy" library explicitly defines when heap allocation occurs or not to avoid users falling into performance hell, which is different from [`std::function`](https://en.cppreference.com/w/cpp/utility/functional/function) and other existing polymorphic wrappers in the standard.
 - `std::format("p3 = {:.2f}\n", *p3)`: Formats `*p3` as "3.14" as per the [standard format specification](https://en.cppreference.com/w/cpp/utility/format/spec) with no surprises.
 - When `main` returns, `p2` and `p3` will destroy the underlying objects, while `p1` does nothing because it holds a raw pointer that does not have ownership of the underlying `std::string`.
+
+Note: If you prefer the library to be consumed as a (C++20) module, refer to [C++20 Modules support](https://microsoft.github.io/proxy/docs/cpp20_modules_support.html).
 
 ### Hello World (Stream Version)
 
