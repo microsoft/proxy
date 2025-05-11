@@ -12,4 +12,10 @@ target_sources(msft_proxy_tests_cpp20_modules
     impl.cpp
 )
 
+target_compile_features(
+  msft_proxy_tests_cpp20_modules
+  PRIVATE
+  cxx_std_20
+)
+
 target_link_libraries(msft_proxy_tests_cpp20_modules PRIVATE msft_proxy msft_proxy::module)

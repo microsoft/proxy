@@ -8,7 +8,6 @@ module;
 export module foo;
 
 import proxy;
-import proxy_interface;
 
 extern "C++" {
 PRO_DEF_MEM_DISPATCH(MemGetFoo, GetFoo);

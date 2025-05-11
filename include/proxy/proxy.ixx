@@ -82,3 +82,11 @@ using skills::indirect_rtti;
 export namespace std {
 using std::formatter;
 }
+
+// Currently, these are required by PRO_DEF_... macros.
+// In the future the macros might be refactored to avoid depending
+// on implementation details.
+export namespace pro::details {
+using details::adl_accessor_arg_t;
+using details::non_proxy_arg;
+} // namespace pro::details

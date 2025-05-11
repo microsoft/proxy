@@ -6,22 +6,21 @@ add_library(msft_proxy INTERFACE)
 # Do not enable building tests if proxy is consumed as
 # subdirectory (e.g. by CMake FetchContent_Declare).
 if(PROJECT_IS_TOP_LEVEL)
-    option(BUILD_TESTING "Build tests" ON)
+  option(BUILD_TESTING "Build tests" ON)
 else()
-    option(BUILD_TESTING "Build tests" OFF)
+  option(BUILD_TESTING "Build tests" OFF)
 endif()
 
 target_sources(msft_proxy
   INTERFACE
-    FILE_SET public_headers 
+    FILE_SET public_headers
     TYPE HEADERS 
     BASE_DIRS include
     FILES
       include/proxy/proxy.h
       include/proxy/proxy_macros.h
       include/proxy/proxy_fmt.h
-      include/proxy/details/proxy_impl.h
-      include/proxy/details/proxy_impl_macros.h
+      include/proxy/proxy.ixx
 )
 
 target_compile_features(msft_proxy INTERFACE cxx_std_20)
@@ -41,13 +40,6 @@ include(GNUInstallDirs)
 install(TARGETS msft_proxy
         EXPORT proxyTargets
         FILE_SET public_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-install(
-  FILES 
-    include/proxy/proxy.cppm
-    include/proxy/proxy_interface.cppm
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/proxy
 )
 
 install(EXPORT proxyTargets DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy)
