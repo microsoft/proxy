@@ -36,7 +36,7 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
     ```cmake
     CPMAddPackage(
       NAME proxy
-      GIT_TAG 3.3.0
+      GIT_TAG 4.0.0 # or above
       GIT_REPOSITORY https://github.com/microsoft/proxy.git
     )
 

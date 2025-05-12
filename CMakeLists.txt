@@ -38,7 +38,9 @@ target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURREN
 # Do not set the module target if proxy is consumed as a subdirectory.
 if(PROJECT_IS_TOP_LEVEL)
   set(proxy_INCLUDE_DIR include)
-  include(cmake/proxyModuleTargets.cmake)
+  if(PROXY_BUILDING_WITH_MODULE)
+    include(cmake/proxyModuleTargets.cmake)
+  endif()
 else()
   # Propagate the variable to the parent project
   set(proxy_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
