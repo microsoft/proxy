@@ -29,7 +29,7 @@ def main():
 
     input_dir = sys.argv[1]
     output_dir = sys.argv[2]
-    exclusions: Set[str] = {os.path.normcase(p) for p in sys.argv[3:]}
+    exclusions: Set[str] = {os.path.normpath(p) for p in sys.argv[3:]}
 
     for root, _, files in os.walk(input_dir):
         for file in files:
