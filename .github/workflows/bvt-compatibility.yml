@@ -34,31 +34,31 @@ jobs:
 
     - name: build and run test with gcc 13
       run: |
-        cmake -B build-gcc-13 -GNinja -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
+        cmake -B build-gcc-13 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
         cmake --build build-gcc-13 -j
         ctest --test-dir build-gcc-13 -j
 
     - name: build and run test with clang 19
       run: |
-        cmake -B build-clang-19 -GNinja -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
+        cmake -B build-clang-19 -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
         cmake --build build-clang-19 -j
         ctest --test-dir build-clang-19 -j
 
     - name: build and run test with clang 18
       run: |
-        cmake -B build-clang-18 -GNinja -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
+        cmake -B build-clang-18 -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
         cmake --build build-clang-18 -j
         ctest --test-dir build-clang-18 -j
 
     - name: build and run test with clang 17
       run: |
-        cmake -B build-clang-17 -GNinja -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
+        cmake -B build-clang-17 -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
         cmake --build build-clang-17 -j
         ctest --test-dir build-clang-17 -j
 
     # Note that libc++ in Clang 19 is not compatible with Clang 16. Therefore, we fallback to libstdc++.
     - name: build and run test with clang 16
       run: |
-        cmake -B build-clang-16 -GNinja -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
+        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILDING_WITH_MODULE=FALSE
         cmake --build build-clang-16 -j
         ctest --test-dir build-clang-16 -j
