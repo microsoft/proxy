@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from typing import Set
 
 def extract_cpp_code(md_path, cpp_path):
     with open(md_path, 'r', encoding='utf-8') as f:
@@ -22,21 +23,25 @@ def extract_cpp_code(md_path, cpp_path):
         out.write(cpp_code)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python extract_example_code_from_docs.py <input_dir> <output_dir>")
+    if len(sys.argv) < 3:
+        print("Usage: python extract_example_code_from_docs.py <input_dir> <output_dir> [exclusion ...]")
         sys.exit(1)
 
     input_dir = sys.argv[1]
     output_dir = sys.argv[2]
+    exclusions: Set[str] = {os.path.normcase(p) for p in sys.argv[3:]}
 
     for root, _, files in os.walk(input_dir):
         for file in files:
-            if file.endswith('.md'):
-                md_path = os.path.join(root, file)
-                rel_path = os.path.relpath(md_path, input_dir)
-                rel_base = os.path.splitext(rel_path)[0].replace(os.sep, '_')
-                cpp_path = os.path.join(output_dir, f"example_{rel_base}.cpp")
-                extract_cpp_code(md_path, cpp_path)
+            if not file.endswith('.md'):
+                continue
+            md_path = os.path.join(root, file)
+            rel_path = os.path.relpath(md_path, input_dir)
+            if rel_path in exclusions:
+                continue
+            rel_base = os.path.splitext(rel_path)[0].replace(os.sep, '_')
+            cpp_path = os.path.join(output_dir, f"example_{rel_base}.cpp")
+            extract_cpp_code(md_path, cpp_path)
 
 if __name__ == '__main__':
     main()

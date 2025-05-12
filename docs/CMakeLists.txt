@@ -2,7 +2,6 @@ project(msft_proxy_docs)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-file(GLOB_RECURSE DOC_FILES "*.md")
 set(EXTRACTION_SCRIPT ${CMAKE_SOURCE_DIR}/tools/extract_example_code_from_docs.py)
 set(EXAMPLES_DIR ${CMAKE_BINARY_DIR}/examples_from_docs)
 file(MAKE_DIRECTORY "${EXAMPLES_DIR}")
