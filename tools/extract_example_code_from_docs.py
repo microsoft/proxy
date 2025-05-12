@@ -20,12 +20,12 @@ def extract_cpp_code(input_dir: str, output_dir: str, md_rel_path: str) -> None:
     with open(md_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    pattern = r"## Example\r?\n\r?\n```cpp\r?\n(.*?)\r?\n```"
+    pattern = r'## Example\r?\n\r?\n```cpp\r?\n(.*?)\r?\n```'
     code_blocks = re.findall(pattern, content, re.DOTALL)
     if len(code_blocks) == 0:
         return  # No match, skip
 
-    rel_base = os.path.splitext(md_rel_path)[0].replace(os.sep, "_")
+    rel_base = os.path.splitext(md_rel_path)[0].replace(os.sep, '_')
     if len(code_blocks) == 1:
         targets = [os.path.join(output_dir, f"example_{rel_base}.cpp")]
     else:
