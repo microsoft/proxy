@@ -124,7 +124,7 @@ int main() {
 
 Here is a step-by-step explanation:
 
-- `#include <iostream>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
+- `#include <iomanip>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
 - `#include <proxy/proxy.h>`: For the "Proxy" library.
