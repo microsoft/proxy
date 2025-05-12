@@ -9,12 +9,6 @@ if(PROXY_BUILDING_WITH_MODULE)
     FILES code_1.cpp
   )
 
-  if (MSVC)
-    target_compile_options($NAME$ PRIVATE /W4)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic -Wno-c++2b-extensions)
-  else()
-    target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic)
-  endif()
+  $COMMON$
 
 endif()
