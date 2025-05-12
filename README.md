@@ -103,7 +103,7 @@ In the previous "Hello Word" example, we demonstrated how `proxy` could manage d
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Streamable : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"<<", true>, std::ostream&(std::ostream& out) const>
@@ -127,7 +127,7 @@ Here is a step-by-step explanation:
 - `#include <iostream>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
-- `#include "proxy.h"`: For the "Proxy" library.
+- `#include <proxy/proxy.h>`: For the "Proxy" library.
 - `struct Streamable : pro::facade_builder ... ::build {}`: Defines a facade type `Streamable`. Specifically,
   - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Gets prepared to build another facade.
   - [`add_convention`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_convention.html): Adds a generalized "calling convention", defined by a "dispatch" and several "overloads", to the build context.
@@ -158,7 +158,7 @@ Note that some facilities are provided as macro, because C++ templates today do 
 #include <iostream>
 #include <sstream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemDraw, Draw);
 PRO_DEF_MEM_DISPATCH(MemArea, Area);
@@ -203,7 +203,7 @@ Here is a step-by-step explanation:
 
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <sstream>`: For [`std::stringstream`](https://en.cppreference.com/w/cpp/io/basic_stringstream).
-- `#include "proxy.h"`: For the "Proxy" library.
+- `#include <proxy/proxy.h>`: For the "Proxy" library.
 - [`PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html)`(MemDraw, Draw)`: Defines a dispatch type `MemDraw` for expressions of calling member function `Draw`.
 - [`PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html)`(MemArea, Area)`: Defines a dispatch type `MemArea` for expressions of calling member function `Area`.
 - `struct Drawable : pro::facade_builder ... ::build {}`: Defines a facade type `Drawable`. Specifically,
