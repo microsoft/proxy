@@ -23,7 +23,7 @@ jobs:
 
     - name: build and run test with gcc 14
       run: |
-        cmake -B build -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -GNinja -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
