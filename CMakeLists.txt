@@ -31,6 +31,9 @@ target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURREN
 if(PROJECT_IS_TOP_LEVEL)
   set(proxy_INCLUDE_DIR include)
   include(cmake/proxyModuleTargets.cmake)
+else()
+  # Propagate the variable to the parent project
+  set(proxy_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
 endif()
 
 # install and export the project. project name - proxy
