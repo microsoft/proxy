@@ -256,15 +256,15 @@ def main():
                 rel_path = os.path.relpath(md_path, input_dir)
                 rel_base = os.path.splitext(rel_path)[0].replace(os.sep, '_')
 
-                # Create subdirectory for this example
-                subdir_name = f"example_{rel_base}"
-                subdir_path = os.path.join(output_dir, subdir_name)
-                os.makedirs(subdir_path, exist_ok=True)
-
                 # Extract C++ code blocks
                 code_blocks = extract_code_blocks_from_md_file(md_path)
                 if not code_blocks:
                     continue  # Skip if no code
+
+                # Create subdirectory for this example
+                subdir_name = f"example_{rel_base}"
+                subdir_path = os.path.join(output_dir, subdir_name)
+                os.makedirs(subdir_path, exist_ok=True)
 
                 # Generate code files and collect names
                 cpp_files = []
