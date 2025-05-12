@@ -7,5 +7,14 @@ if(PROXY_BUILDING_WITH_MODULE)
   target_sources($NAME$ PRIVATE
     FILE_SET CXX_MODULES
     FILES code_1.cpp
-    )
+  )
+
+  if (MSVC)
+    target_compile_options($NAME$ PRIVATE /W4)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic -Wno-c++2b-extensions)
+  else()
+    target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
+
 endif()

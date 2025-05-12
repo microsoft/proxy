@@ -215,6 +215,15 @@ def generate_subdir_cmake(subdir_path, target_name, cpp_files, md_path):
         template_content = """
 add_executable($NAME$ $FILES$)
 target_link_libraries($NAME$ msft_proxy)
+
+if (MSVC)
+  target_compile_options($NAME$ PRIVATE /W4)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic -Wno-c++2b-extensions)
+else()
+  target_compile_options($NAME$ PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 """
 
     # Replace placeholders
