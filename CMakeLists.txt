@@ -11,6 +11,14 @@ else()
   option(BUILD_TESTING "Build tests" OFF)
 endif()
 
+if(PROJECT_IS_TOP_LEVEL)
+  option(
+    PROXY_BUILDING_WITH_MODULE 
+    "When this project is top level, build the docs and tests with C++ module support."
+    ON
+  )
+endif()
+
 target_sources(msft_proxy
   INTERFACE
     FILE_SET public_headers

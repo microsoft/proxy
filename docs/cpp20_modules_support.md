@@ -44,29 +44,45 @@ target_link_libraries(main PRIVATE msft_proxy::module)
 ## Example
 
 ```cpp
-#include <vector>
-#include <iostream>
+// dictionary.cpp
+module;
 
-#include <proxy/proxy_macros.h> // [1]
+#include <string> // [1]
 
-import proxy; // [2]
+#include <proxy/proxy_macros.h> // [2]
 
-extern "C++" { // [3]
+export module dictionary;
+
+import proxy; // [3]
+
+extern "C++" { // [4]
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 }
 
-struct Dictionary : pro::facade_builder
+export struct Dictionary : pro::facade_builder
     ::add_convention<MemAt, std::string(int index) const>
     ::build {};
+
+```
+
+```cpp
+// main.cpp
+#include <vector>
+#include <iostream>
+
+import proxy;
+import dictionary;
 
 int main() {
   std::vector<const char*> v{"hello", "world"};
   pro::proxy<Dictionary> p = &v;
   std::cout << p->at(1) << "\n";  // Prints "world"
 }
+
 ```
 
-- [1] This makes all `PRO_DEF_` macros available. This header file contains only some macros and are therefore very fast to compile.
-- [2] `import proxy;` makes all public interfaces from `pro` namespace available in the current translation unit.
-- [3] As of 2025-05-11, clangd requires the accessor struct to be either `export`-ed, or be declared within an `extern "C++"` block, in order to have auto completion working.
+- [1] This is a traditional header rather than a module. It should be declared in global fragment (after `module` and before `export module`).
+- [2] This makes all `PRO_DEF_` macros available. This header file contains only some macros and are therefore very fast to compile. 
+- [3] `import proxy;` makes all public interfaces from `pro` namespace available in the current translation unit.
+- [4] As of 2025-05-11, clangd requires the accessor struct to be either `export`-ed, or be declared within an `extern "C++"` block, in order to have auto completion working.
 
