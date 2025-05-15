@@ -13,7 +13,7 @@ endif()
 
 if(PROJECT_IS_TOP_LEVEL)
   option(
-    PROXY_BUILD_MODULES 
+    PROXY_BUILD_MODULES
     "When this project is top level, build the docs and tests with C++ module support."
     OFF
   )
