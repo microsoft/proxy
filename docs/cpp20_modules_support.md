@@ -7,8 +7,11 @@ As of 2025-05-11, CMake lacks support for forward compatibility when consuming C
 ```cmake
 find_package(proxy REQUIRED)
 
-if(NOT DEFINED proxy_INCLUDE_DIR) # [1]
-  message(FATAL_ERROR "proxy_INCLUDE_DIR must be defined to use this script.")
+if(NOT DEFINED proxy_INCLUDE_DIR) # (1)
+  if(NOT DEFINED proxy_SOURCE_DIR)
+    message(FATAL_ERROR "proxy_INCLUDE_DIR or proxy_SOURCE_DIR must be defined to use this script.")
+  endif()
+  set(proxy_INCLUDE_DIR ${proxy_SOURCE_DIR}/include)
 endif()
 
 message(STATUS "Declaring `msft_proxy::module` target for include path ${proxy_INCLUDE_DIR}")
@@ -28,11 +31,11 @@ target_sources(msft_proxy_module PUBLIC
   FILES
     ${proxy_INCLUDE_DIR}/proxy/proxy.ixx
 )
-target_compile_features(msft_proxy_module PUBLIC cxx_std_20) # [2]
+target_compile_features(msft_proxy_module PUBLIC cxx_std_20) # (2)
 target_link_libraries(msft_proxy_module PUBLIC msft_proxy)
 ```
 
-- (1) `proxy_INCLUDE_DIR` is automatically declared after `find_package(proxy)`
+- (1) `proxy_INCLUDE_DIR` is automatically declared after `find_package(proxy)`. CPM uses a slightly different convention where `proxy_SOURCE_DIR` is declared after `CPMAddPackage`.
 - (2) The C++ standard version for `msft_proxy_module` target should be the same or higher than the consumer CMake target. For example if your project is using C++23 mode, this line should be changed to `cxx_std_23` or `cxx_std_26` / newer standards.
 
 It can then be consumed like this:
