@@ -1,14 +1,15 @@
 #include <iostream>
+#include <gtest/gtest.h>
 
 import proxy;
 import foo;
 import foo_impl;
 
 auto user(pro::proxy<Foo> p) {
-  std::cout << "Foo says: " << p->GetFoo() << '\n';
+  return p->GetFoo();
 }
 
-int main() {
+TEST(ProxyModuleSupportTests, TestBasic) {
   MyFoo foo;
-  user(&foo);
+  ASSERT_EQ(user(&foo), 42);
 }
