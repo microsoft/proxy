@@ -1,4 +1,4 @@
-if(PROXY_BUILDING_WITH_MODULE)
+if(PROXY_BUILD_MODULES)
   add_executable($NAME$ code_2.cpp)
   
   target_link_libraries($NAME$ msft_proxy::module)

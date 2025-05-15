@@ -1,6 +1,6 @@
 # C++20 Modules support
 
-proxy ships with `.ixx` files starting with version **4.0.0**. Compared to traditional headers, modules offer faster compilation speed and isolation against preprocessor macro definitions.
+The "Proxy" library ships with `.ixx` files starting with version **4.0.0**. Compared to traditional headers, modules offer faster compilation speed and isolation against preprocessor macro definitions.
 
 As of 2025-05-11, CMake lacks support for forward compatibility when consuming C++ modules, which causes consumers with newer C++ standard to be unable to use modules with older standard. Until this is implemented by CMake, a CMake target containing the module can be manually declared using the following CMake script:
 
@@ -8,7 +8,7 @@ As of 2025-05-11, CMake lacks support for forward compatibility when consuming C
 find_package(proxy REQUIRED)
 
 if(NOT DEFINED proxy_INCLUDE_DIR) # [1]
-    message(FATAL_ERROR "proxy_INCLUDE_DIR must be defined to use this script.")
+  message(FATAL_ERROR "proxy_INCLUDE_DIR must be defined to use this script.")
 endif()
 
 message(STATUS "Declaring `msft_proxy::module` target for include path ${proxy_INCLUDE_DIR}")
@@ -32,8 +32,8 @@ target_compile_features(msft_proxy_module PUBLIC cxx_std_20) # [2]
 target_link_libraries(msft_proxy_module PUBLIC msft_proxy)
 ```
 
-- [1] `proxy_INCLUDE_DIR` is automatically declared after `find_package(proxy)`
-- [2] The C++ standard version for `msft_proxy_module` target should be the same or higher than the consumer CMake target. For example if your project is using C++23 mode, this line should be changed to `cxx_std_23` or `cxx_std_26` / newer standards.
+- (1) `proxy_INCLUDE_DIR` is automatically declared after `find_package(proxy)`
+- (2) The C++ standard version for `msft_proxy_module` target should be the same or higher than the consumer CMake target. For example if your project is using C++23 mode, this line should be changed to `cxx_std_23` or `cxx_std_26` / newer standards.
 
 It can then be consumed like this:
 
@@ -43,19 +43,21 @@ target_link_libraries(main PRIVATE msft_proxy::module)
 
 ## Example
 
+Module definition:
+
 ```cpp
 // dictionary.cpp
 module;
 
-#include <string> // [1]
+#include <string> // (1)
 
-#include <proxy/proxy_macros.h> // [2]
+#include <proxy/proxy_macros.h> // (2)
 
 export module dictionary;
 
-import proxy; // [3]
+import proxy; // (3)
 
-extern "C++" { // [4]
+extern "C++" { // (4)
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 }
 
@@ -64,6 +66,8 @@ export struct Dictionary : pro::facade_builder
     ::build {};
 
 ```
+
+Client:
 
 ```cpp
 // main.cpp
@@ -81,8 +85,8 @@ int main() {
 
 ```
 
-- [1] This is a traditional header rather than a module. It should be declared in global fragment (after `module` and before `export module`).
-- [2] This makes all `PRO_DEF_` macros available. This header file contains only some macros and are therefore very fast to compile. 
-- [3] `import proxy;` makes all public interfaces from `pro` namespace available in the current translation unit.
-- [4] As of 2025-05-11, clangd requires the accessor struct to be either `export`-ed, or be declared within an `extern "C++"` block, in order to have auto completion working.
+- (1) This is a traditional header rather than a module. It should be declared in global fragment (after `module` and before `export module`).
+- (2) This makes all `PRO_DEF_` macros available. This header file contains only some macros and are therefore very fast to compile. 
+- (3) `import proxy;` makes all public interfaces from `pro` namespace available in the current translation unit.
+- (4) As of 2025-05-11, clangd requires the accessor struct to be either `export`-ed, or be declared within an `extern "C++"` block, in order to have auto completion working.
 

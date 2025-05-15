@@ -13,9 +13,9 @@ endif()
 
 if(PROJECT_IS_TOP_LEVEL)
   option(
-    PROXY_BUILDING_WITH_MODULE 
+    PROXY_BUILD_MODULES 
     "When this project is top level, build the docs and tests with C++ module support."
-    ON
+    OFF
   )
 endif()
 
@@ -38,7 +38,7 @@ target_include_directories(msft_proxy INTERFACE $<BUILD_INTERFACE:${CMAKE_CURREN
 # Do not set the module target if proxy is consumed as a subdirectory.
 if(PROJECT_IS_TOP_LEVEL)
   set(proxy_INCLUDE_DIR include)
-  if(PROXY_BUILDING_WITH_MODULE)
+  if(PROXY_BUILD_MODULES)
     include(cmake/proxyModuleTargets.cmake)
   endif()
 else()

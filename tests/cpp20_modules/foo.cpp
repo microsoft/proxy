@@ -16,10 +16,10 @@ PRO_DEF_FREE_AS_MEM_DISPATCH(FreeGetBaz, GetBaz);
 }
 
 export struct Foo
-    : pro::facade_builder ::add_convention<MemGetFoo, int() const>::build {};
+    : pro::facade_builder::add_convention<MemGetFoo, int() const>::build {};
 
 export struct Bar
-    : pro::facade_builder ::add_convention<FreeGetBar, int() const>::build {};
+    : pro::facade_builder::add_convention<FreeGetBar, int() const>::build {};
 
 export struct Baz
-    : pro::facade_builder ::add_convention<FreeGetBaz, int() const>::build {};
+    : pro::facade_builder::add_convention<FreeGetBaz, int() const>::build {};
