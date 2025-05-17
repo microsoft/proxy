@@ -44,7 +44,7 @@ Throws any exception thrown by the constructor of `T`.
 ```cpp
 #include <array>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 // By default, the maximum pointer size defined by pro::facade_builder
 // is 2 * sizeof(void*). This value can be overridden by `restrict_layout`.

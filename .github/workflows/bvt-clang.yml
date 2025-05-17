@@ -26,7 +26,7 @@ jobs:
 
     - name: build and run test with clang 20
       run: |
-        cmake -B build -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop

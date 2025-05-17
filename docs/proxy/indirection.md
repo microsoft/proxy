@@ -38,7 +38,7 @@ These operators do not check whether the `proxy` contains a value. To check whet
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemSize, size);
 

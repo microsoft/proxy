@@ -47,7 +47,7 @@ Similar to [`std::any::emplace`](https://en.cppreference.com/w/cpp/utility/any/e
 #include <memory>
 #include <memory_resource>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct AnyCopyable : pro::facade_builder
     ::support_copy<pro::constraint_level::nontrivial>

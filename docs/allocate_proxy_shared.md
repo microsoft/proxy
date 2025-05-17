@@ -42,7 +42,7 @@ The implementation of `strong-compact-ptr` may vary depending on the definition 
 #include <iostream>
 #include <memory_resource>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct RttiAware : pro::facade_builder
     ::support_copy<pro::constraint_level::nothrow>

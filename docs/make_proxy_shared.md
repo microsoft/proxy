@@ -35,7 +35,7 @@ Throws any exception thrown by allocation and the constructor of `T`.
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct RttiAware : pro::facade_builder
     ::support_copy<pro::constraint_level::nothrow>

@@ -9,7 +9,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 namespace {
 

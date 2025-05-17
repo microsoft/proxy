@@ -17,7 +17,7 @@ Adding a facade type that contains duplicated convention or reflection types alr
 #include <iostream>
 #include <unordered_map>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemSize, size);
 PRO_DEF_MEM_DISPATCH(MemAt, at);

@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#include "utils.h"
 #include <array>
+#include <proxy/proxy.h>
 #include <stdexcept>
 #include <type_traits>
-#include "proxy.h"
-#include "utils.h"
 
 namespace proxy_traits_tests_details {
 

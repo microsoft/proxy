@@ -28,7 +28,7 @@ In [Java](https://docs.oracle.com/javase/specs/jls/se23/html/jls-9.html#jls-9.4-
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 

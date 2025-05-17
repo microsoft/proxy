@@ -4,6 +4,7 @@
 #ifndef _MSFT_PROXY_TEST_UTILS_
 #define _MSFT_PROXY_TEST_UTILS_
 
+#include <proxy/proxy.h>
 #include <string>
 #include <vector>
 

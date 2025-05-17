@@ -17,7 +17,7 @@
 #pragma warning(push)
 #pragma warning(disable: 4702)  // False alarm from MSVC: warning C4702: unreachable code
 #endif  // defined(_MSC_VER) && !defined(__clang__)
-#include "proxy.h"
+#include <proxy/proxy.h>
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #endif  // defined(_MSC_VER) && !defined(__clang__)

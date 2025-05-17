@@ -23,7 +23,7 @@ jobs:
     - name: build and run test with NVHPC 24.9
       run: |
         PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/24.9/compilers/bin:$PATH; export PATH
-        cmake -B build -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -GNinja -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop

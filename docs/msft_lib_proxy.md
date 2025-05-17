@@ -19,7 +19,7 @@ Similar to the standard [feature test macros](https://en.cppreference.com/w/cpp/
 ```cpp
 #include <cstdio>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 int main() {
 #if defined(__msft_lib_proxy) && __msft_lib_proxy >= 202408L

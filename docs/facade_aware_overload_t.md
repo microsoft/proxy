@@ -16,7 +16,7 @@ Class template `facade_aware_overload_t<O>` specifies a facade-aware overload te
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 template <class F>
 using BinaryOverload = pro::proxy<F>(const pro::proxy_indirect_accessor<F>& rhs) const;

@@ -16,7 +16,7 @@ Checks whether `*this` contains a value.
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct AnyMovable : pro::facade_builder::build {};
 
