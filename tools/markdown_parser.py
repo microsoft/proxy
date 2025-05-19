@@ -39,9 +39,9 @@ class MarkdownParserState:
         self.current_paragraph.append(line)
 
     def has_paragraph(self) -> bool:
-        return len(self.current_paragraph) > 0
+        return len(self.current_paragraph) > 0 and not self.has_empty_paragraph()
 
-    def is_empty_paragraph(self) -> bool:
+    def has_empty_paragraph(self) -> bool:
         return len(self.current_paragraph) == 1 and len(self.current_paragraph[0].strip()) == 0
 
 
@@ -100,8 +100,7 @@ def parse_markdown_elements(text: str) -> Generator[Tuple[str, Dict | str], None
                 # If there was an ongoing paragraph, yield it first
                 if state.has_paragraph():
                     paragraph_lines: list[str] = state.get_paragraph()
-                    if not state.is_empty_paragraph():
-                        yield 'paragraph', '\n'.join(paragraph_lines)
+                    yield 'paragraph', '\n'.join(paragraph_lines)
 
                 # Count number of '#' characters to determine heading level
                 hash_count: int = count_leading_chars(stripped_line, '#')
@@ -114,8 +113,7 @@ def parse_markdown_elements(text: str) -> Generator[Tuple[str, Dict | str], None
                 # If there was an ongoing paragraph, yield it first
                 if state.has_paragraph():
                     paragraph_lines: list[str] = state.get_paragraph()
-                    if not state.is_empty_paragraph():
-                        yield 'paragraph', '\n'.join(paragraph_lines)
+                    yield 'paragraph', '\n'.join(paragraph_lines)
 
                 # Determine number of opening backticks and language
                 line_ticks: int = count_leading_chars(line, '`')
@@ -128,8 +126,7 @@ def parse_markdown_elements(text: str) -> Generator[Tuple[str, Dict | str], None
                     # Blank line: flush current paragraph if any
                     if state.has_paragraph():
                         paragraph_lines: list[str] = state.get_paragraph()
-                        if not state.is_empty_paragraph():
-                            yield 'paragraph', '\n'.join(paragraph_lines)
+                        yield 'paragraph', '\n'.join(paragraph_lines)
                 else:
                     # Part of a paragraph: add to current paragraph buffer
                     state.add_line_to_paragraph(line)
@@ -137,8 +134,7 @@ def parse_markdown_elements(text: str) -> Generator[Tuple[str, Dict | str], None
     # After loop: flush remaining paragraph if any
     if state.has_paragraph():
         paragraph_lines: list[str] = state.get_paragraph()
-        if not state.is_empty_paragraph():
-            yield 'paragraph', '\n'.join(paragraph_lines)
+        yield 'paragraph', '\n'.join(paragraph_lines)
 
     # If got stuck inside a code block at the end, yield it anyway
     if state.inside_code_block:
