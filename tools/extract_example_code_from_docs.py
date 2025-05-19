@@ -98,7 +98,7 @@ def generate_subdir_cmake(subdir_path, target_name, cpp_filenames, md_path):
         # Fallback to default template
         template_content = """
 add_executable($NAME$ $FILES$)
-target_link_libraries($NAME$ msft_proxy)
+target_link_libraries($NAME$ PRIVATE msft_proxy)
 
 $COMMON$
 
