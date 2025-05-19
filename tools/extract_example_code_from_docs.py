@@ -140,7 +140,7 @@ endif()
 
 def move_tmp_contents_to_persistent(tmp_dir: str, persistent_dir: str):
     """
-    Move the contents of the temporary directory to the parent directory,
+    Move the contents of the temporary directory to the persistent directory,
     overwriting only the files that have changed.
 
     Note: The tmp_dir is removed after the operation.
