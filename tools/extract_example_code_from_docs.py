@@ -234,7 +234,8 @@ def main():
             f.write(line + '\n')
 
     # Move the contents in temporary directory into parent directory.
-    # This updates only the changed files, which makes incremental builds much faster than before.
+    # This updates only the changed files, which makes incremental builds faster
+    # as unchanged files don't need to be re-compiled.
     move_tmp_contents_to_persistent(temp_output_dir, output_dir)
 
 
