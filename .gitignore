@@ -1,3 +1,5 @@
 # Ignore build directories
 build/
 Testing/
+# Ignore python runtime caches
+tools/__pycache__/
