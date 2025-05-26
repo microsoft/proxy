@@ -22,7 +22,7 @@ The alias templates `fmt_format` and `fmt_wformat` modify a specialization of [`
 This facility requires [the {fmt} library](https://github.com/fmtlib/fmt) to be properly installed and included before including `proxy_fmt.h`.
 
 - The minimum required version of {fmt} is 6.1.0.
-- If you are using {fmt} version 8.0.0 or newer, you must also include the header fmt/xchar.h.
+- If you are using {fmt} version 8.0.0 or newer, you must also include the header `fmt/xchar.h`.
 - When using modules, ensure that the macro `FMT_VERSION` is predefined.
 
 ## Example
