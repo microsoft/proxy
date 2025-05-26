@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - lkg
-      - user/mingxwa/doc
 
 jobs:
   build:
