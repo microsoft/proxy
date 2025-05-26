@@ -1,0 +1,12 @@
+nav:
+  - proxy: README.md
+  - (constructor): constructor.md
+  - (destructor): destructor.md
+  - emplace: emplace.md
+  - operator bool<br />has_value: operator_bool.md
+  - operator-><br />operator*: indirection.md
+  - operator=: assignment.md
+  - operator= (non-member): friend_operator_equality.md
+  - reset: reset.md
+  - swap: swap.md
+  - swap (non-member): friend_swap.md

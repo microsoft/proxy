@@ -5,6 +5,7 @@ module;
 export module proxy;
 
 export namespace pro {
+
 using pro::constraint_level;
 using pro::proxiable_ptr_constraints;
 using pro::facade_aware_overload_t;
@@ -38,21 +39,41 @@ using pro::conversion_dispatch;
 using pro::not_implemented;
 using pro::weak_dispatch;
 using pro::facade_builder;
-} // namespace pro
+
+}  // namespace pro
 
 export namespace pro::skills {
-using skills::direct_rtti;
-using skills::indirect_rtti;
-} // namespace pro::skills
 
+#if __STDC_HOSTED__ && __has_include(<format>)
+using skills::format;
+using skills::wformat;
+#endif  // __STDC_HOSTED__ && __has_include(<format>)
+
+#if __cpp_rtti >= 199711L
+using skills::indirect_rtti;
+using skills::direct_rtti;
+using skills::rtti;
+#endif  // __cpp_rtti >= 199711L
+
+using skills::as_view;
+using skills::as_weak;
+
+}  // namespace pro::skills
+
+#if __STDC_HOSTED__ && __has_include(<format>)
 export namespace std {
+
 using std::formatter;
-}
+
+}  // namespace std
+#endif  // __STDC_HOSTED__ && __has_include(<format>)
 
 // Currently, these are required by PRO_DEF_... macros.
 // In the future the macros might be refactored to avoid depending
 // on implementation details.
 export namespace pro::details {
+
 using details::adl_accessor_arg_t;
 using details::non_proxy_arg;
-} // namespace pro::details
+
+}  // namespace pro::details

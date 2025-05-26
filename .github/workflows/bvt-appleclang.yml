@@ -1,17 +1,11 @@
 on:
   workflow_call:
-    inputs:
-      branch:
-        type: string
-        required: false
 
 jobs:
   bvt-appleclang:
     runs-on: macos-15
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch }}
 
     - name: check compiler versions
       run: |
