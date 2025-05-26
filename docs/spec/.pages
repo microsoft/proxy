@@ -1,0 +1,53 @@
+nav:
+  - Specifications: README.md
+  - Concepts:
+    - facade: facade.md
+    - inplace_proxiable_target: inplace_proxiable_target.md
+    - proxiable_target: proxiable_target.md
+    - proxiable: proxiable.md
+  - Classes:
+    - bad_proxy_cast: bad_proxy_cast.md
+    - basic_facade_builder<br />facade_builder: basic_facade_builder
+    - constraint_level: constraint_level.md
+    - explicit_conversion_dispatch<br />conversion_dispatch: explicit_conversion_dispatch
+    - facade_aware_overload_t: facade_aware_overload_t.md
+    - implicit_conversion_dispatch: implicit_conversion_dispatch
+    - not_implemented: not_implemented.md
+    - operator_dispatch: operator_dispatch
+    - proxiable_ptr_constraints: proxiable_ptr_constraints.md
+    - proxy_indirect_accessor: proxy_indirect_accessor.md
+    - proxy_view<br />observer_facade: proxy_view.md
+    - proxy: proxy
+    - weak_dispatch: weak_dispatch
+    - weak_proxy<br />weak_facade: weak_proxy.md
+  - Alias Templates:
+    - skills::as_view: skills_as_view.md
+    - skills::as_weak: skills_as_weak.md
+    - skills::fmt_format<br />skills::fmt_wformat: skills_fmt_format.md
+    - skills::format<br />skills::wformat: skills_format.md
+    - "skills::rtti<br />skills::indirect_rtti<br />skills::direct_rtti": skills_rtti
+  - Functions:
+    - access_proxy: access_proxy.md
+    - allocate_proxy_shared: allocate_proxy_shared.md
+    - allocate_proxy: allocate_proxy.md
+    - make_proxy_inplace: make_proxy_inplace.md
+    - make_proxy_shared: make_proxy_shared.md
+    - make_proxy_view: make_proxy_view.md
+    - make_proxy: make_proxy.md
+    - proxy_invoke: proxy_invoke.md
+    - proxy_reflect: proxy_reflect.md
+  - Macros:
+    - __msft_lib_proxy: msft_lib_proxy.md
+    - PRO_DEF_FREE_AS_MEM_DISPATCH: PRO_DEF_FREE_AS_MEM_DISPATCH.md
+    - PRO_DEF_FREE_DISPATCH: PRO_DEF_FREE_DISPATCH.md
+    - PRO_DEF_MEM_DISPATCH: PRO_DEF_MEM_DISPATCH.md
+  - Named Requirements:
+    - ProAccessible: ProAccessible.md
+    - ProBasicConvention: ProBasicConvention.md
+    - ProBasicFacade: ProBasicFacade.md
+    - ProBasicReflection: ProBasicReflection.md
+    - ProConvention: ProConvention.md
+    - ProDispatch: ProDispatch.md
+    - ProFacade: ProFacade.md
+    - ProOverload: ProOverload.md
+    - ProReflection: ProReflection.md

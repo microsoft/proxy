@@ -1,17 +1,11 @@
 on:
   workflow_call:
-    inputs:
-      branch:
-        type: string
-        required: false
 
 jobs:
   bvt-msvc:
     runs-on: windows-2025
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch }}
 
     - name: add cl.exe to PATH
       uses: ilammy/msvc-dev-cmd@v1

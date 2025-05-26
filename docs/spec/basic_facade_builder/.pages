@@ -1,0 +1,11 @@
+nav:
+  - basic_facade_builder: README.md
+  - add_convention<br />add_indirect_convention<br />add_direct_convention: add_convention.md
+  - add_facade: add_facade.md
+  - add_reflection<br />add_indirect_reflection<br />add_direct_reflection: add_reflection.md
+  - build: build.md
+  - restrict_layout: restrict_layout.md
+  - support: support.md
+  - support_copy: support_copy.md
+  - support_destruction: support_destruction.md
+  - support_relocation: support_relocation.md

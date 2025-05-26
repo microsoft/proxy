@@ -31,19 +31,19 @@ While virtual functions have served well for decades, "Proxy" offers modern solu
 
 ### <a name="how-learn">How to learn "Proxy" effectively?</a>
 
-The fundamental abstraction of "Proxy" is called "facade". It is recommended for beginners to start with the examples in the [README](../README.md), try to understand the pattern of defining a [`facade`](facade.md) type, using a facade type to specify a [`proxy`](proxy.md) type, and creating and using a proxy object at runtime. Don't hesitate to consult the [specifications](specifications.md) for more details about any facility in the library.
+The fundamental abstraction of "Proxy" is called "facade". It is recommended for beginners to start with the examples in the [home page](README.md#quick-start), try to understand the pattern of defining a [`facade`](spec/facade.md) type, using a facade type to specify a [`proxy`](spec/proxy/README.md) type, and creating and using a proxy object at runtime. Don't hesitate to consult the [specifications](spec/README.md) for more details about any facility in the library.
 
 ### <a name="how-integrate">How to integrate "Proxy" into my project?</a>
 
-Since "Proxy" is a header-only library, you can simply navigate to the [latest release](https://github.com/microsoft/proxy/releases), download the source code, and include "proxy.h" in your project. Make sure your compiler version meets the [minimum requirements for compilers](../README.md#compiler-req). If your project has already integrated with [vcpkg](https://vcpkg.io/) or [conan](https://conan.io/), just search for the keyword "proxy" and install it. Thanks to the community that helped port "Proxy" to these platforms!
+Since "Proxy" is a header-only library, you can simply navigate to the [latest release](https://github.com/microsoft/proxy/releases), download the source code, and include "proxy.h" in your project. Make sure your compiler version meets the [minimum requirements for compilers](README.md#minimum-requirements-for-compilers). If your project has already integrated with [vcpkg](https://vcpkg.io/) or [conan](https://conan.io/), just search for the keyword "proxy" and install it. Thanks to the community that helped port "Proxy" to these platforms!
 
 ### <a name="how-migrate">My existing project uses virtual functions. How should I migrate to "Proxy"?</a>
 
 Follow the 4 steps below to upgrade an existing project from using virtual functions to "Proxy":
 
-1. Update the compiler version to meet our [minimum requirements for compilers](../README.md#compiler-req).
-2. Define [`facade`](facade.md) types that match the "base classes with virtual functions" (virtual base classes).
-3. Replace all the usage of virtual base classes with [`proxy`](proxy.md) from the API boundary.
+1. Update the compiler version to meet our [minimum requirements for compilers](README.md#minimum-requirements-for-compilers).
+2. Define [`facade`](spec/facade.md) types that match the "base classes with virtual functions" (virtual base classes).
+3. Replace all the usage of virtual base classes with [`proxy`](spec/proxy/README.md) from the API boundary.
 4. Remove all the definitions and inheritance of virtual base classes.
 
 ### <a name="performance">How is the performance compared to virtual functions?</a>
@@ -56,7 +56,7 @@ At the beginning, we explored the feasibility of designing a general-purpose pol
 
 ### <a name="why-macros">Why does "Proxy" define several macros instead of modern C++ facilities?</a>
 
-"Proxy" defines 4 macros: [`__msft_lib_proxy`](msft_lib_proxy.md), [`PRO_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md), [`PRO_DEF_FREE_DISPATCH`](PRO_DEF_FREE_DISPATCH.md), and [`PRO_DEF_FREE_AS_MEM_DISPATCH`](PRO_DEF_FREE_AS_MEM_DISPATCH.md). [`__msft_lib_proxy`](msft_lib_proxy.md) is the feature test macro, following the existing practice in the C++20 standard. The other 3 macros are fundamental facilities to define a custom [`dispatch`](ProDispatch.md) type. These macros cannot be replaced by modern C++ facilities because there is no existing language feature prior to C++26 that allows generating a function with an arbitrary name. As a result, "Proxy" does not provide a default interface for [modules](https://en.cppreference.com/w/cpp/language/modules) as of now.
+"Proxy" defines 4 macros: [`__msft_lib_proxy`](spec/msft_lib_proxy.md), [`PRO_DEF_MEM_DISPATCH`](spec/PRO_DEF_MEM_DISPATCH.md), [`PRO_DEF_FREE_DISPATCH`](spec/PRO_DEF_FREE_DISPATCH.md), and [`PRO_DEF_FREE_AS_MEM_DISPATCH`](spec/PRO_DEF_FREE_AS_MEM_DISPATCH.md). [`__msft_lib_proxy`](spec/msft_lib_proxy.md) is the feature test macro, following the existing practice in the C++20 standard. The other 3 macros are fundamental facilities to define a custom [`dispatch`](spec/ProDispatch.md) type. These macros cannot be replaced by modern C++ facilities because there is no existing language feature prior to C++26 that allows generating a function with an arbitrary name. As a result, "Proxy" does not provide a default interface for [modules](https://en.cppreference.com/w/cpp/language/modules) as of now.
 
 ### <a name="standardization">What is the standardization progress of this library?</a>
 

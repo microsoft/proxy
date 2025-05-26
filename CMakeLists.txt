@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(msft_proxy VERSION 3.3.0 LANGUAGES CXX)
+project(msft_proxy VERSION 4.0.0 LANGUAGES CXX)
 add_library(msft_proxy INTERFACE)
 
 # Do not enable building tests if proxy is consumed as

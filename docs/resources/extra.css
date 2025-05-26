@@ -1,0 +1,13 @@
+.md-typeset table:not(.highlight) {
+  font-size: .8rem;
+}
+
+.md-typeset table:not(.highlight) th,
+.md-typeset table:not(.highlight) td {
+  padding: .75em 1em;
+}
+
+.md-typeset table:not(.highlight) th:first-child,
+.md-typeset table:not(.highlight) td:first-child {
+  white-space: nowrap;
+}

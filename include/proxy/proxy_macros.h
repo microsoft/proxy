@@ -22,9 +22,7 @@
 #define ___PRO_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202503L
-
-////////
+#define __msft_lib_proxy 202505L
 
 #define ___PRO_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
@@ -102,8 +100,6 @@
 #define ___PRO_EXPAND_MACRO(__MACRO, ...) \
     ___PRO_EXPAND_IMPL(___PRO_EXPAND_MACRO_IMPL( \
         __MACRO, __VA_ARGS__, 3, 2)(__VA_ARGS__))
-
-////////
 
 #define ___PRO_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class __R, \

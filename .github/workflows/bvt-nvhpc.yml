@@ -1,17 +1,11 @@
 on:
   workflow_call:
-    inputs:
-      branch:
-        type: string
-        required: false
 
 jobs:
   bvt-nvhpc:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch }}
 
     - name: install NVHPC 24.9
       run: |

@@ -1462,6 +1462,9 @@ constexpr proxy<F> make_proxy_shared(T&& value)
 }
 #endif  // __STDC_HOSTED__
 
+template <class Cs, class Rs, proxiable_ptr_constraints C>
+struct basic_facade_builder;
+
 #if __cpp_rtti >= 199711L
 class bad_proxy_cast : public std::bad_cast {
  public:
@@ -1521,8 +1524,9 @@ struct explicit_conversion_adapter {
   T&& value_;
 };
 
-constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+inline constexpr std::size_t invalid_size =
+    std::numeric_limits<std::size_t>::max();
+inline constexpr constraint_level invalid_cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size)
@@ -1674,6 +1678,11 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
     (WithUpwardConversion &&
         F::constraints.copyability != constraint_level::trivial) ?
         F::constraints.relocatability : constraint_level::none>::type;
+
+template <class T> struct facade_builder_traits : inapplicable_traits {};
+template <class Cs, class Rs, proxiable_ptr_constraints C>
+struct facade_builder_traits<basic_facade_builder<Cs, Rs, C>>
+    : applicable_traits {};
 
 template <class O>
 using observer_upward_conversion_overload = proxy_view<
@@ -1853,6 +1862,8 @@ struct basic_facade_builder {
   using support_destruction = basic_facade_builder<
       Cs, Rs, details::make_destructible(C, CL)>;
   template <template <class> class Skill>
+      requires(details::facade_builder_traits<
+          Skill<basic_facade_builder>>::applicable)
   using support = Skill<basic_facade_builder>;
   using build = details::facade_impl<Cs, Rs, details::normalize(C)>;
   basic_facade_builder() = delete;
