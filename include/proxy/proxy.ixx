@@ -4,7 +4,7 @@ module;
 
 export module proxy;
 
-export namespace pro {
+export namespace pro::v4 {
 using pro::constraint_level;
 using pro::proxiable_ptr_constraints;
 using pro::facade_aware_overload_t;
