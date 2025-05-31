@@ -48,6 +48,8 @@
 
 namespace pro {
 
+inline namespace v4 {
+
 namespace details {
 
 struct applicable_traits { static constexpr bool applicable = true; };
@@ -2339,6 +2341,8 @@ struct weak_dispatch : D {
   [[noreturn]] ___PRO_STATIC_CALL(details::wildcard, Args&&...)
       { ___PRO_THROW(not_implemented{}); }
 };
+
+}  // inline namespace v4
 
 }  // namespace pro
 

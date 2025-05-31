@@ -22,6 +22,8 @@ later) are included before proxy_fmt.h.
 
 namespace pro {
 
+inline namespace v4 {
+
 namespace details {
 
 template <class CharT> struct fmt_format_overload_traits;
@@ -63,6 +65,8 @@ using fmt_wformat = typename FB::template add_convention<
     details::fmt_format_dispatch, details::fmt_format_overload_t<wchar_t>>;
 
 }  // namespace skills
+
+}  // inline namespace v4
 
 }  // namespace pro
 
