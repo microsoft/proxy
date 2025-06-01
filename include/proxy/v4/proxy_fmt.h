@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_FMT_
-#define _MSFT_PROXY_FMT_
+#ifndef _MSFT_PROXY_4_FMT_
+#define _MSFT_PROXY_4_FMT_
 
 #include <string_view>
 #include <type_traits>
@@ -22,6 +22,8 @@ later) are included before proxy_fmt.h.
 
 namespace pro {
 
+inline namespace v4 {
+
 namespace details {
 
 template <class CharT> struct fmt_format_overload_traits;
@@ -38,7 +40,7 @@ using fmt_format_overload_t = typename fmt_format_overload_traits<CharT>::type;
 
 struct fmt_format_dispatch {
   template <class T, class CharT, class FormatContext>
-  ___PRO_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
+  ___PRO_4__STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
       FormatContext& fc)
       requires(std::is_default_constructible_v<fmt::formatter<T, CharT>>) {
     fmt::formatter<T, CharT> impl;
@@ -64,15 +66,17 @@ using fmt_wformat = typename FB::template add_convention<
 
 }  // namespace skills
 
+} // inline namespace v4
+
 }  // namespace pro
 
 namespace fmt {
 
-template <pro::facade F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<
-        false, pro::details::fmt_format_dispatch,
-        pro::details::fmt_format_overload_t<CharT>>)
-struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+template <pro::v4::facade F, class CharT>
+    requires(pro::v4::details::facade_traits<F>::template is_invocable<
+        false, pro::v4::details::fmt_format_dispatch,
+        pro::v4::details::fmt_format_overload_t<CharT>>)
+struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
       if (*it == '}') {
@@ -84,13 +88,13 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   }
 
   template <class FormatContext>
-  auto format(const pro::proxy_indirect_accessor<F>& ia, FormatContext& fc)
+  auto format(const pro::v4::proxy_indirect_accessor<F>& ia, FormatContext& fc)
       const -> typename FormatContext::iterator {
-    auto& p = pro::access_proxy<F>(ia);
+    auto& p = pro::v4::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
-        { ___PRO_THROW(format_error{"null proxy"}); }
-    return pro::proxy_invoke<false, pro::details::fmt_format_dispatch,
-        pro::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
+        { ___PRO_4__THROW(format_error{"null proxy"}); }
+    return pro::v4::proxy_invoke<false, pro::v4::details::fmt_format_dispatch,
+        pro::v4::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
   }
 
  private:
@@ -99,4 +103,4 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 
 }  // namespace fmt
 
-#endif  // _MSFT_PROXY_FMT_
+#endif  // _MSFT_PROXY_4_FMT_

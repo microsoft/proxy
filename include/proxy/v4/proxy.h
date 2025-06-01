@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_
-#define _MSFT_PROXY_
+#ifndef _MSFT_PROXY_4_
+#define _MSFT_PROXY_4_
 
 #include "proxy_macros.h"
 
@@ -33,20 +33,22 @@
 #endif  // __cpp_rtti >= 199711L
 
 #if __has_cpp_attribute(msvc::no_unique_address)
-#define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE msvc::no_unique_address
+#define ___PRO_4__NO_UNIQUE_ADDRESS_ATTRIBUTE msvc::no_unique_address
 #elif __has_cpp_attribute(no_unique_address)
-#define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE no_unique_address
+#define ___PRO_4__NO_UNIQUE_ADDRESS_ATTRIBUTE no_unique_address
 #else
 #error Proxy requires C++20 attribute no_unique_address.
 #endif
 
 #if __cpp_exceptions >= 199711L
-#define ___PRO_THROW(...) throw __VA_ARGS__
+#define ___PRO_4__THROW(...) throw __VA_ARGS__
 #else
-#define ___PRO_THROW(...) std::abort()
+#define ___PRO_4__THROW(...) std::abort()
 #endif  // __cpp_exceptions >= 199711L
 
 namespace pro {
+
+inline namespace v4 {
 
 namespace details {
 
@@ -117,7 +119,7 @@ template <class F>
 concept facade = details::basic_facade_traits<F>::applicable;
 
 template <facade F> struct proxy_indirect_accessor;
-template <facade F> class ___PRO_ENFORCE_EBO proxy;
+template <facade F> class ___PRO_4__ENFORCE_EBO proxy;
 
 namespace details {
 
@@ -494,14 +496,14 @@ struct refl_traits {
 
 struct copy_dispatch {
   template <class T, class F>
-  ___PRO_STATIC_CALL(void, T&& self, proxy<F>& rhs)
+  ___PRO_4__STATIC_CALL(void, T&& self, proxy<F>& rhs)
       noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
       requires(std::is_constructible_v<std::decay_t<T>, T>)
       { std::construct_at(std::addressof(rhs), std::forward<T>(self)); }
 };
 struct destroy_dispatch {
   template <class T>
-  ___PRO_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
+  ___PRO_4__STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
       requires(std::is_destructible_v<T>) { std::destroy_at(&self); }
 };
 template <class F, class D, class ONE, class OE, constraint_level C>
@@ -516,9 +518,9 @@ template <class F, class D, class ONE, class OE, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<F, D, ONE, OE, C>::type;
 
 template <class... As>
-class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <facade> friend class pro::proxy;
-  template <facade> friend struct pro::proxy_indirect_accessor;
+class ___PRO_4__ENFORCE_EBO composite_accessor_impl : public As... {
+  template <facade> friend class pro::v4::proxy;
+  template <facade> friend struct pro::v4::proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -783,7 +785,7 @@ class inplace_ptr {
   const T&& operator*() const&& noexcept { return std::move(value_); }
 
  private:
-  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
+  [[___PRO_4__NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   T value_;
 };
 
@@ -872,7 +874,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
  public:
   using facade_type = F;
 
-  proxy() noexcept { ___PRO_DEBUG(std::ignore = &_symbol_guard;) }
+  proxy() noexcept { ___PRO_4__DEBUG(std::ignore = &_symbol_guard;) }
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept requires(F::constraints.copyability ==
       constraint_level::trivial) = default;
@@ -1048,7 +1050,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
     return result;
   }
 
-___PRO_DEBUG(
+___PRO_4__DEBUG(
   static inline void _symbol_guard(proxy& self, const proxy& cself) noexcept {
     self.operator->(); *self; *std::move(self);
     cself.operator->(); *cself; *std::move(cself);
@@ -1101,7 +1103,7 @@ struct alloc_aware {
   explicit alloc_aware(const Alloc& alloc) noexcept : alloc(alloc) {}
   alloc_aware(const alloc_aware&) noexcept = default;
 
-  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
+  [[___PRO_4__NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   Alloc alloc;
 };
 template <class T>
@@ -1123,7 +1125,7 @@ class indirect_ptr {
 };
 
 template <class T, class Alloc>
-class ___PRO_ENFORCE_EBO allocated_ptr
+class ___PRO_4__ENFORCE_EBO allocated_ptr
     : private alloc_aware<Alloc>, public indirect_ptr<inplace_ptr<T>> {
  public:
   template <class... Args>
@@ -1145,7 +1147,7 @@ class ___PRO_ENFORCE_EBO allocated_ptr
 };
 
 template <class T, class Alloc>
-struct ___PRO_ENFORCE_EBO compact_ptr_storage
+struct ___PRO_4__ENFORCE_EBO compact_ptr_storage
     : alloc_aware<Alloc>, inplace_ptr<T> {
   template <class... Args>
   explicit compact_ptr_storage(const Alloc& alloc, Args&&... args)
@@ -1173,7 +1175,7 @@ class compact_ptr : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
 
 struct shared_compact_ptr_storage_base { std::atomic_long ref_count = 1; };
 template <class T, class Alloc>
-struct ___PRO_ENFORCE_EBO shared_compact_ptr_storage
+struct ___PRO_4__ENFORCE_EBO shared_compact_ptr_storage
     : shared_compact_ptr_storage_base, alloc_aware<Alloc>, inplace_ptr<T> {
   template <class... Args>
   explicit shared_compact_ptr_storage(const Alloc& alloc, Args&&... args)
@@ -1465,7 +1467,7 @@ constexpr proxy<F> make_proxy_shared(T&& value)
 #if __cpp_rtti >= 199711L
 class bad_proxy_cast : public std::bad_cast {
  public:
-  char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
+  char const* what() const noexcept override { return "pro::v4::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti >= 199711L
 
@@ -1483,10 +1485,10 @@ struct proxy_arg_traits<proxy_indirect_accessor<F>> : applicable_traits {};
 template <class T>
 concept non_proxy_arg = !proxy_arg_traits<std::decay_t<T>>::applicable;
 
-#define ___PRO_DEF_CAST_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_4__DEF_CAST_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class T> \
     struct accessor<__F, __IsDirect, __D, T() Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(operator T) \
+      ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(operator T) \
       explicit(Expl) operator T() Q { \
         if constexpr (Nullable) { \
           if (!SELF.has_value()) { return nullptr; } \
@@ -1496,14 +1498,14 @@ concept non_proxy_arg = !proxy_arg_traits<std::decay_t<T>>::applicable;
     }
 template <bool Expl, bool Nullable>
 struct cast_dispatch_base {
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CAST_ACCESSOR,
+  ___PRO_4__DEF_MEM_ACCESSOR_TEMPLATE(___PRO_4__DEF_CAST_ACCESSOR,
       operator typename overload_traits<__Os>::return_type)
 };
-#undef ___PRO_DEF_CAST_ACCESSOR
+#undef ___PRO_4__DEF_CAST_ACCESSOR
 
 struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
   template <non_proxy_arg T>
-  ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
+  ___PRO_4__STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 
 template <class T>
@@ -1756,7 +1758,7 @@ template <class P>
 auto weak_lock_impl(const P& self) noexcept
     requires(requires { static_cast<bool>(self.lock()); })
     { return nullable_ptr_adapter{self.lock()}; }
-PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
+PRO_4_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
 template <class O> struct weak_upward_conversion_overload_traits;
 template <class F>
@@ -1869,7 +1871,7 @@ namespace details {
 
 struct view_conversion_dispatch : cast_dispatch_base<false, true> {
   template <non_proxy_arg T>
-  ___PRO_STATIC_CALL(auto, T& value) noexcept
+  ___PRO_4__STATIC_CALL(auto, T& value) noexcept
       requires(requires { { std::addressof(*value) } noexcept; }) {
     return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
         decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
@@ -1881,7 +1883,7 @@ using view_conversion_overload = proxy_view<F>() noexcept;
 
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
   template <non_proxy_arg P>
-  ___PRO_STATIC_CALL(auto, const P& self) noexcept
+  ___PRO_4__STATIC_CALL(auto, const P& self) noexcept
       requires(
           requires(const typename P::weak_type& w)
               { { w.lock() } noexcept -> std::same_as<P>; } &&
@@ -1913,7 +1915,7 @@ struct format_dispatch {
   // std::formatter by std::is_default_constructible_v as per
   // [format.formatter.spec].
   template <class T, class CharT, class OutIt>
-  ___PRO_STATIC_CALL(OutIt, const T& self, std::basic_string_view<CharT> spec,
+  ___PRO_4__STATIC_CALL(OutIt, const T& self, std::basic_string_view<CharT> spec,
       std::basic_format_context<OutIt, CharT>& fc)
       requires(
 #if __cpp_lib_format_ranges >= 202207L
@@ -1949,7 +1951,7 @@ struct proxy_cast_accessor_impl {
   friend T proxy_cast(_Self self) {
     static_assert(!std::is_rvalue_reference_v<T>);
     if (!access_proxy<F>(self).has_value()) [[unlikely]]
-        { ___PRO_THROW(bad_proxy_cast{}); }
+        { ___PRO_4__THROW(bad_proxy_cast{}); }
     if constexpr (std::is_lvalue_reference_v<T>) {
       using U = std::remove_reference_t<T>;
       void* result = nullptr;
@@ -1957,7 +1959,7 @@ struct proxy_cast_accessor_impl {
           .is_const = std::is_const_v<U>, .result_ptr = &result};
       proxy_invoke<IsDirect, D, O>(
           access_proxy<F>(std::forward<_Self>(self)), ctx);
-      if (result == nullptr) [[unlikely]] { ___PRO_THROW(bad_proxy_cast{}); }
+      if (result == nullptr) [[unlikely]] { ___PRO_4__THROW(bad_proxy_cast{}); }
       return *static_cast<U*>(result);
     } else {
       std::optional<std::remove_const_t<T>> result;
@@ -1965,7 +1967,7 @@ struct proxy_cast_accessor_impl {
           .is_const = false, .result_ptr = &result};
       proxy_invoke<IsDirect, D, O>(
           access_proxy<F>(std::forward<_Self>(self)), ctx);
-      if (!result.has_value()) [[unlikely]] { ___PRO_THROW(bad_proxy_cast{}); }
+      if (!result.has_value()) [[unlikely]] { ___PRO_4__THROW(bad_proxy_cast{}); }
       return std::move(*result);
     }
   }
@@ -1981,14 +1983,14 @@ struct proxy_cast_accessor_impl {
   }
 };
 
-#define ___PRO_DEF_PROXY_CAST_ACCESSOR(Q, ...) \
+#define ___PRO_4__DEF_PROXY_CAST_ACCESSOR(Q, ...) \
     template <class F, bool IsDirect, class D> \
     struct accessor<F, IsDirect, D, void(proxy_cast_context) Q> \
         : proxy_cast_accessor_impl<F, IsDirect, D, \
               void(proxy_cast_context) Q> {}
 struct proxy_cast_dispatch {
   template <non_proxy_arg T>
-  ___PRO_STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
+  ___PRO_4__STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
     if (typeid(T) == *ctx.type_ptr) [[likely]] {
       if (ctx.is_ref) {
         if constexpr (std::is_lvalue_reference_v<T>) {
@@ -2004,9 +2006,9 @@ struct proxy_cast_dispatch {
       }
     }
   }
-  ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_PROXY_CAST_ACCESSOR)
+  ___PRO_4__DEF_FREE_ACCESSOR_TEMPLATE(___PRO_4__DEF_PROXY_CAST_ACCESSOR)
 };
-#undef ___PRO_DEF_PROXY_CAST_ACCESSOR
+#undef ___PRO_4__DEF_PROXY_CAST_ACCESSOR
 
 struct proxy_typeid_reflector {
   template <class T>
@@ -2023,7 +2025,7 @@ struct proxy_typeid_reflector {
       const proxy_typeid_reflector& refl = proxy_reflect<IsDirect, R>(p);
       return *refl.info;
     }
-___PRO_DEBUG(
+___PRO_4__DEBUG(
     accessor() noexcept { std::ignore = &_symbol_guard; }
 
    private:
@@ -2110,59 +2112,59 @@ using as_weak = typename FB
 template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;
 
-#define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_4__DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R> \
     struct accessor<__F, __IsDirect, __D, R() Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__() Q { return proxy_invoke<__IsDirect, __D, R() Q>(SELF); } \
     }
-#define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_4__DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class... Args> \
     struct accessor<__F, __IsDirect, __D, R(Args...) Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__(Args... args) Q { \
         return proxy_invoke<__IsDirect, __D, R(Args...) Q>( \
             SELF, std::forward<Args>(args)...); \
       } \
     }
-#define ___PRO_DEF_LHS_UNARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
+#define ___PRO_4__DEF_LHS_UNARY_OP_ACCESSOR ___PRO_4__DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_4__DEF_LHS_BINARY_OP_ACCESSOR ___PRO_4__DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_4__DEF_LHS_ALL_OP_ACCESSOR ___PRO_4__DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_4__LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self) \
-        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
-#define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
+    ___PRO_4__STATIC_CALL(decltype(auto), T&& self) \
+        ___PRO_4__DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
+#define ___PRO_4__LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self) \
-        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
+    ___PRO_4__STATIC_CALL(decltype(auto), T&& self) \
+        ___PRO_4__DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
     template <details::non_proxy_arg T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self, int) \
-        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
-#define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
+    ___PRO_4__STATIC_CALL(decltype(auto), T&& self, int) \
+        ___PRO_4__DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
+#define ___PRO_4__LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T, class Arg> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-        ___PRO_DIRECT_FUNC_IMPL( \
+    ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+        ___PRO_4__DIRECT_FUNC_IMPL( \
             std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
-#define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
-    ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
-    ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
-#define ___PRO_LHS_OP_DISPATCH_IMPL(TYPE, ...) \
+#define ___PRO_4__LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
+    ___PRO_4__LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
+    ___PRO_4__LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
+#define ___PRO_4__LHS_OP_DISPATCH_IMPL(TYPE, ...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
-      ___PRO_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE( \
-          ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
+      ___PRO_4__LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
+      ___PRO_4__DEF_MEM_ACCESSOR_TEMPLATE( \
+          ___PRO_4__DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
     };
 
-#define ___PRO_DEF_RHS_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
+#define ___PRO_4__DEF_RHS_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg) Q> { \
       friend R operator __VA_ARGS__(Arg arg, SELF_ARG) NE { \
         return proxy_invoke<__IsDirect, __D, R(Arg) Q>( \
             SELF, std::forward<Arg>(arg)); \
       } \
-___PRO_DEBUG( \
+___PRO_4__DEBUG( \
       accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
@@ -2172,29 +2174,29 @@ ___PRO_DEBUG( \
       } \
 ) \
     }
-#define ___PRO_RHS_OP_DISPATCH_IMPL(...) \
+#define ___PRO_4__RHS_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <details::non_proxy_arg T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL( \
+      ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO_4__DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE( \
-          ___PRO_DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
+      ___PRO_4__DEF_FREE_ACCESSOR_TEMPLATE( \
+          ___PRO_4__DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
     };
 
-#define ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
-    ___PRO_LHS_OP_DISPATCH_IMPL(ALL, __VA_ARGS__) \
-    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
+#define ___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_4__LHS_OP_DISPATCH_IMPL(ALL, __VA_ARGS__) \
+    ___PRO_4__RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
-#define ___PRO_BINARY_OP_DISPATCH_IMPL(...) \
-    ___PRO_LHS_OP_DISPATCH_IMPL(BINARY, __VA_ARGS__) \
-    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
+#define ___PRO_4__BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_4__LHS_OP_DISPATCH_IMPL(BINARY, __VA_ARGS__) \
+    ___PRO_4__RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
-#define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_4__DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg) Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       decltype(auto) __VA_ARGS__(Arg arg) Q { \
         proxy_invoke<__IsDirect, __D, R(Arg) Q>(SELF, std::forward<Arg>(arg)); \
         if constexpr (__IsDirect) { \
@@ -2204,14 +2206,14 @@ ___PRO_DEBUG( \
         } \
       } \
     }
-#define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
+#define ___PRO_4__DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg&) Q> { \
       friend Arg& operator __VA_ARGS__(Arg& arg, SELF_ARG) NE { \
         proxy_invoke<__IsDirect, __D, R(Arg&) Q>(SELF, arg); \
         return arg; \
       } \
-___PRO_DEBUG( \
+___PRO_4__DEBUG( \
       accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
@@ -2219,136 +2221,138 @@ ___PRO_DEBUG( \
           { return arg __VA_ARGS__ std::forward<decltype(__self)>(__self); } \
 ) \
     }
-#define ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
+#define ___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       template <details::non_proxy_arg T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
+      ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO_4__DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
               std::forward<Arg>(arg)) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
+      ___PRO_4__DEF_MEM_ACCESSOR_TEMPLATE(___PRO_4__DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     }; \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <details::non_proxy_arg T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL( \
+      ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO_4__DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
+      ___PRO_4__DEF_FREE_ACCESSOR_TEMPLATE(___PRO_4__DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
           __VA_ARGS__) \
     };
 
-___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(-)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(*)
-___PRO_BINARY_OP_DISPATCH_IMPL(/)
-___PRO_BINARY_OP_DISPATCH_IMPL(%)
-___PRO_LHS_OP_DISPATCH_IMPL(UNARY, ++)
-___PRO_LHS_OP_DISPATCH_IMPL(UNARY, --)
-___PRO_BINARY_OP_DISPATCH_IMPL(==)
-___PRO_BINARY_OP_DISPATCH_IMPL(!=)
-___PRO_BINARY_OP_DISPATCH_IMPL(>)
-___PRO_BINARY_OP_DISPATCH_IMPL(<)
-___PRO_BINARY_OP_DISPATCH_IMPL(>=)
-___PRO_BINARY_OP_DISPATCH_IMPL(<=)
-___PRO_BINARY_OP_DISPATCH_IMPL(<=>)
-___PRO_LHS_OP_DISPATCH_IMPL(LEFT, !)
-___PRO_BINARY_OP_DISPATCH_IMPL(&&)
-___PRO_BINARY_OP_DISPATCH_IMPL(||)
-___PRO_LHS_OP_DISPATCH_IMPL(LEFT, ~)
-___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(&)
-___PRO_BINARY_OP_DISPATCH_IMPL(|)
-___PRO_BINARY_OP_DISPATCH_IMPL(^)
-___PRO_BINARY_OP_DISPATCH_IMPL(<<)
-___PRO_BINARY_OP_DISPATCH_IMPL(>>)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(+=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(-=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(*=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(/=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(&=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(|=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(^=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(<<=)
-___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
-___PRO_BINARY_OP_DISPATCH_IMPL(,)
-___PRO_BINARY_OP_DISPATCH_IMPL(->*)
+___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
+___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL(-)
+___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL(*)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(/)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(%)
+___PRO_4__LHS_OP_DISPATCH_IMPL(UNARY, ++)
+___PRO_4__LHS_OP_DISPATCH_IMPL(UNARY, --)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(==)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(!=)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(>)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(<)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(>=)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(<=)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(<=>)
+___PRO_4__LHS_OP_DISPATCH_IMPL(LEFT, !)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(&&)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(||)
+___PRO_4__LHS_OP_DISPATCH_IMPL(LEFT, ~)
+___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL(&)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(|)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(^)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(<<)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(>>)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(+=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(-=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(*=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(/=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(&=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(|=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(^=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(<<=)
+___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(,)
+___PRO_4__BINARY_OP_DISPATCH_IMPL(->*)
 
 template <>
 struct operator_dispatch<"()", false> {
   template <details::non_proxy_arg T, class... Args>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
+  ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Args&&... args)
+      ___PRO_4__DIRECT_FUNC_IMPL(
           std::forward<T>(self)(std::forward<Args>(args)...))
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
+  ___PRO_4__DEF_MEM_ACCESSOR_TEMPLATE(___PRO_4__DEF_LHS_ANY_OP_ACCESSOR, operator())
 };
 template <>
 struct operator_dispatch<"[]", false> {
 #if __cpp_multidimensional_subscript >= 202110L
   template <details::non_proxy_arg T, class... Args>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
+  ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Args&&... args)
+      ___PRO_4__DIRECT_FUNC_IMPL(
           std::forward<T>(self)[std::forward<Args>(args)...])
 #else
   template <details::non_proxy_arg T, class Arg>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
-      ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
+  ___PRO_4__STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
+      ___PRO_4__DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // __cpp_multidimensional_subscript >= 202110L
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
+  ___PRO_4__DEF_MEM_ACCESSOR_TEMPLATE(___PRO_4__DEF_LHS_ANY_OP_ACCESSOR, operator[])
 };
 
-#undef ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL
-#undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO_BINARY_OP_DISPATCH_IMPL
-#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL
-#undef ___PRO_RHS_OP_DISPATCH_IMPL
-#undef ___PRO_DEF_RHS_OP_ACCESSOR
-#undef ___PRO_LHS_OP_DISPATCH_IMPL
-#undef ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL
-#undef ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL
-#undef ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL
-#undef ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL
-#undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
-#undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
+#undef ___PRO_4__ASSIGNMENT_OP_DISPATCH_IMPL
+#undef ___PRO_4__DEF_RHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_4__DEF_LHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_4__BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_4__EXTENDED_BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_4__RHS_OP_DISPATCH_IMPL
+#undef ___PRO_4__DEF_RHS_OP_ACCESSOR
+#undef ___PRO_4__LHS_OP_DISPATCH_IMPL
+#undef ___PRO_4__LHS_ALL_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_4__LHS_BINARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_4__LHS_UNARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_4__LHS_LEFT_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_4__DEF_LHS_ALL_OP_ACCESSOR
+#undef ___PRO_4__DEF_LHS_BINARY_OP_ACCESSOR
+#undef ___PRO_4__DEF_LHS_UNARY_OP_ACCESSOR
+#undef ___PRO_4__DEF_LHS_ANY_OP_ACCESSOR
+#undef ___PRO_4__DEF_LHS_LEFT_OP_ACCESSOR
 
 struct implicit_conversion_dispatch
     : details::cast_dispatch_base<false, false> {
   template <details::non_proxy_arg T>
-  ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
+  ___PRO_4__STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
   template <details::non_proxy_arg T>
-  ___PRO_STATIC_CALL(auto, T&& self) noexcept
+  ___PRO_4__STATIC_CALL(auto, T&& self) noexcept
       { return details::explicit_conversion_adapter<T>{std::forward<T>(self)}; }
 };
 using conversion_dispatch = explicit_conversion_dispatch;
 
 class not_implemented : public std::exception {
  public:
-  char const* what() const noexcept override { return "pro::not_implemented"; }
+  char const* what() const noexcept override { return "pro::v4::not_implemented"; }
 };
 
 template <class D>
 struct weak_dispatch : D {
   using D::operator();
   template <class... Args>
-  [[noreturn]] ___PRO_STATIC_CALL(details::wildcard, Args&&...)
-      { ___PRO_THROW(not_implemented{}); }
+  [[noreturn]] ___PRO_4__STATIC_CALL(details::wildcard, Args&&...)
+      { ___PRO_4__THROW(not_implemented{}); }
 };
+
+} // inline namespace v4
 
 }  // namespace pro
 
 #if __STDC_HOSTED__ && __has_include(<format>)
 namespace std {
 
-template <pro::facade F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<false,
-        pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
-struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+template <pro::v4::facade F, class CharT>
+    requires(pro::v4::details::facade_traits<F>::template is_invocable<false,
+        pro::v4::details::format_dispatch, pro::v4::details::format_overload_t<CharT>>)
+struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
       if (*it == '}') {
@@ -2360,13 +2364,13 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   }
 
   template <class OutIt>
-  OutIt format(const pro::proxy_indirect_accessor<F>& ia,
+  OutIt format(const pro::v4::proxy_indirect_accessor<F>& ia,
       basic_format_context<OutIt, CharT>& fc) const {
-    auto& p = pro::access_proxy<F>(ia);
+    auto& p = pro::v4::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
-        { ___PRO_THROW(format_error{"null proxy"}); }
-    return pro::proxy_invoke<false, pro::details::format_dispatch,
-        pro::details::format_overload_t<CharT>>(p, spec_, fc);
+        { ___PRO_4__THROW(format_error{"null proxy"}); }
+    return pro::v4::proxy_invoke<false, pro::v4::details::format_dispatch,
+        pro::v4::details::format_overload_t<CharT>>(p, spec_, fc);
   }
 
  private:
@@ -2376,6 +2380,6 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 }  // namespace std
 #endif  // __STDC_HOSTED__ && __has_include(<format>)
 
-#undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
+#undef ___PRO_4__NO_UNIQUE_ADDRESS_ATTRIBUTE
 
-#endif  // _MSFT_PROXY_
+#endif  // _MSFT_PROXY_4_
