@@ -7,9 +7,9 @@
 #include <string_view>
 #include <type_traits>
 
-#ifndef __msft_lib_proxy
+#ifndef __msft_lib_proxy4
 #error Please ensure that proxy.h is included before proxy_fmt.h.
-#endif  // __msft_lib_proxy
+#endif  // __msft_lib_proxy4
 
 #if FMT_VERSION >= 60100
 static_assert(fmt::is_char<wchar_t>::value,
@@ -21,6 +21,8 @@ later) are included before proxy_fmt.h.
 #endif  // FMT_VERSION >= 60100
 
 namespace pro {
+
+inline namespace v4 {
 
 namespace details {
 
@@ -64,15 +66,17 @@ using fmt_wformat = typename FB::template add_convention<
 
 }  // namespace skills
 
+} // inline namespace v4
+
 }  // namespace pro
 
 namespace fmt {
 
-template <pro::facade F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<
-        false, pro::details::fmt_format_dispatch,
-        pro::details::fmt_format_overload_t<CharT>>)
-struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+template <pro::v4::facade F, class CharT>
+    requires(pro::v4::details::facade_traits<F>::template is_invocable<
+        false, pro::v4::details::fmt_format_dispatch,
+        pro::v4::details::fmt_format_overload_t<CharT>>)
+struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
       if (*it == '}') {
@@ -84,13 +88,13 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   }
 
   template <class FormatContext>
-  auto format(const pro::proxy_indirect_accessor<F>& ia, FormatContext& fc)
+  auto format(const pro::v4::proxy_indirect_accessor<F>& ia, FormatContext& fc)
       const -> typename FormatContext::iterator {
-    auto& p = pro::access_proxy<F>(ia);
+    auto& p = pro::v4::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
         { ___PRO_4_THROW(format_error{"null proxy"}); }
-    return pro::proxy_invoke<false, pro::details::fmt_format_dispatch,
-        pro::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
+    return pro::v4::proxy_invoke<false, pro::v4::details::fmt_format_dispatch,
+        pro::v4::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
   }
 
  private:

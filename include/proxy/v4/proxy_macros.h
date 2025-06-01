@@ -22,7 +22,8 @@
 #define ___PRO_4_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202503L
+#define __msft_lib_proxy4 202503L
+#define __msft_lib_proxy __msft_lib_proxy4
 
 ////////
 

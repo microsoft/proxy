@@ -519,8 +519,8 @@ using lifetime_meta_t = typename lifetime_meta_traits<F, D, ONE, OE, C>::type;
 
 template <class... As>
 class ___PRO_4_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <facade> friend class pro::proxy;
-  template <facade> friend struct pro::proxy_indirect_accessor;
+  template <facade> friend class pro::v4::proxy;
+  template <facade> friend struct pro::v4::proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -1467,7 +1467,7 @@ constexpr proxy<F> make_proxy_shared(T&& value)
 #if __cpp_rtti >= 199711L
 class bad_proxy_cast : public std::bad_cast {
  public:
-  char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
+  char const* what() const noexcept override { return "pro::v4::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti >= 199711L
 
@@ -2331,7 +2331,7 @@ using conversion_dispatch = explicit_conversion_dispatch;
 
 class not_implemented : public std::exception {
  public:
-  char const* what() const noexcept override { return "pro::not_implemented"; }
+  char const* what() const noexcept override { return "pro::v4::not_implemented"; }
 };
 
 template <class D>
@@ -2342,17 +2342,17 @@ struct weak_dispatch : D {
       { ___PRO_4_THROW(not_implemented{}); }
 };
 
-} // namespace v4
+} // inline namespace v4
 
 }  // namespace pro
 
 #if __STDC_HOSTED__ && __has_include(<format>)
 namespace std {
 
-template <pro::facade F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<false,
-        pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
-struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+template <pro::v4::facade F, class CharT>
+    requires(pro::v4::details::facade_traits<F>::template is_invocable<false,
+        pro::v4::details::format_dispatch, pro::v4::details::format_overload_t<CharT>>)
+struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
       if (*it == '}') {
@@ -2364,13 +2364,13 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   }
 
   template <class OutIt>
-  OutIt format(const pro::proxy_indirect_accessor<F>& ia,
+  OutIt format(const pro::v4::proxy_indirect_accessor<F>& ia,
       basic_format_context<OutIt, CharT>& fc) const {
-    auto& p = pro::access_proxy<F>(ia);
+    auto& p = pro::v4::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
         { ___PRO_4_THROW(format_error{"null proxy"}); }
-    return pro::proxy_invoke<false, pro::details::format_dispatch,
-        pro::details::format_overload_t<CharT>>(p, spec_, fc);
+    return pro::v4::proxy_invoke<false, pro::v4::details::format_dispatch,
+        pro::v4::details::format_overload_t<CharT>>(p, spec_, fc);
   }
 
  private:
