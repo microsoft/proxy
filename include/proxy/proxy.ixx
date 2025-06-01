@@ -1,10 +1,13 @@
 module;
 
-#include <proxy/proxy.h>
+#include <proxy/v4/proxy.h>
 
-export module proxy;
+export module proxy.v4;
 
 export namespace pro {
+
+inline namespace v4 {
+
 using pro::constraint_level;
 using pro::proxiable_ptr_constraints;
 using pro::facade_aware_overload_t;
@@ -38,21 +41,24 @@ using pro::conversion_dispatch;
 using pro::not_implemented;
 using pro::weak_dispatch;
 using pro::facade_builder;
-} // namespace pro
 
-export namespace pro::skills {
+namespace skills {
 using skills::direct_rtti;
 using skills::indirect_rtti;
 } // namespace pro::skills
 
-export namespace std {
-using std::formatter;
-}
-
 // Currently, these are required by PRO_DEF_... macros.
 // In the future the macros might be refactored to avoid depending
 // on implementation details.
-export namespace pro::details {
+namespace details {
 using details::adl_accessor_arg_t;
 using details::non_proxy_arg;
 } // namespace pro::details
+
+} // namespace v4
+
+} // namespace pro
+
+export namespace std {
+using std::formatter;
+}
