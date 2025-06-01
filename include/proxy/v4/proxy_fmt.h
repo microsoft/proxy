@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_FMT_
-#define _MSFT_PROXY_FMT_
+#ifndef _MSFT_PROXY_4_FMT_
+#define _MSFT_PROXY_4_FMT_
 
 #include <string_view>
 #include <type_traits>
@@ -38,7 +38,7 @@ using fmt_format_overload_t = typename fmt_format_overload_traits<CharT>::type;
 
 struct fmt_format_dispatch {
   template <class T, class CharT, class FormatContext>
-  ___PRO_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
+  ___PRO_4_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
       FormatContext& fc)
       requires(std::is_default_constructible_v<fmt::formatter<T, CharT>>) {
     fmt::formatter<T, CharT> impl;
@@ -88,7 +88,7 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
       const -> typename FormatContext::iterator {
     auto& p = pro::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
-        { ___PRO_THROW(format_error{"null proxy"}); }
+        { ___PRO_4_THROW(format_error{"null proxy"}); }
     return pro::proxy_invoke<false, pro::details::fmt_format_dispatch,
         pro::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
   }
@@ -99,4 +99,4 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 
 }  // namespace fmt
 
-#endif  // _MSFT_PROXY_FMT_
+#endif  // _MSFT_PROXY_4_FMT_
