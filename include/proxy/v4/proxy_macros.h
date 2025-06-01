@@ -22,7 +22,10 @@
 #define ___PRO_4__DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202503L
+#define __msft_lib_proxy4 202503L
+#ifndef __msft_lib_proxy
+#define __msft_lib_proxy __msft_lib_proxy4
+#endif
 
 ////////
 
@@ -39,23 +42,23 @@
     struct accessor<__F, __IsDirect, __D, __Os...> \
         : accessor<__F, __IsDirect, __D, __Os>... \
         { using accessor<__F, __IsDirect, __D, __Os>::__VA_ARGS__...; }; \
-    __MACRO(, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(&&, ::pro::access_proxy<__F>(::std::move(*this)), __VA_ARGS__); \
-    __MACRO(&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
+    __MACRO(, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(noexcept, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(&, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(& noexcept, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(&&, ::pro::v4::access_proxy<__F>(::std::move(*this)), __VA_ARGS__); \
+    __MACRO(&& noexcept, ::pro::v4::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__); \
-    __MACRO(const, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const&&, ::pro::access_proxy<__F>(::std::move(*this)), \
+    __MACRO(const, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const noexcept, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const&, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const& noexcept, ::pro::v4::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const&&, ::pro::v4::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__); \
-    __MACRO(const&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
+    __MACRO(const&& noexcept, ::pro::v4::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__);
 
-#define ___PRO_4__ADL_ARG ::pro::details::adl_accessor_arg_t<__F, __IsDirect>
+#define ___PRO_4__ADL_ARG ::pro::v4::details::adl_accessor_arg_t<__F, __IsDirect>
 #define ___PRO_4__DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
     template <class __F, bool __IsDirect, class __D, class... __Os> \
     struct ___PRO_4__ENFORCE_EBO accessor { accessor() = delete; }; \
@@ -64,31 +67,31 @@
             accessor<__F, __IsDirect, __D, __Os>> && ...)) \
     struct accessor<__F, __IsDirect, __D, __Os...> \
         : accessor<__F, __IsDirect, __D, __Os>... {}; \
-    __MACRO(,, ___PRO_4__ADL_ARG& __self, ::pro::access_proxy<__F>(__self), \
+    __MACRO(,, ___PRO_4__ADL_ARG& __self, ::pro::v4::access_proxy<__F>(__self), \
         __VA_ARGS__); \
     __MACRO(noexcept, noexcept, ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(&,, ___PRO_4__ADL_ARG& __self, ::pro::access_proxy<__F>(__self), \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(&,, ___PRO_4__ADL_ARG& __self, ::pro::v4::access_proxy<__F>(__self), \
         __VA_ARGS__); \
     __MACRO(& noexcept, noexcept, ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(&&,, ___PRO_4__ADL_ARG&& __self, ::pro::access_proxy<__F>( \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(&&,, ___PRO_4__ADL_ARG&& __self, ::pro::v4::access_proxy<__F>( \
         ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
     __MACRO(&& noexcept, noexcept, ___PRO_4__ADL_ARG&& __self, \
-        ::pro::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
+        ::pro::v4::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
         __VA_ARGS__); \
     __MACRO(const,, const ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
     __MACRO(const noexcept, noexcept, const ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
     __MACRO(const&,, const ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
     __MACRO(const& noexcept, noexcept, const ___PRO_4__ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(const&&,, const ___PRO_4__ADL_ARG&& __self, ::pro::access_proxy<__F>( \
+        ::pro::v4::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(const&&,, const ___PRO_4__ADL_ARG&& __self, ::pro::v4::access_proxy<__F>( \
         ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
     __MACRO(const&& noexcept, noexcept, const ___PRO_4__ADL_ARG&& __self, \
-        ::pro::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
+        ::pro::v4::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
         __VA_ARGS__);
 
 #define ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(...) \
@@ -111,7 +114,7 @@
     struct accessor<__F, __IsDirect, __D, __R(__Args...) __Q> { \
       ___PRO_4__GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       __R __VA_ARGS__(__Args... __args) __Q { \
-        return ::pro::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
+        return ::pro::v4::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
     }
@@ -125,7 +128,7 @@
     }
 #define ___PRO_4__DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
     ___PRO_4__DEF_MEM_DISPATCH_IMPL( \
-        __NAME, __FUNC, __FUNC, ::pro::details::non_proxy_arg)
+        __NAME, __FUNC, __FUNC, ::pro::v4::details::non_proxy_arg)
 #define ___PRO_4__DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
     ___PRO_4__DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, class)
 #define PRO_4_DEF_MEM_DISPATCH(__NAME, ...) \
@@ -136,7 +139,7 @@
         class... __Args> \
     struct accessor<__F, __IsDirect, __D, __R(__Args...) __Q> { \
       friend __R __VA_ARGS__(__SELF_ARG, __Args... __args) __NE { \
-        return ::pro::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
+        return ::pro::v4::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
 ___PRO_4__DEBUG( \
@@ -159,7 +162,7 @@ ___PRO_4__DEBUG( \
     }
 #define ___PRO_4__DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
     ___PRO_4__DEF_FREE_DISPATCH_IMPL( \
-        __NAME, __FUNC, __FUNC, ::pro::details::non_proxy_arg)
+        __NAME, __FUNC, __FUNC, ::pro::v4::details::non_proxy_arg)
 #define ___PRO_4__DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
     ___PRO_4__DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME, class)
 #define PRO_4_DEF_FREE_DISPATCH(__NAME, ...) \

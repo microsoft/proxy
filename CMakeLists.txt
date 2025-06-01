@@ -25,10 +25,15 @@ target_sources(msft_proxy
     TYPE HEADERS 
     BASE_DIRS include
     FILES
+      include/proxy.h
       include/proxy/proxy.h
       include/proxy/proxy_macros.h
       include/proxy/proxy_fmt.h
       include/proxy/proxy.ixx
+      include/proxy/v3/proxy.h
+      include/proxy/v4/proxy.h
+      include/proxy/v4/proxy_macros.h
+      include/proxy/v4/proxy_fmt.h
 )
 
 target_compile_features(msft_proxy INTERFACE cxx_std_20)
