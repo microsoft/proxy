@@ -18,7 +18,7 @@ target_sources(msft_proxy4_module PUBLIC
   FILE_SET CXX_MODULES
   BASE_DIRS ${proxy4_INCLUDE_DIR}
   FILES
-    ${proxy4_INCLUDE_DIR}/proxy/proxy.ixx
+    ${proxy4_INCLUDE_DIR}/proxy/v4/proxy.ixx
 )
 target_compile_features(msft_proxy4_module PUBLIC cxx_std_20)
 target_link_libraries(msft_proxy4_module PUBLIC msft_proxy::msft_proxy4)

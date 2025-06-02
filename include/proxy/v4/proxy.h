@@ -46,9 +46,7 @@
 #define ___PRO_4_THROW(...) std::abort()
 #endif  // __cpp_exceptions >= 199711L
 
-namespace pro {
-
-inline namespace v4 {
+namespace pro::inline v4 {
 
 namespace details {
 
@@ -2342,9 +2340,7 @@ struct weak_dispatch : D {
       { ___PRO_4_THROW(not_implemented{}); }
 };
 
-} // inline namespace v4
-
-}  // namespace pro
+}  // namespace pro::v4
 
 #if __STDC_HOSTED__ && __has_include(<format>)
 namespace std {

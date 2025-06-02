@@ -4,9 +4,7 @@ module;
 
 export module proxy.v4;
 
-export namespace pro {
-
-inline namespace v4 {
+export namespace pro::inline v4 {
 
 using v4::constraint_level;
 using v4::proxiable_ptr_constraints;
@@ -45,7 +43,7 @@ using v4::facade_builder;
 namespace skills {
 using skills::direct_rtti;
 using skills::indirect_rtti;
-} // namespace v4::skills
+} // namespace skills
 
 // Currently, these are required by PRO_DEF_... macros.
 // In the future the macros might be refactored to avoid depending
@@ -53,12 +51,10 @@ using skills::indirect_rtti;
 namespace details {
 using details::adl_accessor_arg_t;
 using details::non_proxy_arg;
-} // namespace v4::details
+} // namespace details
 
-} // namespace v4
-
-} // namespace pro
+} // namespace pro::v4
 
 export namespace std {
 using std::formatter;
-}
+} // namespace std

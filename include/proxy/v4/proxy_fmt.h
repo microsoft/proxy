@@ -20,9 +20,7 @@ static_assert(fmt::is_char<wchar_t>::value,
 later) are included before proxy_fmt.h.
 #endif  // FMT_VERSION >= 60100
 
-namespace pro {
-
-inline namespace v4 {
+namespace pro::inline v4 {
 
 namespace details {
 
@@ -66,9 +64,7 @@ using fmt_wformat = typename FB::template add_convention<
 
 }  // namespace skills
 
-} // inline namespace v4
-
-}  // namespace pro
+}  // namespace pro::v4
 
 namespace fmt {
 
