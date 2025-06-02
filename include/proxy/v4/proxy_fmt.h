@@ -38,7 +38,7 @@ using fmt_format_overload_t = typename fmt_format_overload_traits<CharT>::type;
 
 struct fmt_format_dispatch {
   template <class T, class CharT, class FormatContext>
-  ___PRO_4_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
+  ___PRO4_STATIC_CALL(auto, const T& self, std::basic_string_view<CharT> spec,
       FormatContext& fc)
       requires(std::is_default_constructible_v<fmt::formatter<T, CharT>>) {
     fmt::formatter<T, CharT> impl;
@@ -88,7 +88,7 @@ struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
       const -> typename FormatContext::iterator {
     auto& p = pro::v4::access_proxy<F>(ia);
     if (!p.has_value()) [[unlikely]]
-        { ___PRO_4_THROW(format_error{"null proxy"}); }
+        { ___PRO4_THROW(format_error{"null proxy"}); }
     return pro::v4::proxy_invoke<false, pro::v4::details::fmt_format_dispatch,
         pro::v4::details::fmt_format_overload_t<CharT>>(p, spec_, fc);
   }
