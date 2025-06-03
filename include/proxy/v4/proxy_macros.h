@@ -181,4 +181,32 @@ ___PRO4_DEBUG( \
 #define PRO4_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
     ___PRO4_EXPAND_MACRO(___PRO4_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
+// Version-less macro aliases
+
+#define ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__NAME) \
+    static_assert(false, "The use of macro `" #__NAME "` is ambiguous. \
+Are multiple different versions of Proxy library included at the same time?\n\
+Note: To resolve this error: \n\
+- Either make sure that only one version of Proxy library is included within this file.\n\
+- Or use `PRO4_...` macros (note the `4` suffix) to explicitly stick to a specific major \
+version of the Proxy library.");
+
+#ifdef PRO_DEF_MEM_DISPATCH
+#define PRO_DEF_MEM_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH)
+#else
+#define PRO_DEF_MEM_DISPATCH(name, ...) PRO4_DEF_MEM_DISPATCH(name, __VA_ARGS__)
+#endif
+
+#ifdef PRO_DEF_FREE_DISPATCH
+#define PRO_DEF_FREE_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH)
+#else
+#define PRO_DEF_FREE_DISPATCH(name, ...) PRO4_DEF_FREE_DISPATCH(name, __VA_ARGS__)
+#endif
+
+#ifdef PRO_DEF_FREE_AS_MEM_DISPATCH
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_AS_MEM_DISPATCH)
+#else
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(name, ...) PRO4_DEF_FREE_AS_MEM_DISPATCH(name, __VA_ARGS__)
+#endif
+
 #endif // _MSFT_PROXY_4_MACROS_
