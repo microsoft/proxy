@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_4_FMT_
-#define _MSFT_PROXY_4_FMT_
+#ifndef _MSFT_PROXY4_FMT_
+#define _MSFT_PROXY4_FMT_
 
 #include <string_view>
 #include <type_traits>
@@ -99,4 +99,4 @@ struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
 
 }  // namespace fmt
 
-#endif  // _MSFT_PROXY_4_FMT_
+#endif  // _MSFT_PROXY4_FMT_

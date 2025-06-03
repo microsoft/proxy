@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_4_MACROS_
-#define _MSFT_PROXY_4_MACROS_
+#ifndef _MSFT_PROXY4_MACROS_
+#define _MSFT_PROXY4_MACROS_
 
 #if __cpp_static_call_operator >= 202207L
 #define ___PRO4_STATIC_CALL(__R, ...) static __R operator()(__VA_ARGS__)
@@ -209,4 +209,4 @@ version of the Proxy library.");
 #define PRO_DEF_FREE_AS_MEM_DISPATCH(name, ...) PRO4_DEF_FREE_AS_MEM_DISPATCH(name, __VA_ARGS__)
 #endif
 
-#endif // _MSFT_PROXY_4_MACROS_
+#endif // _MSFT_PROXY4_MACROS_

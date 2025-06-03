@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_4_
-#define _MSFT_PROXY_4_
+#ifndef _MSFT_PROXY4_
+#define _MSFT_PROXY4_
 
 #include "proxy_macros.h"
 
@@ -2378,4 +2378,4 @@ struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
 
 #undef ___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
-#endif  // _MSFT_PROXY_4_
+#endif  // _MSFT_PROXY4_
