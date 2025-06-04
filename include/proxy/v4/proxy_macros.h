@@ -191,6 +191,7 @@ Note: To resolve this error: \n\
 stick to a specific major version of the Proxy library.")
 
 #ifdef __msft_lib_proxy
+#undef __msft_lib_proxy
 #define __msft_lib_proxy \
 [] { ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__msft_lib_proxy, __msft_lib_proxy4); return 0L; } ()
 #else
@@ -198,6 +199,7 @@ stick to a specific major version of the Proxy library.")
 #endif
 
 #ifdef PRO_DEF_MEM_DISPATCH
+#undef PRO_DEF_MEM_DISPATCH
 #define PRO_DEF_MEM_DISPATCH(...) \
 ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH, PRO4_DEF_MEM_DISPATCH)
 #else
@@ -205,6 +207,7 @@ ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH, PRO4_DEF_MEM_DIS
 #endif
 
 #ifdef PRO_DEF_FREE_DISPATCH
+#undef PRO_DEF_FREE_DISPATCH
 #define PRO_DEF_FREE_DISPATCH(...) \
 ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH, PRO4_DEF_FREE_DISPATCH)
 #else
@@ -212,6 +215,7 @@ ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH, PRO4_DEF_FREE_D
 #endif
 
 #ifdef PRO_DEF_FREE_AS_MEM_DISPATCH
+#undef PRO_DEF_FREE_AS_MEM_DISPATCH
 #define PRO_DEF_FREE_AS_MEM_DISPATCH(...) \
 ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_AS_MEM_DISPATCH, PRO4_DEF_FREE_AS_MEM_DISPATCH)
 #else
