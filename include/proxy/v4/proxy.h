@@ -33,13 +33,15 @@
 #endif  // __cpp_rtti >= 199711L
 
 #if __has_cpp_attribute(msvc::no_unique_address)
-#define ___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE msvc::no_unique_address
+#define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE msvc::no_unique_address
 #elif __has_cpp_attribute(no_unique_address)
-#define ___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE no_unique_address
+#define ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE no_unique_address
 #else
 #error Proxy requires C++20 attribute no_unique_address.
 #endif
 
+// `___PRO4_THROW` is used inside `proxy_fmt.h`, 
+// hence it's not `#undef`-ed at the end.
 #if __cpp_exceptions >= 199711L
 #define ___PRO4_THROW(...) throw __VA_ARGS__
 #else
@@ -783,7 +785,7 @@ class inplace_ptr {
   const T&& operator*() const&& noexcept { return std::move(value_); }
 
  private:
-  [[___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
+  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   T value_;
 };
 
@@ -1101,7 +1103,7 @@ struct alloc_aware {
   explicit alloc_aware(const Alloc& alloc) noexcept : alloc(alloc) {}
   alloc_aware(const alloc_aware&) noexcept = default;
 
-  [[___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
+  [[___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   Alloc alloc;
 };
 template <class T>
@@ -1483,7 +1485,7 @@ struct proxy_arg_traits<proxy_indirect_accessor<F>> : applicable_traits {};
 template <class T>
 concept non_proxy_arg = !proxy_arg_traits<std::decay_t<T>>::applicable;
 
-#define ___PRO4_DEF_CAST_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_DEF_CAST_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class T> \
     struct accessor<__F, __IsDirect, __D, T() Q> { \
       ___PRO4_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(operator T) \
@@ -1496,10 +1498,10 @@ concept non_proxy_arg = !proxy_arg_traits<std::decay_t<T>>::applicable;
     }
 template <bool Expl, bool Nullable>
 struct cast_dispatch_base {
-  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO4_DEF_CAST_ACCESSOR,
+  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CAST_ACCESSOR,
       operator typename overload_traits<__Os>::return_type)
 };
-#undef ___PRO4_DEF_CAST_ACCESSOR
+#undef ___PRO_DEF_CAST_ACCESSOR
 
 struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
   template <non_proxy_arg T>
@@ -1981,7 +1983,7 @@ struct proxy_cast_accessor_impl {
   }
 };
 
-#define ___PRO4_DEF_PROXY_CAST_ACCESSOR(Q, ...) \
+#define ___PRO_DEF_PROXY_CAST_ACCESSOR(Q, ...) \
     template <class F, bool IsDirect, class D> \
     struct accessor<F, IsDirect, D, void(proxy_cast_context) Q> \
         : proxy_cast_accessor_impl<F, IsDirect, D, \
@@ -2004,9 +2006,9 @@ struct proxy_cast_dispatch {
       }
     }
   }
-  ___PRO4_DEF_FREE_ACCESSOR_TEMPLATE(___PRO4_DEF_PROXY_CAST_ACCESSOR)
+  ___PRO4_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_PROXY_CAST_ACCESSOR)
 };
-#undef ___PRO4_DEF_PROXY_CAST_ACCESSOR
+#undef ___PRO_DEF_PROXY_CAST_ACCESSOR
 
 struct proxy_typeid_reflector {
   template <class T>
@@ -2110,13 +2112,13 @@ using as_weak = typename FB
 template <details::sign Sign, bool Rhs = false>
 struct operator_dispatch;
 
-#define ___PRO4_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R> \
     struct accessor<__F, __IsDirect, __D, R() Q> { \
       ___PRO4_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__() Q { return proxy_invoke<__IsDirect, __D, R() Q>(SELF); } \
     }
-#define ___PRO4_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class... Args> \
     struct accessor<__F, __IsDirect, __D, R(Args...) Q> { \
       ___PRO4_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
@@ -2125,37 +2127,37 @@ struct operator_dispatch;
             SELF, std::forward<Args>(args)...); \
       } \
     }
-#define ___PRO4_DEF_LHS_UNARY_OP_ACCESSOR ___PRO4_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO4_DEF_LHS_BINARY_OP_ACCESSOR ___PRO4_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO4_DEF_LHS_ALL_OP_ACCESSOR ___PRO4_DEF_LHS_ANY_OP_ACCESSOR
-#define ___PRO4_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
+#define ___PRO_DEF_LHS_UNARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_DEF_LHS_BINARY_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T> \
     ___PRO4_STATIC_CALL(decltype(auto), T&& self) \
         ___PRO4_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
-#define ___PRO4_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
+#define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T> \
     ___PRO4_STATIC_CALL(decltype(auto), T&& self) \
         ___PRO4_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
     template <details::non_proxy_arg T> \
     ___PRO4_STATIC_CALL(decltype(auto), T&& self, int) \
         ___PRO4_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
-#define ___PRO4_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
+#define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <details::non_proxy_arg T, class Arg> \
     ___PRO4_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
         ___PRO4_DIRECT_FUNC_IMPL( \
             std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
-#define ___PRO4_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
-    ___PRO4_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
-    ___PRO4_LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
-#define ___PRO4_LHS_OP_DISPATCH_IMPL(TYPE, ...) \
+#define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
+    ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
+    ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(__VA_ARGS__)
+#define ___PRO_LHS_OP_DISPATCH_IMPL(TYPE, ...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
-      ___PRO4_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
+      ___PRO_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
       ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE( \
-          ___PRO4_DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
+          ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
     };
 
-#define ___PRO4_DEF_RHS_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
+#define ___PRO_DEF_RHS_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg) Q> { \
       friend R operator __VA_ARGS__(Arg arg, SELF_ARG) NE { \
@@ -2172,7 +2174,7 @@ ___PRO4_DEBUG( \
       } \
 ) \
     }
-#define ___PRO4_RHS_OP_DISPATCH_IMPL(...) \
+#define ___PRO_RHS_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <details::non_proxy_arg T, class Arg> \
@@ -2180,18 +2182,18 @@ ___PRO4_DEBUG( \
           ___PRO4_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
       ___PRO4_DEF_FREE_ACCESSOR_TEMPLATE( \
-          ___PRO4_DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
+          ___PRO_DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
     };
 
-#define ___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
-    ___PRO4_LHS_OP_DISPATCH_IMPL(ALL, __VA_ARGS__) \
-    ___PRO4_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
+#define ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_IMPL(ALL, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
-#define ___PRO4_BINARY_OP_DISPATCH_IMPL(...) \
-    ___PRO4_LHS_OP_DISPATCH_IMPL(BINARY, __VA_ARGS__) \
-    ___PRO4_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
+#define ___PRO_BINARY_OP_DISPATCH_IMPL(...) \
+    ___PRO_LHS_OP_DISPATCH_IMPL(BINARY, __VA_ARGS__) \
+    ___PRO_RHS_OP_DISPATCH_IMPL(__VA_ARGS__)
 
-#define ___PRO4_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
+#define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg) Q> { \
       ___PRO4_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
@@ -2204,7 +2206,7 @@ ___PRO4_DEBUG( \
         } \
       } \
     }
-#define ___PRO4_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
+#define ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(Q, NE, SELF_ARG, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg&) Q> { \
       friend Arg& operator __VA_ARGS__(Arg& arg, SELF_ARG) NE { \
@@ -2219,14 +2221,14 @@ ___PRO4_DEBUG( \
           { return arg __VA_ARGS__ std::forward<decltype(__self)>(__self); } \
 ) \
     }
-#define ___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
+#define ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(...) \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       template <details::non_proxy_arg T, class Arg> \
       ___PRO4_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
           ___PRO4_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
               std::forward<Arg>(arg)) \
-      ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO4_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
+      ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     }; \
     template <> \
@@ -2235,44 +2237,44 @@ ___PRO4_DEBUG( \
       ___PRO4_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
           ___PRO4_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
-      ___PRO4_DEF_FREE_ACCESSOR_TEMPLATE(___PRO4_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
+      ___PRO4_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
           __VA_ARGS__) \
     };
 
-___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
-___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL(-)
-___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL(*)
-___PRO4_BINARY_OP_DISPATCH_IMPL(/)
-___PRO4_BINARY_OP_DISPATCH_IMPL(%)
-___PRO4_LHS_OP_DISPATCH_IMPL(UNARY, ++)
-___PRO4_LHS_OP_DISPATCH_IMPL(UNARY, --)
-___PRO4_BINARY_OP_DISPATCH_IMPL(==)
-___PRO4_BINARY_OP_DISPATCH_IMPL(!=)
-___PRO4_BINARY_OP_DISPATCH_IMPL(>)
-___PRO4_BINARY_OP_DISPATCH_IMPL(<)
-___PRO4_BINARY_OP_DISPATCH_IMPL(>=)
-___PRO4_BINARY_OP_DISPATCH_IMPL(<=)
-___PRO4_BINARY_OP_DISPATCH_IMPL(<=>)
-___PRO4_LHS_OP_DISPATCH_IMPL(LEFT, !)
-___PRO4_BINARY_OP_DISPATCH_IMPL(&&)
-___PRO4_BINARY_OP_DISPATCH_IMPL(||)
-___PRO4_LHS_OP_DISPATCH_IMPL(LEFT, ~)
-___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL(&)
-___PRO4_BINARY_OP_DISPATCH_IMPL(|)
-___PRO4_BINARY_OP_DISPATCH_IMPL(^)
-___PRO4_BINARY_OP_DISPATCH_IMPL(<<)
-___PRO4_BINARY_OP_DISPATCH_IMPL(>>)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(+=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(-=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(*=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(/=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(&=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(|=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(^=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(<<=)
-___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
-___PRO4_BINARY_OP_DISPATCH_IMPL(,)
-___PRO4_BINARY_OP_DISPATCH_IMPL(->*)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(-)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(*)
+___PRO_BINARY_OP_DISPATCH_IMPL(/)
+___PRO_BINARY_OP_DISPATCH_IMPL(%)
+___PRO_LHS_OP_DISPATCH_IMPL(UNARY, ++)
+___PRO_LHS_OP_DISPATCH_IMPL(UNARY, --)
+___PRO_BINARY_OP_DISPATCH_IMPL(==)
+___PRO_BINARY_OP_DISPATCH_IMPL(!=)
+___PRO_BINARY_OP_DISPATCH_IMPL(>)
+___PRO_BINARY_OP_DISPATCH_IMPL(<)
+___PRO_BINARY_OP_DISPATCH_IMPL(>=)
+___PRO_BINARY_OP_DISPATCH_IMPL(<=)
+___PRO_BINARY_OP_DISPATCH_IMPL(<=>)
+___PRO_LHS_OP_DISPATCH_IMPL(LEFT, !)
+___PRO_BINARY_OP_DISPATCH_IMPL(&&)
+___PRO_BINARY_OP_DISPATCH_IMPL(||)
+___PRO_LHS_OP_DISPATCH_IMPL(LEFT, ~)
+___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(&)
+___PRO_BINARY_OP_DISPATCH_IMPL(|)
+___PRO_BINARY_OP_DISPATCH_IMPL(^)
+___PRO_BINARY_OP_DISPATCH_IMPL(<<)
+___PRO_BINARY_OP_DISPATCH_IMPL(>>)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(+=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(-=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(*=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(/=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(&=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(|=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(^=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(<<=)
+___PRO_ASSIGNMENT_OP_DISPATCH_IMPL(>>=)
+___PRO_BINARY_OP_DISPATCH_IMPL(,)
+___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 
 template <>
 struct operator_dispatch<"()", false> {
@@ -2280,7 +2282,7 @@ struct operator_dispatch<"()", false> {
   ___PRO4_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
       ___PRO4_DIRECT_FUNC_IMPL(
           std::forward<T>(self)(std::forward<Args>(args)...))
-  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO4_DEF_LHS_ANY_OP_ACCESSOR, operator())
+  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
 };
 template <>
 struct operator_dispatch<"[]", false> {
@@ -2294,26 +2296,26 @@ struct operator_dispatch<"[]", false> {
   ___PRO4_STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
       ___PRO4_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // __cpp_multidimensional_subscript >= 202110L
-  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO4_DEF_LHS_ANY_OP_ACCESSOR, operator[])
+  ___PRO4_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
 };
 
-#undef ___PRO4_ASSIGNMENT_OP_DISPATCH_IMPL
-#undef ___PRO4_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO4_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
-#undef ___PRO4_BINARY_OP_DISPATCH_IMPL
-#undef ___PRO4_EXTENDED_BINARY_OP_DISPATCH_IMPL
-#undef ___PRO4_RHS_OP_DISPATCH_IMPL
-#undef ___PRO4_DEF_RHS_OP_ACCESSOR
-#undef ___PRO4_LHS_OP_DISPATCH_IMPL
-#undef ___PRO4_LHS_ALL_OP_DISPATCH_BODY_IMPL
-#undef ___PRO4_LHS_BINARY_OP_DISPATCH_BODY_IMPL
-#undef ___PRO4_LHS_UNARY_OP_DISPATCH_BODY_IMPL
-#undef ___PRO4_LHS_LEFT_OP_DISPATCH_BODY_IMPL
-#undef ___PRO4_DEF_LHS_ALL_OP_ACCESSOR
-#undef ___PRO4_DEF_LHS_BINARY_OP_ACCESSOR
-#undef ___PRO4_DEF_LHS_UNARY_OP_ACCESSOR
-#undef ___PRO4_DEF_LHS_ANY_OP_ACCESSOR
-#undef ___PRO4_DEF_LHS_LEFT_OP_ACCESSOR
+#undef ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL
+#undef ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR
+#undef ___PRO_BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL
+#undef ___PRO_RHS_OP_DISPATCH_IMPL
+#undef ___PRO_DEF_RHS_OP_ACCESSOR
+#undef ___PRO_LHS_OP_DISPATCH_IMPL
+#undef ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL
+#undef ___PRO_DEF_LHS_ALL_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_BINARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_UNARY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_ANY_OP_ACCESSOR
+#undef ___PRO_DEF_LHS_LEFT_OP_ACCESSOR
 
 struct implicit_conversion_dispatch
     : details::cast_dispatch_base<false, false> {
@@ -2376,6 +2378,6 @@ struct formatter<pro::v4::proxy_indirect_accessor<F>, CharT> {
 }  // namespace std
 #endif  // __STDC_HOSTED__ && __has_include(<format>)
 
-#undef ___PRO4_NO_UNIQUE_ADDRESS_ATTRIBUTE
+#undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
 #endif  // _MSFT_PROXY4_
