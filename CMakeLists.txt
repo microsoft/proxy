@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.28)
 
 project(msft_proxy4 VERSION 3.3.0 LANGUAGES CXX)
 add_library(msft_proxy4 INTERFACE)
-add_library(msft_proxy::msft_proxy4 ALIAS msft_proxy4)
+set_target_properties(msft_proxy4 PROPERTIES EXPORT_NAME proxy4)
+add_library(msft_proxy::proxy4 ALIAS msft_proxy4)
 
 # Do not enable building tests if proxy is consumed as
 # subdirectory (e.g. by CMake FetchContent_Declare).

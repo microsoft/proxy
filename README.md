@@ -40,7 +40,7 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
       GIT_REPOSITORY https://github.com/microsoft/proxy.git
     )
 
-    target_link_libraries(main PRIVATE msft_proxy::msft_proxy4)
+    target_link_libraries(main PRIVATE msft_proxy::proxy4)
     ```
 
 ### Hello World

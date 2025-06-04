@@ -14,7 +14,7 @@ if(NOT DEFINED proxy4_INCLUDE_DIR) # (1)
   set(proxy4_INCLUDE_DIR ${proxy_SOURCE_DIR}/include)
 endif()
 
-message(STATUS "Declaring `msft_proxy::msft_proxy4_module` target for include path ${proxy4_INCLUDE_DIR}")
+message(STATUS "Declaring `msft_proxy::proxy4_module` target for include path ${proxy4_INCLUDE_DIR}")
 
 add_library(msft_proxy4_module)
 set_target_properties(
@@ -24,7 +24,7 @@ set_target_properties(
     EXCLUDE_FROM_ALL TRUE
 )
 
-add_library(msft_proxy::msft_proxy4_module ALIAS msft_proxy4_module)
+add_library(msft_proxy::proxy4_module ALIAS msft_proxy4_module)
 target_sources(msft_proxy4_module PUBLIC
   FILE_SET CXX_MODULES
   BASE_DIRS ${proxy4_INCLUDE_DIR}
@@ -32,7 +32,7 @@ target_sources(msft_proxy4_module PUBLIC
     ${proxy4_INCLUDE_DIR}/proxy/v4/proxy.ixx
 )
 target_compile_features(msft_proxy4_module PUBLIC cxx_std_20) # (2)
-target_link_libraries(msft_proxy4_module PUBLIC msft_proxy::msft_proxy4)
+target_link_libraries(msft_proxy4_module PUBLIC msft_proxy::proxy4)
 ```
 
 - (1) `proxy4_INCLUDE_DIR` is automatically declared after `find_package(proxy4)`. CPM uses a slightly different convention where `proxy_SOURCE_DIR` is declared after `CPMAddPackage`.
@@ -41,7 +41,7 @@ target_link_libraries(msft_proxy4_module PUBLIC msft_proxy::msft_proxy4)
 It can then be consumed like this:
 
 ```cmake
-target_link_libraries(main PRIVATE msft_proxy::msft_proxy4_module)
+target_link_libraries(main PRIVATE msft_proxy::proxy4_module)
 ```
 
 ## Example
