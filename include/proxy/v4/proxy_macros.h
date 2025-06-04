@@ -182,34 +182,38 @@ ___PRO4_DEBUG( \
 
 // Version-less macro aliases
 
-#define ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__NAME) \
+#define ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__NAME, __VERSION_QUALIFIED_NAME) \
     static_assert(false, "The use of macro `" #__NAME "` is ambiguous. \
 Are multiple different versions of Proxy library included at the same time?\n\
 Note: To resolve this error: \n\
 - Either make sure that only one version of Proxy library is included within this file.\n\
-- Or use `PRO4_...` macros (note the `4` suffix) to explicitly stick to a specific major \
-version of the Proxy library.");
+- Or use the `" #__VERSION_QUALIFIED_NAME "` macro (note the `4` suffix) to explicitly \
+stick to a specific major version of the Proxy library.")
 
 #ifdef __msft_lib_proxy
-#define __msft_lib_proxy ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__msft_lib_proxy)
+#define __msft_lib_proxy \
+[] { ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__msft_lib_proxy, __msft_lib_proxy4); return 0L; } ()
 #else
 #define __msft_lib_proxy __msft_lib_proxy4
 #endif
 
 #ifdef PRO_DEF_MEM_DISPATCH
-#define PRO_DEF_MEM_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH)
+#define PRO_DEF_MEM_DISPATCH(...) \
+___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH, PRO4_DEF_MEM_DISPATCH)
 #else
 #define PRO_DEF_MEM_DISPATCH(name, ...) PRO4_DEF_MEM_DISPATCH(name, __VA_ARGS__)
 #endif
 
 #ifdef PRO_DEF_FREE_DISPATCH
-#define PRO_DEF_FREE_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH)
+#define PRO_DEF_FREE_DISPATCH(...) \
+___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH, PRO4_DEF_FREE_DISPATCH)
 #else
 #define PRO_DEF_FREE_DISPATCH(name, ...) PRO4_DEF_FREE_DISPATCH(name, __VA_ARGS__)
 #endif
 
 #ifdef PRO_DEF_FREE_AS_MEM_DISPATCH
-#define PRO_DEF_FREE_AS_MEM_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_AS_MEM_DISPATCH)
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(...) \
+___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_AS_MEM_DISPATCH, PRO4_DEF_FREE_AS_MEM_DISPATCH)
 #else
 #define PRO_DEF_FREE_AS_MEM_DISPATCH(name, ...) PRO4_DEF_FREE_AS_MEM_DISPATCH(name, __VA_ARGS__)
 #endif
