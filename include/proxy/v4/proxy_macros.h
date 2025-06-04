@@ -23,7 +23,6 @@
 #endif  // NDEBUG
 
 #define __msft_lib_proxy4 202503L
-#define __msft_lib_proxy __msft_lib_proxy4
 
 ////////
 
@@ -190,6 +189,12 @@ Note: To resolve this error: \n\
 - Either make sure that only one version of Proxy library is included within this file.\n\
 - Or use `PRO4_...` macros (note the `4` suffix) to explicitly stick to a specific major \
 version of the Proxy library.");
+
+#ifdef __msft_lib_proxy
+#define __msft_lib_proxy ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__msft_lib_proxy)
+#else
+#define __msft_lib_proxy __msft_lib_proxy4
+#endif
 
 #ifdef PRO_DEF_MEM_DISPATCH
 #define PRO_DEF_MEM_DISPATCH(...) ___PRO4_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH)
