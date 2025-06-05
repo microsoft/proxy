@@ -1,5 +1,0 @@
-@PACKAGE_INIT@
-
-include("${CMAKE_CURRENT_LIST_DIR}/proxy4Targets.cmake")
-
-set(proxy4_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")

@@ -10,5 +10,5 @@ if(PROXY_BUILD_MODULES)
       foo.cpp
       impl.cpp
   )
-  target_link_libraries(msft_proxy_tests PRIVATE msft_proxy::proxy4_module)
+  target_link_libraries(msft_proxy_tests PRIVATE msft_proxy4::proxy_module)
 endif()

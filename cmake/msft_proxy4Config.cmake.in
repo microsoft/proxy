@@ -1,0 +1,5 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/msft_proxy4Targets.cmake")
+
+set(msft_proxy4_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
