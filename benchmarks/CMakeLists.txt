@@ -22,7 +22,7 @@ add_executable(msft_proxy_benchmarks
   proxy_management_benchmark.cpp
 )
 target_include_directories(msft_proxy_benchmarks PRIVATE .)
-target_link_libraries(msft_proxy_benchmarks PRIVATE msft_proxy::proxy4 benchmark::benchmark benchmark::benchmark_main)
+target_link_libraries(msft_proxy_benchmarks PRIVATE msft_proxy4::proxy benchmark::benchmark benchmark::benchmark_main)
 
 if (MSVC)
   target_compile_options(msft_proxy_benchmarks PRIVATE /W4)

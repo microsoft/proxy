@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(msft_proxy4 VERSION 3.3.0 LANGUAGES CXX)
+project(msft_proxy4 VERSION 4.0.0 LANGUAGES CXX)
 add_library(msft_proxy4 INTERFACE)
-set_target_properties(msft_proxy4 PROPERTIES EXPORT_NAME proxy4)
-add_library(msft_proxy::proxy4 ALIAS msft_proxy4)
+set_target_properties(msft_proxy4 PROPERTIES EXPORT_NAME proxy)
+add_library(msft_proxy4::proxy ALIAS msft_proxy4)
 
 # Do not enable building tests if proxy is consumed as
 # subdirectory (e.g. by CMake FetchContent_Declare).
@@ -42,13 +42,13 @@ target_include_directories(msft_proxy4 INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRE
 
 # Do not set the module target if proxy is consumed as a subdirectory.
 if(PROJECT_IS_TOP_LEVEL)
-  set(proxy4_INCLUDE_DIR include)
+  set(msft_proxy4_INCLUDE_DIR include)
   if(PROXY_BUILD_MODULES)
-    include(cmake/proxy4ModuleTargets.cmake)
+    include(cmake/msft_proxy4ModuleTargets.cmake)
   endif()
 else()
   # Propagate the variable to the parent project
-  set(proxy4_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
+  set(msft_proxy4_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include PARENT_SCOPE)
 endif()
 
 # install and export the project. project name - proxy
@@ -56,39 +56,39 @@ endif()
 include(GNUInstallDirs)
 
 install(TARGETS msft_proxy4
-        EXPORT proxy4Targets
+        EXPORT msft_proxy4Targets
         FILE_SET public_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
 install(
-  EXPORT proxy4Targets
-  NAMESPACE msft_proxy::
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy
+  EXPORT msft_proxy4Targets
+  NAMESPACE msft_proxy4::
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/msft_proxy4
 )
 export(
   TARGETS msft_proxy4
-  NAMESPACE msft_proxy::
-  FILE proxy4Targets.cmake
+  NAMESPACE msft_proxy4::
+  FILE msft_proxy4Targets.cmake
 )
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
-  cmake/proxy4Config.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/proxy4Config.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy
+  cmake/msft_proxy4Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/cmake/msft_proxy4Config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/msft_proxy4
   PATH_VARS CMAKE_INSTALL_INCLUDEDIR
 )
 
 include(CMakePackageConfigHelpers)
-write_basic_package_version_file(cmake/proxy4ConfigVersion.cmake
+write_basic_package_version_file(cmake/msft_proxy4ConfigVersion.cmake
                                  COMPATIBILITY SameMajorVersion
                                  ARCH_INDEPENDENT)
 
 install(
   FILES 
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/proxy4Config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/proxy4ConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_DATADIR}/proxy
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/msft_proxy4Config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/msft_proxy4ConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/msft_proxy4
 )
 
 # build tests if BUILD_TESTING is ON

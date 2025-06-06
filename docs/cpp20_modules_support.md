@@ -5,16 +5,16 @@ The "Proxy" library ships with `.ixx` files starting with version **4.0.0**. Com
 As of 2025-05-11, CMake lacks support for forward compatibility when consuming C++ modules, which causes consumers with newer C++ standard to be unable to use modules with older standard. Until this is implemented by CMake, a CMake target containing the module can be manually declared using the following CMake script:
 
 ```cmake
-find_package(proxy4 REQUIRED)
+find_package(msft_proxy4 REQUIRED)
 
-if(NOT DEFINED proxy4_INCLUDE_DIR) # (1)
-  if(NOT DEFINED proxy_SOURCE_DIR)
-    message(FATAL_ERROR "proxy4_INCLUDE_DIR or proxy_SOURCE_DIR must be defined to use this script.")
+if(NOT DEFINED msft_proxy4_INCLUDE_DIR) # (1)
+  if(NOT DEFINED msft_proxy4_SOURCE_DIR)
+    message(FATAL_ERROR "`msft_proxy4_INCLUDE_DIR` or `msft_proxy4_SOURCE_DIR` must be defined to use this script.")
   endif()
-  set(proxy4_INCLUDE_DIR ${proxy_SOURCE_DIR}/include)
+  set(msft_proxy4_INCLUDE_DIR ${msft_proxy4_SOURCE_DIR}/include)
 endif()
 
-message(STATUS "Declaring `msft_proxy::proxy4_module` target for include path ${proxy4_INCLUDE_DIR}")
+message(STATUS "Declaring `msft_proxy4::proxy_module` target for include path `${msft_proxy4_INCLUDE_DIR}`")
 
 add_library(msft_proxy4_module)
 set_target_properties(
@@ -24,24 +24,24 @@ set_target_properties(
     EXCLUDE_FROM_ALL TRUE
 )
 
-add_library(msft_proxy::proxy4_module ALIAS msft_proxy4_module)
+add_library(msft_proxy4::proxy_module ALIAS msft_proxy4_module)
 target_sources(msft_proxy4_module PUBLIC
   FILE_SET CXX_MODULES
-  BASE_DIRS ${proxy4_INCLUDE_DIR}
+  BASE_DIRS ${msft_proxy4_INCLUDE_DIR}
   FILES
-    ${proxy4_INCLUDE_DIR}/proxy/v4/proxy.ixx
+    ${msft_proxy4_INCLUDE_DIR}/proxy/v4/proxy.ixx
 )
 target_compile_features(msft_proxy4_module PUBLIC cxx_std_20) # (2)
-target_link_libraries(msft_proxy4_module PUBLIC msft_proxy::proxy4)
+target_link_libraries(msft_proxy4_module PUBLIC msft_proxy4::proxy)
 ```
 
-- (1) `proxy4_INCLUDE_DIR` is automatically declared after `find_package(proxy4)`. CPM uses a slightly different convention where `proxy_SOURCE_DIR` is declared after `CPMAddPackage`.
+- (1) `msft_proxy4_INCLUDE_DIR` is automatically declared after `find_package(msft_proxy4)`. CPM uses a slightly different convention where `msft_proxy4_SOURCE_DIR` is declared after `CPMAddPackage`.
 - (2) The C++ standard version for `msft_proxy4_module` target should be the same or higher than the consumer CMake target. For example if your project is using C++23 mode, this line should be changed to `cxx_std_23` or `cxx_std_26` / newer standards.
 
 It can then be consumed like this:
 
 ```cmake
-target_link_libraries(main PRIVATE msft_proxy::proxy4_module)
+target_link_libraries(main PRIVATE msft_proxy4::proxy_module)
 ```
 
 ## Example
