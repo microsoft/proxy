@@ -35,7 +35,7 @@ Adding duplicate reflection types is well-defined, whether done directly via `ad
 #include <array>
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct LayoutReflector {
  public:

@@ -51,7 +51,7 @@ struct dispatch_name {
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_FREE_AS_MEM_DISPATCH(FreeToString, std::to_string, ToString);
 

@@ -85,7 +85,7 @@ The constructors of `proxy<F>` are similar to but have certain differences from 
 #include <iostream>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemSize, size);
 PRO_DEF_MEM_DISPATCH(MemClear, clear);

@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+#include "utils.h"
 #include <gtest/gtest.h>
 #include <memory_resource>
-#include "proxy.h"
-#include "utils.h"
+#include <proxy/proxy.h>
 
 namespace proxy_creation_tests_details {
 

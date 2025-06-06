@@ -57,7 +57,7 @@ The default values of the fields of [`proxiable_ptr_constraints`](../proxiable_p
 ```cpp
 #include <type_traits>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct DefaultBase : pro::facade_builder
     ::build {};

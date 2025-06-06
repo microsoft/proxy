@@ -6,10 +6,10 @@
 #include <memory>
 #include <memory_resource>
 #include <numbers>
+#include <proxy/proxy.h>
 #include <sstream>
 #include <string>
 #include <vector>
-#include "proxy.h"
 
 namespace proxy_integration_tests_details {
 

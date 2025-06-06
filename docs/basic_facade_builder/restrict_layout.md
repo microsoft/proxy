@@ -18,7 +18,7 @@ If no layout restriction is applied before specifying [`build`](build.md), the d
 #include <array>
 #include <memory>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct DefaultFacade : pro::facade_builder::build {};
 

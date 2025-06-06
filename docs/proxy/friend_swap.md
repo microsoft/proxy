@@ -15,7 +15,7 @@ This function is not visible to ordinary [unqualified](https://en.cppreference.c
 #include <numbers>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_FREE_DISPATCH(FreeToString, std::to_string, ToString);
 

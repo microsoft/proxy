@@ -27,7 +27,20 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
 ## Quick Start
 
-"Proxy" is a header-only C++20 library. To use the library, make sure your compiler meets the [minimum requirements](#compiler-req) and just include the header file [proxy.h](https://github.com/microsoft/proxy/blob/main/proxy.h) in your source code. Alternatively, you can install the library via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), by searching for "proxy" (see [vcpkg.io](https://vcpkg.io/en/package/proxy) and [conan.io](https://conan.io/center/recipes/proxy)).
+"Proxy" is a header-only C++20 library. To use the library, make sure your compiler meets the [minimum requirements](#compiler-req) and just put the [proxy](https://github.com/microsoft/proxy/tree/main/include/proxy) directory in your project's include directory. Alternatively, you can install the library via:
+
+- [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview): [proxy port on vcpkg.io](https://vcpkg.io/en/package/proxy)
+- [conan](https://conan.io/): [proxy recipe on conan.io](https://conan.io/center/recipes/proxy)
+- [CPM](https://github.com/cpm-cmake/CPM.cmake) / CMake [FetchContent_Declare](https://cmake.org/cmake/help/latest/module/FetchContent.html):
+
+    ```cmake
+    CPMAddPackage(
+      NAME proxy
+      GIT_TAG 3.4.0 # or above
+      GIT_REPOSITORY https://github.com/microsoft/proxy.git
+    )
+    target_link_libraries(main PRIVATE msft_proxy)
+    ```
 
 ### Hello World
 
@@ -38,7 +51,7 @@ Let's get started with the following "Hello World" example ([run](https://godbol
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Formattable : pro::facade_builder
     ::support_format
@@ -62,7 +75,7 @@ Here is a step-by-step explanation:
 - `#include <format>`: For [`std::format`](https://en.cppreference.com/w/cpp/utility/format/format).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
-- `#include "proxy.h"`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`. If the library is consumed via [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_started/overview) or [conan](https://conan.io/), this line should be changed into `#include <proxy/proxy.h>`.
+- `#include <proxy/proxy.h>`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`.
 - `struct Formattable : pro::facade_builder ... ::build {}`: Defines a facade type `Formattable`. The term "facade", formally defined as the [*ProFacade* requirements](https://microsoft.github.io/proxy/docs/ProFacade.html), is how the "Proxy" library models runtime abstraction. Specifically,
   - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Provides capability to build a facade type at compile-time.
   - [`support_format`](https://microsoft.github.io/proxy/docs/basic_facade_builder/support_format.html): Specifies the capability of formatting (via [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format)).
@@ -87,7 +100,7 @@ In the previous "Hello Word" example, we demonstrated how `proxy` could manage d
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Streamable : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"<<", true>, std::ostream&(std::ostream& out) const>
@@ -108,10 +121,10 @@ int main() {
 
 Here is a step-by-step explanation:
 
-- `#include <iostream>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
+- `#include <iomanip>`: For [`std::setprecision`](https://en.cppreference.com/w/cpp/io/manip/setprecision).
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <string>`: For [`std::string`](https://en.cppreference.com/w/cpp/string/basic_string).
-- `#include "proxy.h"`: For the "Proxy" library.
+- `#include <proxy/proxy.h>`: For the "Proxy" library.
 - `struct Streamable : pro::facade_builder ... ::build {}`: Defines a facade type `Streamable`. Specifically,
   - [`pro::facade_builder`](https://microsoft.github.io/proxy/docs/basic_facade_builder.html): Gets prepared to build another facade.
   - [`add_convention`](https://microsoft.github.io/proxy/docs/basic_facade_builder/add_convention.html): Adds a generalized "calling convention", defined by a "dispatch" and several "overloads", to the build context.
@@ -142,7 +155,7 @@ Note that some facilities are provided as macro, because C++ templates today do 
 #include <iostream>
 #include <sstream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemDraw, Draw);
 PRO_DEF_MEM_DISPATCH(MemArea, Area);
@@ -187,7 +200,7 @@ Here is a step-by-step explanation:
 
 - `#include <iostream>`: For [`std::cout`](https://en.cppreference.com/w/cpp/io/cout).
 - `#include <sstream>`: For [`std::stringstream`](https://en.cppreference.com/w/cpp/io/basic_stringstream).
-- `#include "proxy.h"`: For the "Proxy" library.
+- `#include <proxy/proxy.h>`: For the "Proxy" library.
 - [`PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html)`(MemDraw, Draw)`: Defines a dispatch type `MemDraw` for expressions of calling member function `Draw`.
 - [`PRO_DEF_MEM_DISPATCH`](https://microsoft.github.io/proxy/docs/PRO_DEF_MEM_DISPATCH.html)`(MemArea, Area)`: Defines a dispatch type `MemArea` for expressions of calling member function `Area`.
 - `struct Drawable : pro::facade_builder ... ::build {}`: Defines a facade type `Drawable`. Specifically,

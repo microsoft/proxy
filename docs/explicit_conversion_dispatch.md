@@ -26,7 +26,7 @@ Class `explicit_conversion_dispatch` models a [dispatch](ProDispatch.md) type fo
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct IntConvertible : pro::facade_builder
     ::add_convention<pro::conversion_dispatch, int() const>

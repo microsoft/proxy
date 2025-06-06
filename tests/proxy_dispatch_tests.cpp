@@ -8,7 +8,7 @@
 #pragma warning(push)
 #pragma warning(disable: 4834)  // False alarm from MSVC: warning C4834: discarding return value of function with [[nodiscard]] attribute
 #endif  // defined(_MSC_VER) && !defined(__clang__)
-#include "proxy.h"
+#include <proxy/proxy.h>
 #if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #endif  // defined(_MSC_VER) && !defined(__clang__)

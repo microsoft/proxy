@@ -12,7 +12,7 @@ See [`make_proxy_inplace`](make_proxy_inplace.md) for the definition of the expo
 ```cpp
 #include <array>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 // By default, the maximum pointer size defined by pro::facade_builder
 // is 2 * sizeof(void*). This value can be overridden by `restrict_layout`.
