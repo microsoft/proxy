@@ -13,7 +13,7 @@ The concept `proxiable<P, F>` specifies that [`proxy<F>`](proxy.md) can potentia
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_FREE_DISPATCH(FreeToString, std::to_string, ToString);
 

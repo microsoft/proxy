@@ -2,7 +2,7 @@
 #error "This file shall be compiled targeting a freestanding environment."
 #endif  // __STDC_HOSTED__
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 constexpr unsigned DefaultHash = -1;
 unsigned GetHash(int v) { return static_cast<unsigned>(v + 3) * 31; }

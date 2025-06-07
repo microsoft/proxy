@@ -19,7 +19,7 @@ The `!=` operator is [synthesized](https://en.cppreference.com/w/cpp/language/de
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct AnyMovable : pro::facade_builder::build {};
 

@@ -13,7 +13,7 @@ Destroys the contained value if it exists. After the call, `*this` does not cont
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct AnyMovable : pro::facade_builder::build {};
 

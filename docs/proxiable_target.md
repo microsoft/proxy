@@ -10,7 +10,7 @@ See [`make_proxy_view`](make_proxy_view.md) for the definition of the exposition
 ## Example
 
 ```cpp
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Runnable : pro::facade_builder
     ::add_convention<pro::operator_dispatch<"()">, void()>

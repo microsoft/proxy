@@ -15,7 +15,7 @@ Destroys the `proxy` object. If the `proxy` contains a value, the contained valu
 ```cpp
 #include <cstdio>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct AnyMovable : pro::facade_builder::build {};
 

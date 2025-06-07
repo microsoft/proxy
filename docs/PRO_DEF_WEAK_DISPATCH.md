@@ -39,7 +39,7 @@ In [Java](https://docs.oracle.com/javase/specs/jls/se23/html/jls-9.html#jls-9.4-
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct NotImplemented {
   explicit NotImplemented(auto&&...) { throw std::runtime_error{ "Not implemented!" }; }

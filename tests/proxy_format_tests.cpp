@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 namespace proxy_format_tests_details {
 

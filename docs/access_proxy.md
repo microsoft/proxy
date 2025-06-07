@@ -33,7 +33,7 @@ Similar to [`proxy_invoke`](proxy_invoke.md), this function can be used to imple
 #include <iostream>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_FREE_DISPATCH(FreeToString, std::to_string, ToString);
 

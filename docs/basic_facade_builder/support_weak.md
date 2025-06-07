@@ -17,7 +17,7 @@ Let `p` be a value of type `proxy<F>`, `ptr` of type `P` be the contained value 
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct Formattable : pro::facade_builder
     ::support_format

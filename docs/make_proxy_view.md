@@ -20,7 +20,7 @@ The constructed `proxy_view` object.
 #include <map>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 

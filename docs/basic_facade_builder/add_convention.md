@@ -38,7 +38,7 @@ Adding duplicated combinations of some dispatch type and overload type is well-d
 #include <memory>
 #include <string>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_FREE_DISPATCH(FreeToString, std::to_string, ToString);
 

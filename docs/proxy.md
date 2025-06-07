@@ -48,7 +48,7 @@ Another major difference is that `proxy` is open to abstractions. Unlike `std::f
 #include <string>
 #include <vector>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 

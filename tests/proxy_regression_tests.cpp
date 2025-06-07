@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 #include <gtest/gtest.h>
+#include <proxy/proxy.h>
 #include <vector>
-#include "proxy.h"
 
 namespace proxy_regression_tests_details {
 

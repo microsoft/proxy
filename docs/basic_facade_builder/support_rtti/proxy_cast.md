@@ -61,7 +61,7 @@ These functions are not visible to ordinary [unqualified](https://en.cppreferenc
 ```cpp
 #include <iostream>
 
-#include "proxy.h"
+#include <proxy/proxy.h>
 
 struct RttiAware : pro::facade_builder
     ::support_rtti
