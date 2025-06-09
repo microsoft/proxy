@@ -18,6 +18,7 @@ target_sources(msft_proxy
     BASE_DIRS include
     FILES
       include/proxy/proxy.h
+      include/proxy/v3/proxy.h
 )
 
 target_compile_features(msft_proxy INTERFACE cxx_std_20)

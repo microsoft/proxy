@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_
-#define _MSFT_PROXY_
+#ifndef _MSFT_PROXY3_
+#define _MSFT_PROXY3_
 
 #include <cassert>
 #include <cstddef>
@@ -43,26 +43,26 @@
 #endif  // __cpp_exceptions >= 199711L
 
 #if __cpp_static_call_operator >= 202207L
-#define ___PRO_STATIC_CALL(__R, ...) static __R operator()(__VA_ARGS__)
+#define ___PRO3_STATIC_CALL(__R, ...) static __R operator()(__VA_ARGS__)
 #else
-#define ___PRO_STATIC_CALL(__R, ...) __R operator()(__VA_ARGS__) const
+#define ___PRO3_STATIC_CALL(__R, ...) __R operator()(__VA_ARGS__) const
 #endif  // __cpp_static_call_operator >= 202207L
 
 #ifdef _MSC_VER
-#define ___PRO_ENFORCE_EBO __declspec(empty_bases)
+#define ___PRO3_ENFORCE_EBO __declspec(empty_bases)
 #else
-#define ___PRO_ENFORCE_EBO
+#define ___PRO3_ENFORCE_EBO
 #endif  // _MSC_VER
 
 #ifdef NDEBUG
-#define ___PRO_DEBUG(...)
+#define ___PRO3_DEBUG(...)
 #else
-#define ___PRO_DEBUG(...) __VA_ARGS__
+#define ___PRO3_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft_lib_proxy 202503L
+#define __msft3_lib_proxy 202505L
 
-namespace pro {
+namespace pro::inline v3 {
 
 namespace details {
 
@@ -127,7 +127,7 @@ template <class F>
 concept facade = details::basic_facade_traits<F>::applicable;
 
 template <facade F> struct proxy_indirect_accessor;
-template <facade F> class ___PRO_ENFORCE_EBO proxy;
+template <facade F> class ___PRO3_ENFORCE_EBO proxy;
 
 namespace details {
 
@@ -483,14 +483,14 @@ struct refl_traits {
 
 struct copy_dispatch {
   template <class T, class F>
-  ___PRO_STATIC_CALL(void, T&& self, proxy<F>& rhs)
+  ___PRO3_STATIC_CALL(void, T&& self, proxy<F>& rhs)
       noexcept(std::is_nothrow_constructible_v<std::decay_t<T>, T>)
       requires(std::is_constructible_v<std::decay_t<T>, T>)
       { std::construct_at(&rhs, std::forward<T>(self)); }
 };
 struct destroy_dispatch {
   template <class T>
-  ___PRO_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
+  ___PRO3_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>)
       requires(std::is_destructible_v<T>) { std::destroy_at(&self); }
 };
 template <class D, class ONE, class OE, constraint_level C>
@@ -505,9 +505,9 @@ template <class D, class ONE, class OE, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<D, ONE, OE, C>::type;
 
 template <class... As>
-class ___PRO_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <facade> friend class pro::proxy;
-  template <facade> friend struct pro::proxy_indirect_accessor;
+class ___PRO3_ENFORCE_EBO composite_accessor_impl : public As... {
+  template <facade> friend class pro::v3::proxy;
+  template <facade> friend struct pro::v3::proxy_indirect_accessor;
 
   composite_accessor_impl() noexcept = default;
   composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
@@ -934,7 +934,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
   static_assert(_Traits::applicable);
 
  public:
-  proxy() noexcept { ___PRO_DEBUG(std::ignore = &_symbol_guard;) }
+  proxy() noexcept { ___PRO3_DEBUG(std::ignore = &_symbol_guard;) }
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept requires(F::constraints.copyability ==
       constraint_level::trivial) = default;
@@ -1107,7 +1107,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
     return result;
   }
 
-___PRO_DEBUG(
+___PRO3_DEBUG(
   static inline void _symbol_guard(proxy& self, const proxy& cself) noexcept {
     self.operator->(); *self; *std::move(self);
     cself.operator->(); *cself; *std::move(cself);
@@ -1182,7 +1182,7 @@ class indirect_ptr {
 };
 
 template <class T, class Alloc>
-class ___PRO_ENFORCE_EBO allocated_ptr
+class ___PRO3_ENFORCE_EBO allocated_ptr
     : private alloc_aware<Alloc>, public indirect_ptr<inplace_ptr<T>> {
  public:
   template <class... Args>
@@ -1204,7 +1204,7 @@ class ___PRO_ENFORCE_EBO allocated_ptr
 };
 
 template <class T, class Alloc>
-struct ___PRO_ENFORCE_EBO compact_ptr_storage
+struct ___PRO3_ENFORCE_EBO compact_ptr_storage
     : alloc_aware<Alloc>, inplace_ptr<T> {
   template <class... Args>
   explicit compact_ptr_storage(const Alloc& alloc, Args&&... args)
@@ -1232,7 +1232,7 @@ class compact_ptr : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
 
 struct shared_compact_ptr_storage_base { std::atomic_long ref_count = 1; };
 template <class T, class Alloc>
-struct ___PRO_ENFORCE_EBO shared_compact_ptr_storage
+struct ___PRO3_ENFORCE_EBO shared_compact_ptr_storage
     : shared_compact_ptr_storage_base, alloc_aware<Alloc>, inplace_ptr<T> {
   template <class... Args>
   explicit shared_compact_ptr_storage(const Alloc& alloc, Args&&... args)
@@ -1524,120 +1524,125 @@ constexpr proxy<F> make_proxy_shared(T&& value)
 #if __cpp_rtti >= 199711L
 class bad_proxy_cast : public std::bad_cast {
  public:
-  char const* what() const noexcept override { return "pro::bad_proxy_cast"; }
+  char const* what() const noexcept override
+      { return "pro::v3::bad_proxy_cast"; }
 };
 #endif  // __cpp_rtti >= 199711L
 
-#define ___PRO_DIRECT_FUNC_IMPL(...) \
+#define ___PRO3_DIRECT_FUNC_IMPL(...) \
     noexcept(noexcept(__VA_ARGS__)) requires(requires { __VA_ARGS__; }) \
     { return __VA_ARGS__; }
 
-#define ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(__MACRO, ...) \
+#define ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(__MACRO, ...) \
     template <class __F, bool __IsDirect, class __D, class... __Os> \
-    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+    struct ___PRO3_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, bool __IsDirect, class __D, class... __Os> \
         requires(sizeof...(__Os) > 1u && (::std::is_constructible_v< \
             accessor<__F, __IsDirect, __D, __Os>> && ...)) \
     struct accessor<__F, __IsDirect, __D, __Os...> \
         : accessor<__F, __IsDirect, __D, __Os>... \
         { using accessor<__F, __IsDirect, __D, __Os>::__VA_ARGS__...; }; \
-    __MACRO(, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(&&, ::pro::access_proxy<__F>(::std::move(*this)), __VA_ARGS__); \
-    __MACRO(&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
+    __MACRO(, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(noexcept, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(&, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(& noexcept, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(&&, ::pro::v3::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__); \
-    __MACRO(const, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const&, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const& noexcept, ::pro::access_proxy<__F>(*this), __VA_ARGS__); \
-    __MACRO(const&&, ::pro::access_proxy<__F>(::std::move(*this)), \
+    __MACRO(&& noexcept, ::pro::v3::access_proxy<__F>(::std::move(*this)), \
         __VA_ARGS__); \
-    __MACRO(const&& noexcept, ::pro::access_proxy<__F>(::std::move(*this)), \
-        __VA_ARGS__);
+    __MACRO(const, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const noexcept, ::pro::v3::access_proxy<__F>(*this), \
+        __VA_ARGS__); \
+    __MACRO(const&, ::pro::v3::access_proxy<__F>(*this), __VA_ARGS__); \
+    __MACRO(const& noexcept, ::pro::v3::access_proxy<__F>(*this), \
+        __VA_ARGS__); \
+    __MACRO(const&&, ::pro::v3::access_proxy<__F>(::std::move(*this)), \
+        __VA_ARGS__); \
+    __MACRO(const&& noexcept, ::pro::v3::access_proxy<__F>( \
+        ::std::move(*this)), __VA_ARGS__);
 
-#define ___PRO_ADL_ARG ::pro::details::adl_accessor_arg_t<__F, __IsDirect>
-#define ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
+#define ___PRO3_ADL_ARG ::pro::v3::details::adl_accessor_arg_t<__F, __IsDirect>
+#define ___PRO3_DEF_FREE_ACCESSOR_TEMPLATE(__MACRO, ...) \
     template <class __F, bool __IsDirect, class __D, class... __Os> \
-    struct ___PRO_ENFORCE_EBO accessor { accessor() = delete; }; \
+    struct ___PRO3_ENFORCE_EBO accessor { accessor() = delete; }; \
     template <class __F, bool __IsDirect, class __D, class... __Os> \
         requires(sizeof...(__Os) > 1u && (::std::is_constructible_v< \
             accessor<__F, __IsDirect, __D, __Os>> && ...)) \
     struct accessor<__F, __IsDirect, __D, __Os...> \
         : accessor<__F, __IsDirect, __D, __Os>... {}; \
-    __MACRO(,, ___PRO_ADL_ARG& __self, ::pro::access_proxy<__F>(__self), \
+    __MACRO(,, ___PRO3_ADL_ARG& __self, ::pro::v3::access_proxy<__F>(__self), \
         __VA_ARGS__); \
-    __MACRO(noexcept, noexcept, ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(&,, ___PRO_ADL_ARG& __self, ::pro::access_proxy<__F>(__self), \
+    __MACRO(noexcept, noexcept, ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(&,, ___PRO3_ADL_ARG& __self, ::pro::v3::access_proxy<__F>(__self), \
         __VA_ARGS__); \
-    __MACRO(& noexcept, noexcept, ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(&&,, ___PRO_ADL_ARG&& __self, ::pro::access_proxy<__F>( \
+    __MACRO(& noexcept, noexcept, ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(&&,, ___PRO3_ADL_ARG&& __self, ::pro::v3::access_proxy<__F>( \
         ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
-    __MACRO(&& noexcept, noexcept, ___PRO_ADL_ARG&& __self, \
-        ::pro::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
-        __VA_ARGS__); \
-    __MACRO(const,, const ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(const noexcept, noexcept, const ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(const&,, const ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(const& noexcept, noexcept, const ___PRO_ADL_ARG& __self, \
-        ::pro::access_proxy<__F>(__self), __VA_ARGS__); \
-    __MACRO(const&&,, const ___PRO_ADL_ARG&& __self, ::pro::access_proxy<__F>( \
-        ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
-    __MACRO(const&& noexcept, noexcept, const ___PRO_ADL_ARG&& __self, \
-        ::pro::access_proxy<__F>(::std::forward<decltype(__self)>(__self)), \
-        __VA_ARGS__);
+    __MACRO(&& noexcept, noexcept, ___PRO3_ADL_ARG&& __self, \
+        ::pro::v3::access_proxy<__F>( \
+            ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
+    __MACRO(const,, const ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(const noexcept, noexcept, const ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(const&,, const ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(const& noexcept, noexcept, const ___PRO3_ADL_ARG& __self, \
+        ::pro::v3::access_proxy<__F>(__self), __VA_ARGS__); \
+    __MACRO(const&&,, const ___PRO3_ADL_ARG&& __self, \
+        ::pro::v3::access_proxy<__F>( \
+            ::std::forward<decltype(__self)>(__self)), __VA_ARGS__); \
+    __MACRO(const&& noexcept, noexcept, const ___PRO3_ADL_ARG&& __self, \
+        ::pro::v3::access_proxy<__F>( \
+            ::std::forward<decltype(__self)>(__self)), __VA_ARGS__);
 
-#define ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(...) \
-    ___PRO_DEBUG( \
+#define ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(...) \
+    ___PRO3_DEBUG( \
         accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; })
 
-#define ___PRO_EXPAND_IMPL(__X) __X
-#define ___PRO_EXPAND_MACRO_IMPL(__MACRO, __1, __2, __3, __NAME, ...) \
+#define ___PRO3_EXPAND_IMPL(__X) __X
+#define ___PRO3_EXPAND_MACRO_IMPL(__MACRO, __1, __2, __3, __NAME, ...) \
     __MACRO##_##__NAME
-#define ___PRO_EXPAND_MACRO(__MACRO, ...) \
-    ___PRO_EXPAND_IMPL(___PRO_EXPAND_MACRO_IMPL( \
+#define ___PRO3_EXPAND_MACRO(__MACRO, ...) \
+    ___PRO3_EXPAND_IMPL(___PRO3_EXPAND_MACRO_IMPL( \
         __MACRO, __VA_ARGS__, 3, 2)(__VA_ARGS__))
 
-#define ___PRO_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
+#define ___PRO3_DEF_MEM_ACCESSOR(__Q, __SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class __R, \
         class... __Args> \
     struct accessor<__F, __IsDirect, __D, __R(__Args...) __Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       __R __VA_ARGS__(__Args... __args) __Q { \
-        return ::pro::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
+        return ::pro::v3::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
     }
-#define ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+#define ___PRO3_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      ___PRO_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
-          ___PRO_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
+      ___PRO3_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
+          ___PRO3_DIRECT_FUNC_IMPL(::std::forward<__T>(__self) \
               .__FUNC(::std::forward<__Args>(__args)...)) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
+      ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO3_DEF_MEM_ACCESSOR, __FNAME) \
     }
-#define ___PRO_DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
-#define ___PRO_DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
-    ___PRO_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
-#define PRO_DEF_MEM_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
+#define ___PRO3_DEF_MEM_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO3_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO3_DEF_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO3_DEF_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define PRO3_DEF_MEM_DISPATCH(__NAME, ...) \
+    ___PRO3_EXPAND_MACRO(___PRO3_DEF_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
-#define ___PRO_DEF_FREE_ACCESSOR(__Q, __NE, __SELF_ARG, __SELF, ...) \
+#define ___PRO3_DEF_FREE_ACCESSOR(__Q, __NE, __SELF_ARG, __SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class __R, \
         class... __Args> \
     struct accessor<__F, __IsDirect, __D, __R(__Args...) __Q> { \
       friend __R __VA_ARGS__(__SELF_ARG, __Args... __args) __NE { \
-        return ::pro::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
+        return ::pro::v3::proxy_invoke<__IsDirect, __D, __R(__Args...) __Q>( \
             __SELF, ::std::forward<__Args>(__args)...); \
       } \
-___PRO_DEBUG( \
+___PRO3_DEBUG( \
       accessor() noexcept { ::std::ignore = &_symbol_guard; } \
     \
      private: \
@@ -1647,35 +1652,35 @@ ___PRO_DEBUG( \
       } \
 ) \
     }
-#define ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+#define ___PRO3_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      ___PRO_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
-          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
+      ___PRO3_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
+          ___PRO3_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_FREE_ACCESSOR, __FNAME) \
+      ___PRO3_DEF_FREE_ACCESSOR_TEMPLATE(___PRO3_DEF_FREE_ACCESSOR, __FNAME) \
     }
-#define ___PRO_DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
-#define ___PRO_DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
-    ___PRO_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
-#define PRO_DEF_FREE_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
+#define ___PRO3_DEF_FREE_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO3_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO3_DEF_FREE_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO3_DEF_FREE_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define PRO3_DEF_FREE_DISPATCH(__NAME, ...) \
+    ___PRO3_EXPAND_MACRO(___PRO3_DEF_FREE_DISPATCH, __NAME, __VA_ARGS__)
 
-#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
+#define ___PRO3_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME) \
     struct __NAME { \
       template <class __T, class... __Args> \
-      ___PRO_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
-          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
+      ___PRO3_STATIC_CALL(decltype(auto), __T&& __self, __Args&&... __args) \
+          ___PRO3_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__T>(__self), \
               ::std::forward<__Args>(__args)...)) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_MEM_ACCESSOR, __FNAME) \
+      ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO3_DEF_MEM_ACCESSOR, __FNAME) \
     }
-#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_2(__NAME, __FUNC) \
-    ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
-#define ___PRO_DEF_FREE_AS_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
-    ___PRO_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
-#define PRO_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
-    ___PRO_EXPAND_MACRO(___PRO_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
+#define ___PRO3_DEF_FREE_AS_MEM_DISPATCH_2(__NAME, __FUNC) \
+    ___PRO3_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FUNC)
+#define ___PRO3_DEF_FREE_AS_MEM_DISPATCH_3(__NAME, __FUNC, __FNAME) \
+    ___PRO3_DEF_FREE_AS_MEM_DISPATCH_IMPL(__NAME, __FUNC, __FNAME)
+#define PRO3_DEF_FREE_AS_MEM_DISPATCH(__NAME, ...) \
+    ___PRO3_EXPAND_MACRO(___PRO3_DEF_FREE_AS_MEM_DISPATCH, __NAME, __VA_ARGS__)
 
 namespace details {
 
@@ -1686,7 +1691,7 @@ using adl_accessor_arg_t =
 #define ___PRO_DEF_CAST_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class T> \
     struct accessor<__F, __IsDirect, __D, T() Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(operator T) \
+      ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(operator T) \
       explicit(Expl) operator T() Q { \
         if constexpr (Nullable) { \
           if (!SELF.has_value()) { return nullptr; } \
@@ -1696,14 +1701,14 @@ using adl_accessor_arg_t =
     }
 template <bool Expl, bool Nullable>
 struct cast_dispatch_base {
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CAST_ACCESSOR,
+  ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_CAST_ACCESSOR,
       operator typename overload_traits<__Os>::return_type)
 };
 #undef ___PRO_DEF_CAST_ACCESSOR
 
 struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
   template <class T>
-  ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
+  ___PRO3_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 
 template <class T>
@@ -1877,7 +1882,7 @@ using merge_facade_conv_t = typename add_upward_conversion_conv<
 
 struct proxy_view_dispatch : cast_dispatch_base<false, true> {
   template <class T>
-  ___PRO_STATIC_CALL(auto, T& value) noexcept
+  ___PRO3_STATIC_CALL(auto, T& value) noexcept
       requires(requires { { std::addressof(*value) } noexcept; }) {
     return observer_ptr<decltype(*value), decltype(*std::as_const(value)),
         decltype(*std::move(value)), decltype(*std::move(std::as_const(value)))>
@@ -1970,7 +1975,7 @@ sign(const char (&str)[N]) -> sign<N>;
 
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
   template <class P>
-  ___PRO_STATIC_CALL(auto, const P& self) noexcept
+  ___PRO3_STATIC_CALL(auto, const P& self) noexcept
       requires(
           requires(const typename P::weak_type& w)
               { { w.lock() } noexcept -> std::same_as<P>; } &&
@@ -2001,7 +2006,7 @@ template <class P>
 auto weak_lock_impl(const P& self) noexcept
     requires(requires { static_cast<bool>(self.lock()); })
     { return nullable_ptr_adapter{self.lock()}; }
-PRO_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
+PRO3_DEF_FREE_AS_MEM_DISPATCH(weak_mem_lock, weak_lock_impl, lock);
 
 #if __STDC_HOSTED__
 template <class CharT> struct format_overload_traits;
@@ -2025,7 +2030,7 @@ struct format_dispatch {
   // std::formatter by std::is_default_constructible_v as per
   // [format.formatter.spec].
   template <class T, class CharT, class OutIt>
-  ___PRO_STATIC_CALL(OutIt, const T& self, std::basic_string_view<CharT> spec,
+  ___PRO3_STATIC_CALL(OutIt, const T& self, std::basic_string_view<CharT> spec,
       std::basic_format_context<OutIt, CharT>& fc)
       requires(
 #if __cpp_lib_format_ranges >= 202207L
@@ -2099,7 +2104,7 @@ struct proxy_cast_accessor_impl {
               void(proxy_cast_context) Q> {}
 struct proxy_cast_dispatch {
   template <class T>
-  ___PRO_STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
+  ___PRO3_STATIC_CALL(void, T&& self, proxy_cast_context ctx) {
     if (typeid(T) == *ctx.type_ptr) {
       if (ctx.is_ref) {
         if constexpr (std::is_lvalue_reference_v<T>) {
@@ -2115,7 +2120,7 @@ struct proxy_cast_dispatch {
       }
     }
   }
-  ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_PROXY_CAST_ACCESSOR)
+  ___PRO3_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_PROXY_CAST_ACCESSOR)
 };
 #undef ___PRO_DEF_PROXY_CAST_ACCESSOR
 
@@ -2134,7 +2139,7 @@ struct proxy_typeid_reflector {
       const proxy_typeid_reflector& refl = proxy_reflect<IsDirect, R>(p);
       return *refl.info;
     }
-___PRO_DEBUG(
+___PRO3_DEBUG(
     accessor() noexcept { std::ignore = &_symbol_guard; }
 
    private:
@@ -2268,13 +2273,13 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_LEFT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R> \
     struct accessor<__F, __IsDirect, __D, R() Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__() Q { return proxy_invoke<__IsDirect, __D, R() Q>(SELF); } \
     }
 #define ___PRO_DEF_LHS_ANY_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class... Args> \
     struct accessor<__F, __IsDirect, __D, R(Args...) Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       R __VA_ARGS__(Args... args) Q { \
         return proxy_invoke<__IsDirect, __D, R(Args...) Q>( \
             SELF, std::forward<Args>(args)...); \
@@ -2285,19 +2290,19 @@ struct operator_dispatch;
 #define ___PRO_DEF_LHS_ALL_OP_ACCESSOR ___PRO_DEF_LHS_ANY_OP_ACCESSOR
 #define ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self) \
-        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
+    ___PRO3_STATIC_CALL(decltype(auto), T&& self) \
+        ___PRO3_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self))
 #define ___PRO_LHS_UNARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self) \
-        ___PRO_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
+    ___PRO3_STATIC_CALL(decltype(auto), T&& self) \
+        ___PRO3_DIRECT_FUNC_IMPL(__VA_ARGS__ std::forward<T>(self)) \
     template <class T> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self, int) \
-        ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
+    ___PRO3_STATIC_CALL(decltype(auto), T&& self, int) \
+        ___PRO3_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__)
 #define ___PRO_LHS_BINARY_OP_DISPATCH_BODY_IMPL(...) \
     template <class T, class Arg> \
-    ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-        ___PRO_DIRECT_FUNC_IMPL( \
+    ___PRO3_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+        ___PRO3_DIRECT_FUNC_IMPL( \
             std::forward<T>(self) __VA_ARGS__ std::forward<Arg>(arg))
 #define ___PRO_LHS_ALL_OP_DISPATCH_BODY_IMPL(...) \
     ___PRO_LHS_LEFT_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
@@ -2306,7 +2311,7 @@ struct operator_dispatch;
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       ___PRO_LHS_##TYPE##_OP_DISPATCH_BODY_IMPL(__VA_ARGS__) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE( \
+      ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE( \
           ___PRO_DEF_LHS_##TYPE##_OP_ACCESSOR, operator __VA_ARGS__) \
     };
 
@@ -2317,7 +2322,7 @@ struct operator_dispatch;
         return proxy_invoke<__IsDirect, __D, R(Arg) Q>( \
             SELF, std::forward<Arg>(arg)); \
       } \
-___PRO_DEBUG( \
+___PRO3_DEBUG( \
       accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
@@ -2331,10 +2336,10 @@ ___PRO_DEBUG( \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL( \
+      ___PRO3_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO3_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE( \
+      ___PRO3_DEF_FREE_ACCESSOR_TEMPLATE( \
           ___PRO_DEF_RHS_OP_ACCESSOR, __VA_ARGS__) \
     };
 
@@ -2349,7 +2354,7 @@ ___PRO_DEBUG( \
 #define ___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR(Q, SELF, ...) \
     template <class __F, bool __IsDirect, class __D, class R, class Arg> \
     struct accessor<__F, __IsDirect, __D, R(Arg) Q> { \
-      ___PRO_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
+      ___PRO3_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__) \
       decltype(auto) __VA_ARGS__(Arg arg) Q { \
         proxy_invoke<__IsDirect, __D, R(Arg) Q>(SELF, std::forward<Arg>(arg)); \
         if constexpr (__IsDirect) { \
@@ -2366,7 +2371,7 @@ ___PRO_DEBUG( \
         proxy_invoke<__IsDirect, __D, R(Arg&) Q>(SELF, arg); \
         return arg; \
       } \
-___PRO_DEBUG( \
+___PRO3_DEBUG( \
       accessor() noexcept { std::ignore = &_symbol_guard; } \
     \
      private: \
@@ -2378,20 +2383,20 @@ ___PRO_DEBUG( \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, false> { \
       template <class T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
+      ___PRO3_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO3_DIRECT_FUNC_IMPL(std::forward<T>(self) __VA_ARGS__ \
               std::forward<Arg>(arg)) \
-      ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
+      ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ASSIGNMENT_OP_ACCESSOR, \
           operator __VA_ARGS__) \
     }; \
     template <> \
     struct operator_dispatch<#__VA_ARGS__, true> { \
       template <class T, class Arg> \
-      ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
-          ___PRO_DIRECT_FUNC_IMPL( \
+      ___PRO3_STATIC_CALL(decltype(auto), T&& self, Arg&& arg) \
+          ___PRO3_DIRECT_FUNC_IMPL( \
               std::forward<Arg>(arg) __VA_ARGS__ std::forward<T>(self)) \
-      ___PRO_DEF_FREE_ACCESSOR_TEMPLATE(___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, \
-          __VA_ARGS__) \
+      ___PRO3_DEF_FREE_ACCESSOR_TEMPLATE( \
+          ___PRO_DEF_RHS_ASSIGNMENT_OP_ACCESSOR, __VA_ARGS__) \
     };
 
 ___PRO_EXTENDED_BINARY_OP_DISPATCH_IMPL(+)
@@ -2432,24 +2437,24 @@ ___PRO_BINARY_OP_DISPATCH_IMPL(->*)
 template <>
 struct operator_dispatch<"()", false> {
   template <class T, class... Args>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
+  ___PRO3_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
+      ___PRO3_DIRECT_FUNC_IMPL(
           std::forward<T>(self)(std::forward<Args>(args)...))
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
+  ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator())
 };
 template <>
 struct operator_dispatch<"[]", false> {
 #if __cpp_multidimensional_subscript >= 202110L
   template <class T, class... Args>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
-      ___PRO_DIRECT_FUNC_IMPL(
+  ___PRO3_STATIC_CALL(decltype(auto), T&& self, Args&&... args)
+      ___PRO3_DIRECT_FUNC_IMPL(
           std::forward<T>(self)[std::forward<Args>(args)...])
 #else
   template <class T, class Arg>
-  ___PRO_STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
-      ___PRO_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
+  ___PRO3_STATIC_CALL(decltype(auto), T&& self, Arg&& arg)
+      ___PRO3_DIRECT_FUNC_IMPL(std::forward<T>(self)[std::forward<Arg>(arg)])
 #endif  // __cpp_multidimensional_subscript >= 202110L
-  ___PRO_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
+  ___PRO3_DEF_MEM_ACCESSOR_TEMPLATE(___PRO_DEF_LHS_ANY_OP_ACCESSOR, operator[])
 };
 
 #undef ___PRO_ASSIGNMENT_OP_DISPATCH_IMPL
@@ -2473,25 +2478,26 @@ struct operator_dispatch<"[]", false> {
 struct implicit_conversion_dispatch
     : details::cast_dispatch_base<false, false> {
   template <class T>
-  ___PRO_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
+  ___PRO3_STATIC_CALL(T&&, T&& self) noexcept { return std::forward<T>(self); }
 };
 struct explicit_conversion_dispatch : details::cast_dispatch_base<true, false> {
   template <class T>
-  ___PRO_STATIC_CALL(auto, T&& self) noexcept
+  ___PRO3_STATIC_CALL(auto, T&& self) noexcept
       { return details::explicit_conversion_adapter<T>{std::forward<T>(self)}; }
 };
 using conversion_dispatch = explicit_conversion_dispatch;
 
 class not_implemented : public std::exception {
  public:
-  char const* what() const noexcept override { return "pro::not_implemented"; }
+  char const* what() const noexcept override
+      { return "pro::v3::not_implemented"; }
 };
 
 template <class D>
 struct weak_dispatch : D {
   using D::operator();
   template <class... Args>
-  [[noreturn]] ___PRO_STATIC_CALL(details::wildcard, std::nullptr_t, Args&&...)
+  [[noreturn]] ___PRO3_STATIC_CALL(details::wildcard, std::nullptr_t, Args&&...)
       { ___PRO_THROW(not_implemented{}); }
 };
 
@@ -2500,8 +2506,9 @@ struct weak_dispatch : D {
         "Use pro::weak_dispatch<" #__D "> instead.")]] __NAME : __D { \
       using __D::operator(); \
       template <class... __Args> \
-      ___PRO_STATIC_CALL(decltype(auto), ::std::nullptr_t, __Args&&... __args) \
-          ___PRO_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
+      ___PRO3_STATIC_CALL(decltype(auto), \
+          ::std::nullptr_t, __Args&&... __args) \
+          ___PRO3_DIRECT_FUNC_IMPL(__FUNC(::std::forward<__Args>(__args)...)) \
     }
 
 }  // namespace pro
@@ -2509,10 +2516,11 @@ struct weak_dispatch : D {
 #if __STDC_HOSTED__
 namespace std {
 
-template <pro::facade F, class CharT>
-    requires(pro::details::facade_traits<F>::template is_invocable<false,
-        pro::details::format_dispatch, pro::details::format_overload_t<CharT>>)
-struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
+template <pro::v3::facade F, class CharT>
+    requires(pro::v3::details::facade_traits<F>::template is_invocable<
+        false, pro::v3::details::format_dispatch,
+        pro::v3::details::format_overload_t<CharT>>)
+struct formatter<pro::v3::proxy_indirect_accessor<F>, CharT> {
   constexpr auto parse(basic_format_parse_context<CharT>& pc) {
     for (auto it = pc.begin(); it != pc.end(); ++it) {
       if (*it == '}') {
@@ -2524,12 +2532,12 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
   }
 
   template <class OutIt>
-  OutIt format(const pro::proxy_indirect_accessor<F>& ia,
+  OutIt format(const pro::v3::proxy_indirect_accessor<F>& ia,
       basic_format_context<OutIt, CharT>& fc) const {
-    auto& p = pro::access_proxy<F>(ia);
+    auto& p = pro::v3::access_proxy<F>(ia);
     if (!p.has_value()) { ___PRO_THROW(format_error{"null proxy"}); }
-    return pro::proxy_invoke<false, pro::details::format_dispatch,
-        pro::details::format_overload_t<CharT>>(p, spec_, fc);
+    return pro::v3::proxy_invoke<false, pro::details::format_dispatch,
+        pro::v3::details::format_overload_t<CharT>>(p, spec_, fc);
   }
 
  private:
@@ -2539,7 +2547,60 @@ struct formatter<pro::proxy_indirect_accessor<F>, CharT> {
 }  // namespace std
 #endif  // __STDC_HOSTED__
 
+// Version-less macro aliases
+
+#define ___PRO3_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__NAME,                      \
+                                                  __VERSION_QUALIFIED_NAME)    \
+  static_assert(false, "The use of macro `" #__NAME "` is ambiguous. \
+Are multiple different versions of Proxy library included at the same time?\n\
+Note: To resolve this error: \n\
+- Either make sure that only one version of Proxy library is included within this file.\n\
+- Or use the `" #__VERSION_QUALIFIED_NAME                                      \
+                       "` macro (note the `3` suffix) to explicitly \
+stick to a specific major version of the Proxy library.")
+
+#ifdef __msft_lib_proxy
+#undef __msft_lib_proxy
+#define __msft_lib_proxy                                                       \
+  [] {                                                                         \
+    ___PRO3_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(__msft_lib_proxy,                \
+                                              __msft_lib_proxy3);              \
+    return 0L;                                                                 \
+  }()
+#else
+#define __msft_lib_proxy __msft_lib_proxy3
+#endif // __msft_lib_proxy
+
+#ifdef PRO_DEF_MEM_DISPATCH
+#undef PRO_DEF_MEM_DISPATCH
+#define PRO_DEF_MEM_DISPATCH(...)                                              \
+  ___PRO3_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_MEM_DISPATCH,              \
+                                            PRO3_DEF_MEM_DISPATCH)
+#else
+#define PRO_DEF_MEM_DISPATCH(name, ...) PRO3_DEF_MEM_DISPATCH(name, __VA_ARGS__)
+#endif // PRO_DEF_MEM_DISPATCH
+
+#ifdef PRO_DEF_FREE_DISPATCH
+#undef PRO_DEF_FREE_DISPATCH
+#define PRO_DEF_FREE_DISPATCH(...)                                             \
+  ___PRO3_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_DISPATCH,             \
+                                            PRO3_DEF_FREE_DISPATCH)
+#else
+#define PRO_DEF_FREE_DISPATCH(name, ...)                                       \
+  PRO3_DEF_FREE_DISPATCH(name, __VA_ARGS__)
+#endif // PRO_DEF_FREE_DISPATCH
+
+#ifdef PRO_DEF_FREE_AS_MEM_DISPATCH
+#undef PRO_DEF_FREE_AS_MEM_DISPATCH
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(...)                                      \
+  ___PRO3_AMBIGUOUS_MACRO_DIAGNOSTIC_ASSERT(PRO_DEF_FREE_AS_MEM_DISPATCH,      \
+                                            PRO3_DEF_FREE_AS_MEM_DISPATCH)
+#else
+#define PRO_DEF_FREE_AS_MEM_DISPATCH(name, ...)                                \
+  PRO3_DEF_FREE_AS_MEM_DISPATCH(name, __VA_ARGS__)
+#endif // PRO_DEF_FREE_AS_MEM_DISPATCH
+
 #undef ___PRO_THROW
 #undef ___PRO_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
-#endif  // _MSFT_PROXY_
+#endif  // _MSFT_PROXY3_
