@@ -2,7 +2,7 @@
 
 > Header: `proxy.h`  
 > Module: `proxy`  
-> Namespace: `pro`
+> Namespace: `pro::inline v4`
 
 The definition of `allocate_proxy` makes use of an exposition-only class template *allocated-ptr*. An object of type `allocated-ptr<T, Alloc>` allocates the storage for another object of type `T` with an allocator of type `Alloc` and manages the lifetime of this contained object. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), `allocated-ptr<T, Alloc>` provides `operator*` for accessing the managed object of type `T` with the same qualifiers, but does not necessarily support the state where the contained object is absent.
 

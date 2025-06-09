@@ -2,7 +2,7 @@
 
 > Header: `proxy.h`  
 > Module: `proxy`  
-> Namespace: `pro`  
+> Namespace: `pro::inline v4`  
 > Since: 3.3.0
 
 ```cpp

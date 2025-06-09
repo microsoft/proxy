@@ -1,6 +1,6 @@
-# Proxy Specifications
+# Proxy 4 Specifications
 
-This document provides the API specifications for the C++ library Proxy (version 4). All the documented concepts, classes, and functions are defined in the namespace `pro`. Unless otherwise specified, all facilities are [freestanding](https://en.cppreference.com/w/cpp/freestanding) by default.
+This document provides the API specifications for the C++ library Proxy (version 4). All the documented concepts, classes, and functions are defined in the namespace `pro::inline v4`. Unless otherwise specified, all facilities are [freestanding](https://en.cppreference.com/w/cpp/freestanding) by default.
 
 ## Header `<proxy.h>`
 

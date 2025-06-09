@@ -2,7 +2,7 @@
 
 > Header: `proxy.h`  
 > Module: `proxy`  
-> Namespace: `pro`
+> Namespace: `pro::inline v4`
 
 ```cpp
 template <bool IsDirect, class D, class O, facade F, class... Args>

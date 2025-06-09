@@ -2,7 +2,7 @@
 
 > Header: `proxy.h`  
 > Module: `proxy`  
-> Namespace: `pro`
+> Namespace: `pro::inline v4`
 
 The definitions of `make_proxy` make use of the following exposition-only function:
 

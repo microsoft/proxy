@@ -2,7 +2,7 @@
 
 > Header: `proxy_fmt.h`  
 > Module: None  
-> Namespace: `pro::skills`  
+> Namespace: `pro::inline v4::skills`  
 > Since: 4.0.0
 
 ```cpp

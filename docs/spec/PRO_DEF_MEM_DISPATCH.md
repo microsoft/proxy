@@ -47,6 +47,8 @@ struct dispatch_name {
 }
 ```
 
+When headers from different major versions of the Proxy library can appear in the same translation unit (for example, Proxy 3 and Proxy 4), use the major-qualified form `PRO<major>_DEF_MEM_DISPATCH` (e.g., `PRO4_DEF_MEM_DISPATCH`).
+
 ## Example
 
 ```cpp

@@ -2,7 +2,7 @@
 
 > Header: `proxy.h`  
 > Module: `proxy`  
-> Namespace: `pro`
+> Namespace: `pro::inline v4`
 
 The definitions of `basic_facade_builder` and `facade_builder` make use of the following exposition-only constants:
 
