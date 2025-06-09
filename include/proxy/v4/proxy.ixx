@@ -43,13 +43,13 @@ namespace skills {
 #if __STDC_HOSTED__ && __has_include(<format>)
 using skills::format;
 using skills::wformat;
-#endif  // __STDC_HOSTED__ && __has_include(<format>)
+#endif // __STDC_HOSTED__ && __has_include(<format>)
 
 #if __cpp_rtti >= 199711L
-using skills::indirect_rtti;
 using skills::direct_rtti;
+using skills::indirect_rtti;
 using skills::rtti;
-#endif  // __cpp_rtti >= 199711L
+#endif // __cpp_rtti >= 199711L
 
 using skills::as_view;
 using skills::as_weak;
