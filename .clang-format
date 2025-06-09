@@ -1,0 +1,7 @@
+---
+BasedOnStyle: LLVM
+
+AllowShortIfStatementsOnASingleLine: WithoutElse
+BreakTemplateDeclarations: Yes
+IndentWrappedFunctionNames: true
+PointerAlignment: Left

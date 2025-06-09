@@ -39,7 +39,7 @@ add_executable(msft_proxy_tests
   proxy_view_tests.cpp
 )
 target_include_directories(msft_proxy_tests PRIVATE .)
-target_link_libraries(msft_proxy_tests PRIVATE msft_proxy gtest_main fmt::fmt)
+target_link_libraries(msft_proxy_tests PRIVATE msft_proxy4::proxy gtest_main fmt::fmt)
 
 if(MSVC)
   target_compile_options(msft_proxy_tests PRIVATE /W4 /WX)
@@ -59,7 +59,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
     target_compile_options(msft_proxy_freestanding_tests PRIVATE -ffreestanding -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic -Werror)
   endif()
   target_link_options(msft_proxy_freestanding_tests PRIVATE -nodefaultlibs -lc)
-  target_link_libraries(msft_proxy_freestanding_tests PRIVATE msft_proxy)
+  target_link_libraries(msft_proxy_freestanding_tests PRIVATE msft_proxy4::proxy)
   add_test(NAME ProxyFreestandingTests COMMAND msft_proxy_freestanding_tests)
 endif()
 

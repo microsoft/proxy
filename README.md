@@ -37,12 +37,12 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
     ```cmake
     CPMAddPackage(
-      NAME proxy
+      NAME msft_proxy4
       GIT_TAG 4.0.0 # or above
       GIT_REPOSITORY https://github.com/microsoft/proxy.git
     )
     
-    target_link_libraries(main PRIVATE msft_proxy)
+    target_link_libraries(main PRIVATE msft_proxy4::proxy)
     ```
 
 ### Hello World
