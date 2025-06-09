@@ -6,4 +6,4 @@
 
 #include "v4/proxy_fmt.h" // IWYU pragma: export
 
-#endif  // _MSFT_PROXY_FMT_
+#endif // _MSFT_PROXY_FMT_
