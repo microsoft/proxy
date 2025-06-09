@@ -60,7 +60,7 @@
 #define ___PRO3_DEBUG(...) __VA_ARGS__
 #endif  // NDEBUG
 
-#define __msft3_lib_proxy 202505L
+#define __msft_lib_proxy3 202505L
 
 namespace pro::inline v3 {
 
