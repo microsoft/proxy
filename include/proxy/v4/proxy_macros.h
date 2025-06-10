@@ -22,9 +22,7 @@
 #define ___PRO4_DEBUG(...) __VA_ARGS__
 #endif // NDEBUG
 
-#define __msft_lib_proxy4 202503L
-
-////////
+#define __msft_lib_proxy4 202506L
 
 #define ___PRO4_DIRECT_FUNC_IMPL(...)                                          \
   noexcept(noexcept(__VA_ARGS__))                                              \
@@ -119,8 +117,6 @@
 #define ___PRO4_EXPAND_MACRO(__MACRO, ...)                                     \
   ___PRO4_EXPAND_IMPL(                                                         \
       ___PRO4_EXPAND_MACRO_IMPL(__MACRO, __VA_ARGS__, 3, 2)(__VA_ARGS__))
-
-////////
 
 #define ___PRO4_DEF_MEM_ACCESSOR(__Q, __SELF, ...)                             \
   template <class __F, bool __IsDirect, class __D, class __R, class... __Args> \

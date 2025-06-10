@@ -63,4 +63,4 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
   add_test(NAME ProxyFreestandingTests COMMAND msft_proxy_freestanding_tests)
 endif()
 
-add_subdirectory(cpp20_modules)
+add_subdirectory(modules)

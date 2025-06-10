@@ -1,17 +1,11 @@
 on:
   workflow_call:
-    inputs:
-      branch:
-        type: string
-        required: false
 
 jobs:
   bvt-report:
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch }}
 
     - name: download all workflow run artifacts
       uses: actions/download-artifact@v4

@@ -1,0 +1,27 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches:
+      - lkg
+
+jobs:
+  build:
+    uses: ./.github/workflows/mkdocs.yml
+    with:
+      upload-artifacts: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      pages: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
