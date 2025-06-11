@@ -11,6 +11,7 @@
 - [**Why is "Proxy" based on pointer semantics rather than value semantics like `std::function`?**](#why-pointer)
 - [**Why does "Proxy" define several macros instead of modern C++ facilities?**](#why-macros)
 - [**What is the standardization progress of this library?**](#standardization)
+- [**How do I upgrade "Proxy" in a large codebase?**](#how-upgrade)
 - [**What should I do if I found this library deficient in my scenario?**](#help-needed)
 
 ### <a name="what">What is "Proxy" and how does it work?</a>
@@ -61,6 +62,26 @@ At the beginning, we explored the feasibility of designing a general-purpose pol
 ### <a name="standardization">What is the standardization progress of this library?</a>
 
 Currently, there is [an ongoing proposal](https://wg21.link/p3086) being reviewed in the ISO C++ committee. The progress can be tracked [here](https://github.com/cplusplus/papers/issues/1741).
+
+### <a name="how-upgrade">How do I upgrade "Proxy" in a large codebase?</a>
+
+Upgrading a small component is usually straightforward, but migrating a monorepo or multi-module product can be challenging. Follow the guidelines below:
+
+1. **Minor or patch upgrades (e.g. 3.3.0 → 3.4.0)**
+    All 3.x.y releases preserve API/ABI compatibility, so different parts of the program may safely depend on different 3.x.y versions. No special action is required.
+
+2. **Major upgrades (e.g. 3.4.0 → 4.0.0)**
+  - If your current version is *earlier* than 3.4.0, migrate to 3.4.0 first.
+  - Starting with 3.4.0, each major release is placed in a versioned inline namespace (`pro::v3`, `pro::v4`, …).  When a translation unit sees multiple majors, qualify the namespace explicitly:
+    ```cpp
+    pro::v3::foo();   // Proxy 3 API
+    pro::v4::foo();   // Proxy 4 API
+    ```
+    The newest release re-exports its namespace as the inline (default) namespace, so unqualified calls (`pro::foo()`) resolve to the latest version once the migration is complete.
+  - The macros also have major-qualified aliases, e.g. [`PRO3_DEF_MEM_DISPATCH`](PRO_DEF_MEM_DISPATCH.md). Use these forms whenever headers from multiple majors are included in the same translation unit.
+  - Upgrade subsystems incrementally, module-by-module or DLL-by-DLL. When every target depends only on the new major, drop the old include path and remove the previous version from your build.
+
+These rules let old and new code coexist during the transition while keeping ODR violations at bay.
 
 ### <a name="help-needed">What should I do if I found this library deficient in my scenario?</a>
 

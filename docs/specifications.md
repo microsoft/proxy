@@ -2,6 +2,8 @@
 
 This document provides the API specifications for the C++ library Proxy (version 3). All the documented concepts, classes, and functions are defined in the namespace `pro`. Unless otherwise specified, all facilities are [freestanding](https://en.cppreference.com/w/cpp/freestanding) by default.
 
+*Since 3.4.0*: To support side-by-side installation of multiple major releases, each version of Proxy is wrapped in an inline namespace named after its major number. In a translation unit that includes both Proxy 3 and Proxy 4, the APIs can be referenced explicitly as `pro::v3::foo` or `pro::v4::foo` The current release exports `v3` as the inline (default) namespace, so unqualified names resolve to `pro::v3`.
+
 ## Concepts
 
 | Name                                                         | Description                                                  |
