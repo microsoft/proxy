@@ -4,7 +4,7 @@
 #define __msft_lib_proxy /* see below */
 ```
 
-Similar to the standard [feature test macros](https://en.cppreference.com/w/cpp/feature_test), library "Proxy" has defined a feature test macro since 3.0.0. The table below maps each release version number to the corresponding value of `__msft_lib_proxy`.
+Starting with 3.0.0, Proxy ships a feature-test macro that encodes the library version. When headers from different major versions of the Proxy library can appear in the same translation unit (for example, Proxy 3 and Proxy 4), use the major-qualified form `__msft_lib_proxy<major>` (e.g., `__msft_lib_proxy3`).
 
 | Version | Value of `__msft_lib_proxy` |
 | ------- | --------------------------- |
