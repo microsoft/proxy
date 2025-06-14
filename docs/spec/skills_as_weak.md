@@ -21,23 +21,23 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::as_weak>
-    ::build {};
+struct RttiAware : pro::facade_builder             //
+                   ::support<pro::skills::rtti>    //
+                   ::support<pro::skills::as_weak> //
+                   ::build {};
 
 int main() {
   pro::proxy<RttiAware> p1 = pro::make_proxy_shared<RttiAware>(123);
   pro::weak_proxy<RttiAware> p2 = p1;
-  proxy_cast<int&>(*p1) = 456;  // Modifies the contained object of p1
+  proxy_cast<int&>(*p1) = 456; // Modifies the contained object of p1
 
   pro::proxy<RttiAware> p3 = p2.lock();
   p1.reset();
-  std::cout << proxy_cast<int>(*p3) << "\n";  // Prints "456"
+  std::cout << proxy_cast<int>(*p3) << "\n"; // Prints "456"
 
   p3.reset();
   pro::proxy<RttiAware> p4 = p2.lock();
-  std::cout << std::boolalpha << p4.has_value() << "\n";  // Prints "false"
+  std::cout << std::boolalpha << p4.has_value() << "\n"; // Prints "false"
 }
 ```
 

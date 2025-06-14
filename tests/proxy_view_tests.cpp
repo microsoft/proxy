@@ -7,16 +7,15 @@
 
 namespace proxy_view_tests_details {
 
-struct TestFacade : pro::facade_builder
-    ::add_convention<pro::operator_dispatch<"+=">, void(int)>
-    ::add_convention<utils::spec::FreeToString, std::string() const>
-    ::support<pro::skills::as_view>
-    ::build {};
+struct TestFacade
+    : pro::facade_builder                                              //
+      ::add_convention<pro::operator_dispatch<"+=">, void(int)>        //
+      ::add_convention<utils::spec::FreeToString, std::string() const> //
+      ::support<pro::skills::as_view>                                  //
+      ::build {};
 
 template <class T>
-concept SupportsIntPlusEqual = requires(T a, int b) {
-  a += b;
-};
+concept SupportsIntPlusEqual = requires(T a, int b) { a += b; };
 template <class T>
 concept SupportsToString = requires(T a) {
   { ToString(a) } -> std::same_as<std::string>;
@@ -24,17 +23,22 @@ concept SupportsToString = requires(T a) {
 
 static_assert(!std::is_copy_constructible_v<pro::proxy<TestFacade>>);
 static_assert(!std::is_trivially_destructible_v<pro::proxy<TestFacade>>);
-static_assert(SupportsIntPlusEqual<decltype(*std::declval<pro::proxy<TestFacade>>())>);
-static_assert(SupportsToString<decltype(*std::declval<pro::proxy<TestFacade>>())>);
+static_assert(
+    SupportsIntPlusEqual<decltype(*std::declval<pro::proxy<TestFacade>>())>);
+static_assert(
+    SupportsToString<decltype(*std::declval<pro::proxy<TestFacade>>())>);
 static_assert(sizeof(pro::proxy<TestFacade>) == 3 * sizeof(void*));
 
-static_assert(std::is_trivially_copy_constructible_v<pro::proxy_view<TestFacade>>);
+static_assert(
+    std::is_trivially_copy_constructible_v<pro::proxy_view<TestFacade>>);
 static_assert(std::is_trivially_destructible_v<pro::proxy_view<TestFacade>>);
-static_assert(SupportsIntPlusEqual<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
-static_assert(SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
+static_assert(SupportsIntPlusEqual<
+              decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
+static_assert(
+    SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
 static_assert(sizeof(pro::proxy_view<TestFacade>) == 3 * sizeof(void*));
 
-}  // namespace proxy_view_tests_details
+} // namespace proxy_view_tests_details
 
 namespace details = proxy_view_tests_details;
 
@@ -53,7 +57,8 @@ TEST(ProxyViewTests, TestViewIndependentUse) {
 }
 
 TEST(ProxyViewTests, TestViewOfOwning) {
-  pro::proxy<details::TestFacade> p1 = pro::make_proxy<details::TestFacade>(123);
+  pro::proxy<details::TestFacade> p1 =
+      pro::make_proxy<details::TestFacade>(123);
   pro::proxy_view<details::TestFacade> p2 = p1;
   ASSERT_TRUE(p1.has_value());
   ASSERT_TRUE(p2.has_value());
@@ -77,10 +82,11 @@ TEST(ProxyViewTests, TestViewOfNonOwning) {
 }
 
 TEST(ProxyViewTests, TestOverloadShadowing) {
-  struct TestFacade : pro::facade_builder
-      ::add_convention<pro::operator_dispatch<"()">, int(), int() const>
-      ::support<pro::skills::as_view>
-      ::build {};
+  struct TestFacade
+      : pro::facade_builder                                                //
+        ::add_convention<pro::operator_dispatch<"()">, int(), int() const> //
+        ::support<pro::skills::as_view>                                    //
+        ::build {};
   struct TestImpl {
     int operator()() { return 0; }
     int operator()() const { return 1; }
@@ -95,10 +101,11 @@ TEST(ProxyViewTests, TestOverloadShadowing) {
 
 TEST(ProxyViewTests, TestUpwardConversion_FromNull) {
   struct TestFacade1 : pro::facade_builder::build {};
-  struct TestFacade2 : pro::facade_builder
-      ::add_facade<TestFacade1, true>  // Supports upward conversion
-      ::support<pro::skills::as_view>
-      ::build {};
+  struct TestFacade2
+      : pro::facade_builder             //
+        ::add_facade<TestFacade1, true> // Supports upward conversion
+        ::support<pro::skills::as_view> //
+        ::build {};
   pro::proxy<TestFacade2> p1;
   pro::proxy_view<TestFacade2> p2 = p1;
   pro::proxy_view<TestFacade1> p3 = p2;
@@ -108,14 +115,16 @@ TEST(ProxyViewTests, TestUpwardConversion_FromNull) {
 }
 
 TEST(ProxyViewTests, TestUpwardConversion_FromValue) {
-  struct TestFacade1 : pro::facade_builder
-      ::add_convention<utils::spec::FreeToString, std::string() const>
-      ::build {};
-  struct TestFacade2 : pro::facade_builder
-      ::support_copy<pro::constraint_level::nontrivial>
-      ::add_facade<TestFacade1, true>  // Supports upward conversion
-      ::support<pro::skills::as_view>
-      ::build {};
+  struct TestFacade1
+      : pro::facade_builder                                              //
+        ::add_convention<utils::spec::FreeToString, std::string() const> //
+        ::build {};
+  struct TestFacade2
+      : pro::facade_builder                               //
+        ::support_copy<pro::constraint_level::nontrivial> //
+        ::add_facade<TestFacade1, true> // Supports upward conversion
+        ::support<pro::skills::as_view> //
+        ::build {};
   pro::proxy<TestFacade2> p1 = pro::make_proxy<TestFacade2>(123);
   pro::proxy_view<TestFacade2> p2 = p1;
   pro::proxy_view<TestFacade1> p3 = p2;

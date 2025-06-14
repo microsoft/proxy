@@ -126,19 +126,20 @@ Let `self` be the operand of [`proxy`](../proxy/README.md), and `other` and `oth
 
 #include <proxy/proxy.h>
 
-struct Number : pro::facade_builder
-    ::add_convention<pro::operator_dispatch<"*=">, void(int)>
-    ::add_convention<pro::operator_dispatch<"<<", true>, std::ostream&(std::ostream&) const&>
-    ::build {};
+struct Number : pro::facade_builder                                       //
+                ::add_convention<pro::operator_dispatch<"*=">, void(int)> //
+                ::add_convention<pro::operator_dispatch<"<<", true>,
+                                 std::ostream&(std::ostream&) const&> //
+                ::build {};
 
 int main() {
   pro::proxy<Number> p1 = pro::make_proxy<Number>(std::numbers::pi);
   *p1 *= 3;
-  std::cout << std::setprecision(10) << *p1 << "\n";  // Prints: 9.424777961
+  std::cout << std::setprecision(10) << *p1 << "\n"; // Prints: 9.424777961
 
   pro::proxy<Number> p2 = pro::make_proxy<Number>(10);
   *p2 *= 5;
-  std::cout << *p2 << "\n";  // Prints: 50
+  std::cout << *p2 << "\n"; // Prints: 50
 }
 ```
 

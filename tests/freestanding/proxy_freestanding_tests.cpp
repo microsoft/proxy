@@ -1,6 +1,6 @@
 #if __STDC_HOSTED__
 #error "This file shall be compiled targeting a freestanding environment."
-#endif  // __STDC_HOSTED__
+#endif // __STDC_HOSTED__
 
 #include <proxy/proxy.h>
 
@@ -15,13 +15,14 @@ unsigned GetHashImpl(const char* v) {
   return result;
 }
 template <class F>
-unsigned GetHashImpl(const pro::proxy_indirect_accessor<F>&)
-    { return DefaultHash; }
+unsigned GetHashImpl(const pro::proxy_indirect_accessor<F>&) {
+  return DefaultHash;
+}
 PRO_DEF_FREE_DISPATCH(FreeGetHash, GetHashImpl, GetHash);
 
-struct Hashable : pro::facade_builder
-    ::add_convention<FreeGetHash, unsigned()>
-    ::build {};
+struct Hashable : pro::facade_builder                       //
+                  ::add_convention<FreeGetHash, unsigned()> //
+                  ::build {};
 
 extern "C" int main() {
   int i = 123;

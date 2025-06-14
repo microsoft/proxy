@@ -22,15 +22,15 @@ These functions are not visible to ordinary [unqualified](https://en.cppreferenc
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::build {};
+struct RttiAware : pro::facade_builder          //
+                   ::support<pro::skills::rtti> //
+                   ::build {};
 
 int main() {
   pro::proxy<RttiAware> p;
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "v" (assuming GCC)
+  std::cout << proxy_typeid(*p).name() << "\n"; // Prints "v" (assuming GCC)
   p = pro::make_proxy<RttiAware>(123);
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "i" (assuming GCC)
+  std::cout << proxy_typeid(*p).name() << "\n"; // Prints "i" (assuming GCC)
 }
 ```
 

@@ -49,9 +49,9 @@ Similar to [`std::any::emplace`](https://en.cppreference.com/w/cpp/utility/any/e
 
 #include <proxy/proxy.h>
 
-struct AnyCopyable : pro::facade_builder
-    ::support_copy<pro::constraint_level::nontrivial>
-    ::build {};
+struct AnyCopyable : pro::facade_builder                               //
+                     ::support_copy<pro::constraint_level::nontrivial> //
+                     ::build {};
 
 struct Foo {
   ~Foo() { puts("Destroy Foo"); }
@@ -67,8 +67,11 @@ int main() {
 
   pro::proxy<AnyCopyable> p0;
   p0.emplace<std::shared_ptr<Foo>>(alloc.new_object<Foo>(), deleter);
-  pro::proxy<AnyCopyable> p1 = p0;  // `Foo` is not copied. Only the reference count is increased.
-}  // The destructor of `Foo` is called once when both `p0` and `p1` are destroyed
+
+  // `Foo` is not copied. Only the reference count is increased.
+  pro::proxy<AnyCopyable> p1 = p0;
+} // The destructor of `Foo` is called once when both `p0` and `p1` are
+  // destroyed
 ```
 
 ## See Also

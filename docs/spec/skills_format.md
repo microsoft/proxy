@@ -25,14 +25,14 @@ The alias templates `format` and `wformat` modify a specialization of [`basic_fa
 
 #include <proxy/proxy.h>
 
-struct Formattable : pro::facade_builder
-    ::support<pro::skills::format>
-    ::build {};
+struct Formattable : pro::facade_builder            //
+                     ::support<pro::skills::format> //
+                     ::build {};
 
 int main() {
   pro::proxy<Formattable> p = pro::make_proxy<Formattable>(123);
-  std::cout << std::format("{}", *p) << "\n";  // Prints "123"
-  std::cout << std::format("{:*<6}", *p) << "\n";  // Prints "123***"
+  std::cout << std::format("{}", *p) << "\n";     // Prints "123"
+  std::cout << std::format("{:*<6}", *p) << "\n"; // Prints "123***"
 }
 ```
 

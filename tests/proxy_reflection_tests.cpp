@@ -10,7 +10,7 @@
 namespace proxy_reflection_tests_details {
 
 struct TraitsReflector {
- public:
+public:
   template <class T>
   constexpr explicit TraitsReflector(std::in_place_type_t<T>)
       : is_default_constructible_(std::is_default_constructible_v<T>),
@@ -33,16 +33,16 @@ struct TraitsReflector {
   bool is_trivial_;
 };
 
-struct TestRttiFacade : pro::facade_builder
-    ::add_reflection<utils::RttiReflector>
-    ::add_direct_reflection<utils::RttiReflector>
-    ::build {};
+struct TestRttiFacade : pro::facade_builder                           //
+                        ::add_reflection<utils::RttiReflector>        //
+                        ::add_direct_reflection<utils::RttiReflector> //
+                        ::build {};
 
-struct TestTraitsFacade : pro::facade_builder
-    ::add_direct_reflection<TraitsReflector>
-    ::build {};
+struct TestTraitsFacade : pro::facade_builder                      //
+                          ::add_direct_reflection<TraitsReflector> //
+                          ::build {};
 
-}  // namespace proxy_reflection_tests_details
+} // namespace proxy_reflection_tests_details
 
 namespace details = proxy_reflection_tests_details;
 

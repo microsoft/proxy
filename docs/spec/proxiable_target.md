@@ -17,9 +17,9 @@ See [`make_proxy_view`](make_proxy_view.md) for the definition of the exposition
 ```cpp
 #include <proxy/proxy.h>
 
-struct Runnable : pro::facade_builder
-    ::add_convention<pro::operator_dispatch<"()">, void()>
-    ::build {};
+struct Runnable : pro::facade_builder                                    //
+                  ::add_convention<pro::operator_dispatch<"()">, void()> //
+                  ::build {};
 
 int main() {
   auto fun = [] {};

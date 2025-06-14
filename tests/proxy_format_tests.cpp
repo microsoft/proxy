@@ -8,18 +8,25 @@ namespace proxy_format_tests_details {
 
 struct NonFormattable : pro::facade_builder::build {};
 
-static_assert(!std::is_default_constructible_v<std::formatter<pro::proxy_indirect_accessor<NonFormattable>, char>>);
-static_assert(!std::is_default_constructible_v<std::formatter<pro::proxy_indirect_accessor<NonFormattable>, wchar_t>>);
+static_assert(
+    !std::is_default_constructible_v<
+        std::formatter<pro::proxy_indirect_accessor<NonFormattable>, char>>);
+static_assert(
+    !std::is_default_constructible_v<
+        std::formatter<pro::proxy_indirect_accessor<NonFormattable>, wchar_t>>);
 
-struct Formattable : pro::facade_builder
-    ::support<pro::skills::format>
-    ::support<pro::skills::wformat>
-    ::build {};
+struct Formattable : pro::facade_builder             //
+                     ::support<pro::skills::format>  //
+                     ::support<pro::skills::wformat> //
+                     ::build {};
 
-static_assert(std::is_default_constructible_v<std::formatter<pro::proxy_indirect_accessor<Formattable>, char>>);
-static_assert(std::is_default_constructible_v<std::formatter<pro::proxy_indirect_accessor<Formattable>, wchar_t>>);
+static_assert(std::is_default_constructible_v<
+              std::formatter<pro::proxy_indirect_accessor<Formattable>, char>>);
+static_assert(
+    std::is_default_constructible_v<
+        std::formatter<pro::proxy_indirect_accessor<Formattable>, wchar_t>>);
 
-}  // namespace proxy_format_tests_details
+} // namespace proxy_format_tests_details
 
 namespace details = proxy_format_tests_details;
 
