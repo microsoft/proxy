@@ -21,9 +21,9 @@ The concept `proxiable<P, F>` specifies that [`proxy<F>`](proxy/README.md) can p
 
 PRO_DEF_FREE_DISPATCH(FreeToString, std::to_string, ToString);
 
-struct Stringable : pro::facade_builder
-    ::add_convention<FreeToString, std::string()>
-    ::build {};
+struct Stringable : pro::facade_builder                           //
+                    ::add_convention<FreeToString, std::string()> //
+                    ::build {};
 
 int main() {
   static_assert(pro::proxiable<int*, Stringable>);

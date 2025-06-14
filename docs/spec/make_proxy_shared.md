@@ -42,23 +42,23 @@ Throws any exception thrown by allocation and the constructor of `T`.
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support_copy<pro::constraint_level::nothrow>
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::as_weak>
-    ::build {};
+struct RttiAware : pro::facade_builder                            //
+                   ::support_copy<pro::constraint_level::nothrow> //
+                   ::support<pro::skills::rtti>                   //
+                   ::support<pro::skills::as_weak>                //
+                   ::build {};
 
 int main() {
   pro::proxy<RttiAware> p1 = pro::make_proxy_shared<RttiAware>(123);
   pro::weak_proxy<RttiAware> p2 = p1;
   pro::proxy<RttiAware> p3 = p2.lock();
-  std::cout << std::boolalpha << p3.has_value() << "\n";  // Prints "true"
-  std::cout << proxy_cast<int>(*p3) << "\n";  // Prints "123"
+  std::cout << std::boolalpha << p3.has_value() << "\n"; // Prints "true"
+  std::cout << proxy_cast<int>(*p3) << "\n";             // Prints "123"
 
   p3.reset();
   p1.reset();
   p3 = p2.lock();
-  std::cout << std::boolalpha << p3.has_value() << "\n";  // Prints "false"
+  std::cout << std::boolalpha << p3.has_value() << "\n"; // Prints "false"
 }
 ```
 

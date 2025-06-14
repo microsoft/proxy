@@ -59,8 +59,9 @@ int main() {
   // 32/64-bit compilers
   pro::proxy<Any> p1 = pro::make_proxy_inplace<Any>(123);
 
-  // sizeof(std::array<int, 100>) is usually greater than 2 * sizeof(void*)
-  // pro::proxy<Any> p2 = pro::make_proxy_inplace<Any, std::array<int, 100>>();  // Won't compile
+  // Won't compile because sizeof(std::array<int, 100>) is usually greater than
+  // 2 * sizeof(void*) pro::proxy<Any> p2 = pro::make_proxy_inplace<Any,
+  // std::array<int, 100>>();
 }
 ```
 

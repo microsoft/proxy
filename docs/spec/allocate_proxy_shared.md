@@ -49,10 +49,10 @@ The implementation of `strong-compact-ptr` may vary depending on the definition 
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support_copy<pro::constraint_level::nothrow>
-    ::support<pro::skills::rtti>
-    ::build {};
+struct RttiAware : pro::facade_builder                            //
+                   ::support_copy<pro::constraint_level::nothrow> //
+                   ::support<pro::skills::rtti>                   //
+                   ::build {};
 
 int main() {
   std::pmr::unsynchronized_pool_resource pool;
@@ -60,7 +60,7 @@ int main() {
   pro::proxy<RttiAware> p1 = pro::allocate_proxy_shared<RttiAware>(alloc, 1);
   pro::proxy<RttiAware> p2 = p1;
   proxy_cast<int&>(*p1) += 2;
-  std::cout << proxy_cast<int>(*p2) << "\n";  // Prints "3"
+  std::cout << proxy_cast<int>(*p2) << "\n"; // Prints "3"
 }
 ```
 

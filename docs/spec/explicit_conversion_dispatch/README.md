@@ -33,13 +33,15 @@ Class `explicit_conversion_dispatch` models a [dispatch](../ProDispatch.md) type
 
 #include <proxy/proxy.h>
 
-struct IntConvertible : pro::facade_builder
-    ::add_convention<pro::conversion_dispatch, int() const>
-    ::build {};
+struct IntConvertible
+    : pro::facade_builder                                     //
+      ::add_convention<pro::conversion_dispatch, int() const> //
+      ::build {};
 
 int main() {
-  pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);  // p holds a short
-  std::cout << static_cast<int>(*p) << "\n";  // Prints "123"
+  // p holds a short
+  pro::proxy<IntConvertible> p = pro::make_proxy<IntConvertible, short>(123);
+  std::cout << static_cast<int>(*p) << "\n"; // Prints "123"
 }
 ```
 

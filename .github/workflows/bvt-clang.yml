@@ -21,8 +21,8 @@ jobs:
     - name: build and run test with clang 20
       run: |
         cmake -B build -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
-        mapfile -t FILES < <(find include -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
-        echo "Running clang-format on ${#FILES[@]} files"
+        mapfile -t FILES < <(find include tests benchmarks build/examples_from_docs -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
+        echo "Running clang-format on ${#FILES[@]} files: ${FILES[*]}"
         clang-format-20 --dry-run --Werror "${FILES[@]}"
         cmake --build build -j
         ctest --test-dir build -j

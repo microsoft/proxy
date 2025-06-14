@@ -38,22 +38,28 @@ Adding duplicate reflection types is well-defined, whether done directly via `ad
 #include <proxy/proxy.h>
 
 struct LayoutReflector {
- public:
+public:
   template <class T>
   constexpr explicit LayoutReflector(std::in_place_type_t<T>)
       : Size(sizeof(T)), Align(alignof(T)) {}
 
   template <class F, bool IsDirect, class R>
   struct accessor {
-    friend std::size_t SizeOf(const std::conditional_t<IsDirect, pro::proxy<F>,
-        pro::proxy_indirect_accessor<F>>& self) noexcept {
-      const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+    friend std::size_t
+        SizeOf(const std::conditional_t<IsDirect, pro::proxy<F>,
+                                        pro::proxy_indirect_accessor<F>>&
+                   self) noexcept {
+      const LayoutReflector& refl =
+          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
       return refl.Size;
     }
 
-    friend std::size_t AlignOf(const std::conditional_t<IsDirect, pro::proxy<F>,
-        pro::proxy_indirect_accessor<F>>& self) noexcept {
-      const LayoutReflector& refl = pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+    friend std::size_t
+        AlignOf(const std::conditional_t<IsDirect, pro::proxy<F>,
+                                         pro::proxy_indirect_accessor<F>>&
+                    self) noexcept {
+      const LayoutReflector& refl =
+          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
       return refl.Align;
     }
   };
@@ -61,30 +67,30 @@ struct LayoutReflector {
   std::size_t Size, Align;
 };
 
-struct LayoutAware : pro::facade_builder
-    ::add_direct_reflection<LayoutReflector>
-    ::add_indirect_reflection<LayoutReflector>
-    ::build {};
+struct LayoutAware : pro::facade_builder                        //
+                     ::add_direct_reflection<LayoutReflector>   //
+                     ::add_indirect_reflection<LayoutReflector> //
+                     ::build {};
 
 int main() {
   int a = 123;
   pro::proxy<LayoutAware> p = &a;
-  std::cout << SizeOf(p) << "\n";  // Prints sizeof(raw pointer)
+  std::cout << SizeOf(p) << "\n";   // Prints sizeof(raw pointer)
   std::cout << AlignOf(p) << "\n";  // Prints alignof(raw pointer)
   std::cout << SizeOf(*p) << "\n";  // Prints sizeof(int)
-  std::cout << AlignOf(*p) << "\n";  // Prints alignof(int)
+  std::cout << AlignOf(*p) << "\n"; // Prints alignof(int)
 
-  p = pro::make_proxy<LayoutAware>(123);  // SBO enabled
-  std::cout << SizeOf(p) << "\n";  // Prints sizeof(int)
-  std::cout << AlignOf(p) << "\n";  // Prints alignof(int)
-  std::cout << SizeOf(*p) << "\n";  // Prints sizeof(int)
-  std::cout << AlignOf(*p) << "\n";  // Prints alignof(int)
+  p = pro::make_proxy<LayoutAware>(123); // SBO enabled
+  std::cout << SizeOf(p) << "\n";        // Prints sizeof(int)
+  std::cout << AlignOf(p) << "\n";       // Prints alignof(int)
+  std::cout << SizeOf(*p) << "\n";       // Prints sizeof(int)
+  std::cout << AlignOf(*p) << "\n";      // Prints alignof(int)
 
-  p = pro::make_proxy<LayoutAware, std::array<char, 100>>();  // SBO disabled
-  std::cout << SizeOf(p) << "\n";  // Prints sizeof(raw pointer)
+  p = pro::make_proxy<LayoutAware, std::array<char, 100>>(); // SBO disabled
+  std::cout << SizeOf(p) << "\n";   // Prints sizeof(raw pointer)
   std::cout << AlignOf(p) << "\n";  // Prints alignof(raw pointer)
   std::cout << SizeOf(*p) << "\n";  // Prints "100"
-  std::cout << AlignOf(*p) << "\n";  // Prints "1"
+  std::cout << AlignOf(*p) << "\n"; // Prints "1"
 }
 ```
 

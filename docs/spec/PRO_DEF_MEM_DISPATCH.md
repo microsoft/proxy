@@ -60,14 +60,14 @@ When headers from different major versions of the Proxy library can appear in th
 
 PRO_DEF_MEM_DISPATCH(MemAt, at);
 
-struct Dictionary : pro::facade_builder
-    ::add_convention<MemAt, std::string(int index) const>
-    ::build {};
+struct Dictionary : pro::facade_builder                                   //
+                    ::add_convention<MemAt, std::string(int index) const> //
+                    ::build {};
 
 int main() {
   std::vector<const char*> v{"hello", "world"};
   pro::proxy<Dictionary> p = &v;
-  std::cout << p->at(1) << "\n";  // Prints "world"
+  std::cout << p->at(1) << "\n"; // Prints "world"
 }
 ```
 

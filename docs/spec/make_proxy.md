@@ -56,21 +56,36 @@ Throws any exception thrown by allocation and the constructor of `T`.
 
 #include <proxy/proxy.h>
 
-struct Printable : pro::facade_builder
-    ::add_convention<pro::operator_dispatch<"<<", true>, std::ostream&(std::ostream&) const>
-    ::build {};
+struct Printable : pro::facade_builder //
+                   ::add_convention<pro::operator_dispatch<"<<", true>,
+                                    std::ostream&(std::ostream&) const> //
+                   ::build {};
 
 int main() {
-  pro::proxy<Printable> p1 = pro::make_proxy<Printable>(true);  // From bool
-  pro::proxy<Printable> p2 = pro::make_proxy<Printable>(123);  // From int
-  pro::proxy<Printable> p3 = pro::make_proxy<Printable>(3.1415926);  // From double
-  pro::proxy<Printable> p4 = pro::make_proxy<Printable>("lalala");  // From const char*
-  pro::proxy<Printable> p5 = pro::make_proxy<Printable, std::string>(5, 'x');  // From a in-place constructed string
-  std::cout << std::boolalpha << *p1 << "\n";  // Prints "true"
-  std::cout << *p2 << "\n";  // Prints "123"
-  std::cout << std::fixed << std::setprecision(10) << *p3 << "\n";  // Prints "3.1415926000"
-  std::cout << *p4 << "\n";  // Prints "lalala"
-  std::cout << *p5 << "\n";  // Prints "xxxxx"
+  // From bool
+  pro::proxy<Printable> p1 = pro::make_proxy<Printable>(true);
+  // Prints "true"
+  std::cout << std::boolalpha << *p1 << "\n";
+
+  // From int
+  pro::proxy<Printable> p2 = pro::make_proxy<Printable>(123);
+  // Prints "123"
+  std::cout << *p2 << "\n";
+
+  // From double
+  pro::proxy<Printable> p3 = pro::make_proxy<Printable>(3.1415926);
+  // Prints "3.1415926000"
+  std::cout << std::fixed << std::setprecision(10) << *p3 << "\n";
+
+  // From const char*
+  pro::proxy<Printable> p4 = pro::make_proxy<Printable>("lalala");
+  // Prints "lalala"
+  std::cout << *p4 << "\n";
+
+  // From a in-place constructed string
+  pro::proxy<Printable> p5 = pro::make_proxy<Printable, std::string>(5, 'x');
+  // Prints "xxxxx"
+  std::cout << *p5 << "\n";
 }
 ```
 

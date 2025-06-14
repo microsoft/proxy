@@ -16,43 +16,48 @@ namespace proxy_integration_tests_details {
 PRO_DEF_MEM_DISPATCH(MemDraw, Draw);
 PRO_DEF_MEM_DISPATCH(MemArea, Area);
 
-struct Drawable : pro::facade_builder
-    ::add_convention<MemDraw, void(std::ostream&)>
-    ::add_convention<MemArea, double() noexcept>
-    ::build {};
+struct Drawable : pro::facade_builder                            //
+                  ::add_convention<MemDraw, void(std::ostream&)> //
+                  ::add_convention<MemArea, double() noexcept>   //
+                  ::build {};
 
 PRO_DEF_MEM_DISPATCH(MemLog, Log);
 
-struct Logger : pro::facade_builder
-    ::add_convention<MemLog, void(const char*), void(const char*, const std::exception&)>
-    ::build {};
+struct Logger : pro::facade_builder //
+                ::add_convention<MemLog, void(const char*),
+                                 void(const char*, const std::exception&)> //
+                ::build {};
 
 class Rectangle {
- public:
-  explicit Rectangle(double width, double height) : width_(width), height_(height) {}
+public:
+  explicit Rectangle(double width, double height)
+      : width_(width), height_(height) {}
   Rectangle(const Rectangle&) = default;
-  void Draw(std::ostream& out) const
-      { out << "{Rectangle: width = " << width_ << ", height = " << height_ << "}"; }
+  void Draw(std::ostream& out) const {
+    out << "{Rectangle: width = " << width_ << ", height = " << height_ << "}";
+  }
   double Area() const noexcept { return width_ * height_; }
 
- private:
+private:
   double width_;
   double height_;
 };
 
 class Circle {
- public:
+public:
   explicit Circle(double radius) : radius_(radius) {}
   Circle(const Circle&) = default;
-  void Draw(std::ostream& out) const { out << "{Circle: radius = " << radius_ << "}"; }
+  void Draw(std::ostream& out) const {
+    out << "{Circle: radius = " << radius_ << "}";
+  }
   double Area() const noexcept { return std::numbers::pi * radius_ * radius_; }
 
- private:
+private:
   double radius_;
 };
 
 class Point {
- public:
+public:
   void Draw(std::ostream& out) const { out << "{Point}"; }
   constexpr double Area() const noexcept { return 0; }
 };
@@ -95,7 +100,8 @@ pro::proxy<Drawable> MakeDrawableFromCommand(const std::string& s) {
       if (parsed.size() == 3u) {
         static std::pmr::unsynchronized_pool_resource rectangle_memory_pool;
         std::pmr::polymorphic_allocator<> alloc{&rectangle_memory_pool};
-        return pro::allocate_proxy<Drawable, Rectangle>(alloc, std::stod(parsed[1u]), std::stod(parsed[2u]));
+        return pro::allocate_proxy<Drawable, Rectangle>(
+            alloc, std::stod(parsed[1u]), std::stod(parsed[2u]));
       }
     } else if (parsed[0u] == "Circle") {
       if (parsed.size() == 2u) {
@@ -113,29 +119,30 @@ pro::proxy<Drawable> MakeDrawableFromCommand(const std::string& s) {
 }
 
 class StreamLogger {
- public:
+public:
   explicit StreamLogger(std::ostream& out) : out_(&out) {}
   StreamLogger(const StreamLogger&) = default;
 
-  void Log(const char* s) {
-    *out_ << "[INFO] " << s << "\n";
-  }
+  void Log(const char* s) { *out_ << "[INFO] " << s << "\n"; }
   void Log(const char* s, const std::exception& e) {
-    *out_ << "[ERROR] " << s << " (exception info: "  << e.what() << ")\n";
+    *out_ << "[ERROR] " << s << " (exception info: " << e.what() << ")\n";
   }
 
- private:
+private:
   std::ostream* out_;
 };
 
-}  // namespace proxy_integration_tests_details
+} // namespace proxy_integration_tests_details
 
 namespace details = proxy_integration_tests_details;
 
 TEST(ProxyIntegrationTests, TestDrawable) {
-  pro::proxy<details::Drawable> p = details::MakeDrawableFromCommand("Rectangle 2 3");
+  pro::proxy<details::Drawable> p =
+      details::MakeDrawableFromCommand("Rectangle 2 3");
   std::string s = details::PrintDrawableToString(std::move(p));
-  ASSERT_EQ(s, "shape = {Rectangle: width = 2.00000, height = 3.00000}, area = 6.00000");
+  ASSERT_EQ(
+      s,
+      "shape = {Rectangle: width = 2.00000, height = 3.00000}, area = 6.00000");
 
   p = details::MakeDrawableFromCommand("Circle 1");
   s = details::PrintDrawableToString(std::move(p));

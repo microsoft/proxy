@@ -22,15 +22,13 @@ The implementation of `Skill` can combine other member alias templates defined i
 #include <proxy/proxy.h>
 
 template <class FB>
-using SharedSlim = typename FB
-    ::template restrict_layout<sizeof(void*), alignof(void*)>
-    ::template support_copy<pro::constraint_level::nothrow>
+using SharedSlim = typename FB                                //
+    ::template restrict_layout<sizeof(void*), alignof(void*)> //
+    ::template support_copy<pro::constraint_level::nothrow>   //
     ::template support<pro::skills::as_weak>;
 
-struct SharedFormattable : pro::facade_builder
-    ::support<SharedSlim>
-    ::support<pro::skills::format>
-    ::build {};
+struct SharedFormattable : pro::facade_builder ::support<SharedSlim>::support<
+                               pro::skills::format>::build {};
 
 int main() {
   // Raw pointer does not have shared semantics
@@ -40,10 +38,11 @@ int main() {
   static_assert(!pro::proxiable<std::shared_ptr<int>, SharedFormattable>);
 
   // The built-in shared pointer is guaranteed to be "slim"
-  pro::proxy<SharedFormattable> p1 = pro::make_proxy_shared<SharedFormattable>(123);
+  pro::proxy<SharedFormattable> p1 =
+      pro::make_proxy_shared<SharedFormattable>(123);
   pro::weak_proxy<SharedFormattable> p2 = p1;
   pro::proxy<SharedFormattable> p3 = p2.lock();
-  std::cout << std::format("{}\n", *p3);  // Prints "123"
+  std::cout << std::format("{}\n", *p3); // Prints "123"
 }
 ```
 

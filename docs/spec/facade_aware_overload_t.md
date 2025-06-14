@@ -24,24 +24,30 @@ Class template `facade_aware_overload_t<O>` specifies a facade-aware overload te
 #include <proxy/proxy.h>
 
 template <class F>
-using BinaryOverload = pro::proxy<F>(const pro::proxy_indirect_accessor<F>& rhs) const;
+using BinaryOverload =
+    pro::proxy<F>(const pro::proxy_indirect_accessor<F>& rhs) const;
 
 template <class T, pro::facade F>
-pro::proxy<F> operator+(const T& value, const pro::proxy_indirect_accessor<F>& rhs)
-    requires(!std::is_same_v<T, pro::proxy_indirect_accessor<F>>)
-    { return pro::make_proxy<F, T>(value + proxy_cast<const T&>(rhs)); }
+pro::proxy<F> operator+(const T& value,
+                        const pro::proxy_indirect_accessor<F>& rhs)
+  requires(!std::is_same_v<T, pro::proxy_indirect_accessor<F>>)
+{
+  return pro::make_proxy<F, T>(value + proxy_cast<const T&>(rhs));
+}
 
-struct Addable : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::format>
-    ::add_convention<pro::operator_dispatch<"+">, pro::facade_aware_overload_t<BinaryOverload>>
-    ::build {};
+struct Addable
+    : pro::facade_builder            //
+      ::support<pro::skills::rtti>   //
+      ::support<pro::skills::format> //
+      ::add_convention<pro::operator_dispatch<"+">,
+                       pro::facade_aware_overload_t<BinaryOverload>> //
+      ::build {};
 
 int main() {
   pro::proxy<Addable> p1 = pro::make_proxy<Addable>(1);
   pro::proxy<Addable> p2 = pro::make_proxy<Addable>(2);
   pro::proxy<Addable> p3 = *p1 + *p2;
-  std::cout << std::format("{}\n", *p3);  // Prints "3"
+  std::cout << std::format("{}\n", *p3); // Prints "3"
 }
 ```
 
