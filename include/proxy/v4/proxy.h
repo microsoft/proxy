@@ -806,7 +806,7 @@ struct meta_ptr_indirect_impl {
 private:
   const M* ptr_;
   template <class P>
-  static constexpr M storage{std::in_place_type<P>};
+  static inline constexpr M storage{std::in_place_type<P>};
 };
 template <class M, class DM>
 struct meta_ptr_direct_impl : private M {
@@ -1696,8 +1696,9 @@ private:
   T&& value_;
 };
 
-constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+inline constexpr std::size_t invalid_size =
+    std::numeric_limits<std::size_t>::max();
+inline constexpr constraint_level invalid_cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size) {
