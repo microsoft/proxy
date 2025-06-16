@@ -21,7 +21,9 @@ using SmallObject2 = std::shared_ptr<int>;
 struct SmallObject3 {
   SmallObject3() noexcept = default;
   SmallObject3(SmallObject3&&) noexcept = default;
-  SmallObject3(const SmallObject3&) { throw std::runtime_error{ "Not implemented" }; }
+  SmallObject3(const SmallObject3&) {
+    throw std::runtime_error{"Not implemented"};
+  }
 
   std::unique_lock<std::mutex> Field1;
 };
@@ -41,9 +43,9 @@ struct PolymorphicObject : PolymorphicObjectBase {
   T Value;
 };
 
-struct DefaultFacade : pro::facade_builder
-    ::support_copy<pro::constraint_level::nontrivial>
-    ::build {};
+struct DefaultFacade : pro::facade_builder                               //
+                       ::support_copy<pro::constraint_level::nontrivial> //
+                       ::build {};
 
 void BM_SmallObjectManagementWithProxy(benchmark::State& state) {
   for (auto _ : state) {
@@ -78,9 +80,12 @@ void BM_SmallObjectManagementWithProxy_SharedPooled(benchmark::State& state) {
     std::vector<pro::proxy<DefaultFacade>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject1>(alloc));
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject2>(alloc));
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, SmallObject3>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, SmallObject1>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, SmallObject2>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, SmallObject3>(alloc));
     }
     benchmark::DoNotOptimize(data);
   }
@@ -91,9 +96,12 @@ void BM_SmallObjectManagementWithUniquePtr(benchmark::State& state) {
     std::vector<std::unique_ptr<PolymorphicObjectBase>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<SmallObject1>()});
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<SmallObject2>()});
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<SmallObject3>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<SmallObject1>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<SmallObject2>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<SmallObject3>()});
     }
     benchmark::DoNotOptimize(data);
   }
@@ -188,9 +196,12 @@ void BM_LargeObjectManagementWithProxy_SharedPooled(benchmark::State& state) {
     std::vector<pro::proxy<DefaultFacade>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject1>(alloc));
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject2>(alloc));
-      data.push_back(pro::allocate_proxy_shared<DefaultFacade, LargeObject3>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, LargeObject1>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, LargeObject2>(alloc));
+      data.push_back(
+          pro::allocate_proxy_shared<DefaultFacade, LargeObject3>(alloc));
     }
     benchmark::DoNotOptimize(data);
   }
@@ -201,9 +212,12 @@ void BM_LargeObjectManagementWithUniquePtr(benchmark::State& state) {
     std::vector<std::unique_ptr<PolymorphicObjectBase>> data;
     data.reserve(TestManagedObjectCount);
     for (int i = 0; i < TestManagedObjectCount; i += TypeSeriesCount) {
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<LargeObject1>()});
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<LargeObject2>()});
-      data.push_back(std::unique_ptr<PolymorphicObjectBase>{new PolymorphicObject<LargeObject3>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<LargeObject1>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<LargeObject2>()});
+      data.push_back(std::unique_ptr<PolymorphicObjectBase>{
+          new PolymorphicObject<LargeObject3>()});
     }
     benchmark::DoNotOptimize(data);
   }
@@ -266,4 +280,4 @@ BENCHMARK(BM_LargeObjectManagementWithSharedPtr);
 BENCHMARK(BM_LargeObjectManagementWithSharedPtr_Pooled);
 BENCHMARK(BM_LargeObjectManagementWithAny);
 
-}  // namespace
+} // namespace

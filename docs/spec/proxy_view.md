@@ -36,15 +36,16 @@ Class template `observer_facade` is a [facade](facade.md) type for observer poin
 #include <proxy/proxy.h>
 
 template <class K, class V>
-struct FMap : pro::facade_builder
-    ::add_convention<pro::operator_dispatch<"[]">, V&(const K& key)>
-    ::build {};
+struct FMap
+    : pro::facade_builder                                              //
+      ::add_convention<pro::operator_dispatch<"[]">, V&(const K& key)> //
+      ::build {};
 
 int main() {
   std::map<int, int> v;
   pro::proxy_view<FMap<int, int>> p = &v;
   (*p)[1] = 123;
-  printf("%d\n", v.at(1));  // Prints "123"
+  printf("%d\n", v.at(1)); // Prints "123"
 }
 ```
 

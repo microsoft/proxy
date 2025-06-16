@@ -25,16 +25,16 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::as_view>
-    ::build {};
+struct RttiAware : pro::facade_builder             //
+                   ::support<pro::skills::rtti>    //
+                   ::support<pro::skills::as_view> //
+                   ::build {};
 
 int main() {
   pro::proxy<RttiAware> p = pro::make_proxy<RttiAware>(123);
   pro::proxy_view<RttiAware> pv = p;
-  proxy_cast<int&>(*pv) = 456;  // Modifies the contained object of p
-  std::cout << proxy_cast<int>(*pv) << "\n";  // Prints "456"
+  proxy_cast<int&>(*pv) = 456; // Modifies the contained object of p
+  std::cout << proxy_cast<int>(*pv) << "\n"; // Prints "456"
   std::cout << proxy_cast<int>(*p) << "\n";  // Prints "456"
 }
 ```

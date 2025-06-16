@@ -25,5 +25,5 @@ struct Foo {
 
 int main() {
   pro::proxy<AnyMovable> p = pro::make_proxy<AnyMovable, Foo>();
-}  // The destructor of `Foo` is called when `p` is destroyed
+} // The destructor of `Foo` is called when `p` is destroyed
 ```

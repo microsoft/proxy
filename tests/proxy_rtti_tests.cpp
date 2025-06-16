@@ -7,12 +7,12 @@
 
 namespace proxy_rtti_tests_details {
 
-struct TestFacade : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::direct_rtti>
-    ::build {};
+struct TestFacade : pro::facade_builder                 //
+                    ::support<pro::skills::rtti>        //
+                    ::support<pro::skills::direct_rtti> //
+                    ::build {};
 
-}  // namespace proxy_rtti_tests_details
+} // namespace proxy_rtti_tests_details
 
 namespace details = proxy_rtti_tests_details;
 

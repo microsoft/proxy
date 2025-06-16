@@ -35,13 +35,13 @@ This facility requires [the {fmt} library](https://github.com/fmtlib/fmt) to be 
 #include <proxy/proxy.h>
 #include <proxy/proxy_fmt.h>
 
-struct Formattable : pro::facade_builder
-    ::support<pro::skills::fmt_format>
-    ::build {};
+struct Formattable : pro::facade_builder                //
+                     ::support<pro::skills::fmt_format> //
+                     ::build {};
 
 int main() {
   pro::proxy<Formattable> p = pro::make_proxy<Formattable>(3.14159);
-  std::cout << fmt::format("*p = {:.2f}\n", *p);  // Prints "*p = 3.14"
+  std::cout << fmt::format("*p = {:.2f}\n", *p); // Prints "*p = 3.14"
 }
 ```
 

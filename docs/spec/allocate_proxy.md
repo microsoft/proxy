@@ -53,9 +53,11 @@ struct Any : pro::facade_builder::build {};
 
 int main() {
   // sizeof(std::array<int, 100>) is usually greater than 2 * sizeof(void*),
-  // calling allocate_proxy has no limitation to the size and alignment of the target
+  // calling allocate_proxy has no limitation to the size and alignment of the
+  // target
   using Target = std::array<int, 100>;
-  pro::proxy<Any> p1 = pro::allocate_proxy<Any, Target>(std::allocator<Target>{});
+  pro::proxy<Any> p1 =
+      pro::allocate_proxy<Any, Target>(std::allocator<Target>{});
 }
 ```
 

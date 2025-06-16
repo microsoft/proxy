@@ -35,21 +35,21 @@ Class template `weak_facade` is a [facade](facade.md) type for weak pointers (e.
 
 #include <proxy/proxy.h>
 
-struct Formattable : pro::facade_builder
-    ::support<pro::skills::format>
-    ::build {};
+struct Formattable : pro::facade_builder            //
+                     ::support<pro::skills::format> //
+                     ::build {};
 
 int main() {
   std::shared_ptr<int> val = std::make_shared<int>(123);
   pro::weak_proxy<Formattable> wp = std::weak_ptr{val};
   pro::proxy<Formattable> p = wp.lock();
-  std::cout << std::boolalpha << p.has_value() << "\n";  // Prints "true"
-  std::cout << std::format("{}\n", *p);  // Prints "123"
+  std::cout << std::boolalpha << p.has_value() << "\n"; // Prints "true"
+  std::cout << std::format("{}\n", *p);                 // Prints "123"
 
   p.reset();
   val.reset();
   p = wp.lock();
-  std::cout << p.has_value() << "\n";  // Prints "false"
+  std::cout << p.has_value() << "\n"; // Prints "false"
 }
 ```
 

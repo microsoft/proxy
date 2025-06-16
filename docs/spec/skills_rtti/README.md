@@ -32,18 +32,18 @@ The alias templates `rtti`, `indirect_rtti`, and `direct_rtti` modify a speciali
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder
-    ::support<pro::skills::rtti>
-    ::support<pro::skills::direct_rtti>
-    ::build {};
+struct RttiAware : pro::facade_builder                 //
+                   ::support<pro::skills::rtti>        //
+                   ::support<pro::skills::direct_rtti> //
+                   ::build {};
 
 int main() {
   int v = 123;
   pro::proxy<RttiAware> p = &v;
   std::cout << proxy_typeid(p).name() << "\n";  // Prints "Pi" (assuming GCC)
-  std::cout << proxy_cast<int*>(p) << "\n";  // Prints the address of v
-  std::cout << proxy_typeid(*p).name() << "\n";  // Prints "i" (assuming GCC)
-  std::cout << proxy_cast<int>(*p) << "\n";  // Prints "123"
+  std::cout << proxy_cast<int*>(p) << "\n";     // Prints the address of v
+  std::cout << proxy_typeid(*p).name() << "\n"; // Prints "i" (assuming GCC)
+  std::cout << proxy_cast<int>(*p) << "\n";     // Prints "123"
 }
 ```
 

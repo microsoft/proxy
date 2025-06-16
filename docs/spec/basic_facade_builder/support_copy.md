@@ -20,9 +20,9 @@ If no copyability support is applied before specifying [`build`](build.md), the 
 
 struct Movable : pro::facade_builder::build {};
 
-struct Copyable : pro::facade_builder
-    ::support_copy<pro::constraint_level::nontrivial>
-    ::build {};
+struct Copyable : pro::facade_builder                               //
+                  ::support_copy<pro::constraint_level::nontrivial> //
+                  ::build {};
 
 int main() {
   pro::proxy<Movable> p1 = std::make_unique<int>(123);
