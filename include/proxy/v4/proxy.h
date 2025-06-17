@@ -806,7 +806,7 @@ struct meta_ptr_indirect_impl {
 private:
   const M* ptr_;
   template <class P>
-  static inline constexpr M storage{std::in_place_type<P>};
+  static constexpr M storage{std::in_place_type<P>};
 };
 template <class M, class DM>
 struct meta_ptr_direct_impl : private M {
