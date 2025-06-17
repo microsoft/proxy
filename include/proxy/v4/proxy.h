@@ -1185,7 +1185,6 @@ private:
   void destroy()
     requires(F::constraints.destructibility != constraint_level::none)
   {
-    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
     if constexpr (F::constraints.destructibility != constraint_level::trivial) {
       if (meta_.has_value()) {
         proxy_invoke<true, details::destroy_dispatch,
