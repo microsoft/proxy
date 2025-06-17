@@ -2444,7 +2444,7 @@ struct operator_dispatch;
         return std::forward<Arg>(arg) __VA_ARGS__           \
             std::forward<decltype(__self)>(__self);         \
       }                                                     \
-    )                 \
+    )                  \
   }
 #define ___PRO_RHS_OP_DISPATCH_IMPL(...)                                       \
   template <>                                                                  \
