@@ -393,7 +393,7 @@ consteval bool diagnose_proxiable_required_convention_not_implemented() {
 
 template <class F, bool IsDirect, class D, class O>
 struct invocation_meta {
-  constexpr invocation_meta() noexcept : dispatcher(nullptr) {}
+  constexpr invocation_meta() = default;
   template <class P>
   constexpr explicit invocation_meta(std::in_place_type_t<P>) noexcept
       : dispatcher(
@@ -795,7 +795,7 @@ using ptr_prototype = void* [2];
 
 template <class M>
 struct meta_ptr_indirect_impl {
-  constexpr meta_ptr_indirect_impl() noexcept : ptr_(nullptr) {};
+  constexpr meta_ptr_indirect_impl() = default;
   template <class P>
   constexpr explicit meta_ptr_indirect_impl(std::in_place_type_t<P>) noexcept
       : ptr_(&storage<P>) {}
@@ -948,7 +948,7 @@ class proxy : public details::facade_traits<F>::direct_accessor,
 public:
   using facade_type = F;
 
-  proxy() noexcept { ___PRO4_DEBUG(std::ignore = &_symbol_guard;) }
+  proxy() noexcept { initialize(); }
   proxy(std::nullptr_t) noexcept : proxy() {}
   proxy(const proxy&) noexcept
     requires(F::constraints.copyability == constraint_level::trivial)
@@ -957,39 +957,23 @@ public:
                                    constraint_level::nothrow)
     requires(F::constraints.copyability == constraint_level::nontrivial ||
              F::constraints.copyability == constraint_level::nothrow)
-      : details::inplace_ptr<proxy_indirect_accessor<F>>() { // Make GCC happy
-    if (rhs.meta_.has_value()) {
-      proxy_invoke<true, details::copy_dispatch,
-                   void(proxy&) const noexcept(F::constraints.copyability ==
-                                               constraint_level::nothrow)>(
-          rhs, *this);
-    }
+      : details::inplace_ptr<
+            proxy_indirect_accessor<F>>() /* Make GCC happy */ {
+    initialize(rhs);
   }
   proxy(proxy&& rhs) noexcept(F::constraints.relocatability ==
                               constraint_level::nothrow)
     requires(F::constraints.relocatability >= constraint_level::nontrivial &&
              F::constraints.copyability != constraint_level::trivial)
   {
-    if (rhs.meta_.has_value()) {
-      if constexpr (F::constraints.relocatability ==
-                    constraint_level::trivial) {
-        std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
-        meta_ = rhs.meta_;
-        rhs.meta_.reset();
-      } else {
-        proxy_invoke<true, details::copy_dispatch,
-                     void(proxy&) && noexcept(F::constraints.relocatability ==
-                                              constraint_level::nothrow)>(
-            std::move(rhs), *this);
-      }
-    }
+    initialize(std::move(rhs));
   }
   template <class P>
   constexpr proxy(P&& ptr) noexcept(
       std::is_nothrow_constructible_v<std::decay_t<P>, P>)
     requires(details::ptr_traits<std::decay_t<P>>::applicable &&
              std::is_constructible_v<std::decay_t<P>, P>)
-      : proxy() {
+  {
     initialize<std::decay_t<P>>(std::forward<P>(ptr));
   }
   template <class P, class... Args>
@@ -997,7 +981,7 @@ public:
       std::is_nothrow_constructible_v<P, Args...>)
     requires(details::ptr_traits<P>::applicable &&
              std::is_constructible_v<P, Args...>)
-      : proxy() {
+  {
     initialize<P>(std::forward<Args>(args)...);
   }
   template <class P, class U, class... Args>
@@ -1008,7 +992,7 @@ public:
                                        P, std::initializer_list<U>&, Args...>)
     requires(details::ptr_traits<P>::applicable &&
              std::is_constructible_v<P, std::initializer_list<U>&, Args...>)
-      : proxy() {
+  {
     initialize<P>(il, std::forward<Args>(args)...);
   }
   proxy& operator=(std::nullptr_t) noexcept(F::constraints.destructibility >=
@@ -1031,8 +1015,8 @@ public:
   {
     if (this != std::addressof(rhs)) [[likely]] {
       if constexpr (F::constraints.copyability == constraint_level::nothrow) {
-        std::destroy_at(this);
-        std::construct_at(this, rhs);
+        destroy();
+        initialize(rhs);
       } else {
         *this = proxy{rhs};
       }
@@ -1049,7 +1033,7 @@ public:
   {
     if (this != std::addressof(rhs)) [[likely]] {
       reset();
-      std::construct_at(this, std::move(rhs));
+      initialize(std::move(rhs));
     }
     return *this;
   }
@@ -1062,7 +1046,7 @@ public:
              F::constraints.destructibility >= constraint_level::nontrivial)
   {
     if constexpr (std::is_nothrow_constructible_v<std::decay_t<P>, P>) {
-      std::destroy_at(this);
+      destroy();
       initialize<std::decay_t<P>>(std::forward<P>(ptr));
     } else {
       *this = proxy{std::forward<P>(ptr)};
@@ -1076,11 +1060,7 @@ public:
     requires(F::constraints.destructibility == constraint_level::nontrivial ||
              F::constraints.destructibility == constraint_level::nothrow)
   {
-    if (meta_.has_value()) {
-      proxy_invoke<true, details::destroy_dispatch,
-                   void() noexcept(F::constraints.destructibility ==
-                                   constraint_level::nothrow)>(*this);
-    }
+    destroy();
   }
 
   bool has_value() const noexcept { return meta_.has_value(); }
@@ -1089,8 +1069,8 @@ public:
                         constraint_level::nothrow)
     requires(F::constraints.destructibility >= constraint_level::nontrivial)
   {
-    std::destroy_at(this);
-    meta_.reset();
+    destroy();
+    initialize();
   }
   void swap(proxy& rhs) noexcept(F::constraints.relocatability >=
                                      constraint_level::nothrow ||
@@ -1107,13 +1087,13 @@ public:
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
           proxy temp = std::move(*this);
-          std::construct_at(this, std::move(rhs));
-          std::construct_at(std::addressof(rhs), std::move(temp));
+          initialize(std::move(rhs));
+          rhs.initialize(std::move(temp));
         } else {
-          std::construct_at(std::addressof(rhs), std::move(*this));
+          rhs.initialize(std::move(*this));
         }
       } else if (rhs.meta_.has_value()) {
-        std::construct_at(this, std::move(rhs));
+        initialize(std::move(rhs));
       }
     }
   }
@@ -1148,8 +1128,51 @@ public:
   }
 
 private:
+  void initialize() {
+    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
+    meta_.reset();
+  }
+  void initialize(const proxy& rhs)
+    requires(F::constraints.copyability != constraint_level::none)
+  {
+    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
+    if (rhs.meta_.has_value()) {
+      if constexpr (F::constraints.copyability == constraint_level::trivial) {
+        std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
+        meta_ = rhs.meta_;
+      } else {
+        proxy_invoke<true, details::copy_dispatch,
+                     void(proxy&) const noexcept(F::constraints.copyability ==
+                                                 constraint_level::nothrow)>(
+            rhs, *this);
+      }
+    } else {
+      meta_.reset();
+    }
+  }
+  void initialize(proxy&& rhs)
+    requires(F::constraints.relocatability != constraint_level::none)
+  {
+    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
+    if (rhs.meta_.has_value()) {
+      if constexpr (F::constraints.relocatability ==
+                    constraint_level::trivial) {
+        std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
+        meta_ = rhs.meta_;
+        rhs.meta_.reset();
+      } else {
+        proxy_invoke<true, details::copy_dispatch,
+                     void(proxy&) && noexcept(F::constraints.relocatability ==
+                                              constraint_level::nothrow)>(
+            std::move(rhs), *this);
+      }
+    } else {
+      meta_.reset();
+    }
+  }
   template <class P, class... Args>
   constexpr P& initialize(Args&&... args) {
+    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
     P& result = *std::construct_at(reinterpret_cast<P*>(ptr_),
                                    std::forward<Args>(args)...);
     if constexpr (proxiable<P, F>) {
@@ -1159,7 +1182,18 @@ private:
     }
     return result;
   }
-
+  void destroy()
+    requires(F::constraints.destructibility != constraint_level::none)
+  {
+    ___PRO4_DEBUG(std::ignore = &_symbol_guard;)
+    if constexpr (F::constraints.destructibility != constraint_level::trivial) {
+      if (meta_.has_value()) {
+        proxy_invoke<true, details::destroy_dispatch,
+                     void() noexcept(F::constraints.destructibility ==
+                                     constraint_level::nothrow)>(*this);
+      }
+    }
+  }
   ___PRO4_DEBUG(static inline void _symbol_guard(proxy& self,
                                                  const proxy& cself) noexcept {
     self.operator->();
@@ -1696,8 +1730,9 @@ private:
   T&& value_;
 };
 
-constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+inline constexpr std::size_t invalid_size =
+    std::numeric_limits<std::size_t>::max();
+inline constexpr constraint_level invalid_cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval auto normalize(proxiable_ptr_constraints value) {
   if (value.max_size == invalid_size) {
@@ -2410,7 +2445,7 @@ struct operator_dispatch;
         return std::forward<Arg>(arg) __VA_ARGS__           \
             std::forward<decltype(__self)>(__self);         \
       }                                                     \
-    )                  \
+    )                 \
   }
 #define ___PRO_RHS_OP_DISPATCH_IMPL(...)                                       \
   template <>                                                                  \
