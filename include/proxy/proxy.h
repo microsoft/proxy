@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#ifndef _MSFT_PROXY_
-#define _MSFT_PROXY_
+#ifndef MSFT_PROXY_PROXY_H_
+#define MSFT_PROXY_PROXY_H_
 
 #include "v4/proxy.h" // IWYU pragma: export
 
-#endif // _MSFT_PROXY_
+#endif // MSFT_PROXY_PROXY_H_
