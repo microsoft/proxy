@@ -52,7 +52,7 @@ Performs type-safe access to the contained object of `proxy<F>` where `F` is a [
   - `(6)`: `std::as_const(p)`.
   - `(7)`: `p`.
   - `(8)`: `std::move(p)`.
-- `(7-10)` Returns `std::address_of(proxy_cast<T>(*operand))` if the evaluation won't throw, or otherwise, returns `nullptr`.
+- `(7-10)` Returns `std::addressof(proxy_cast<T>(*operand))` if the evaluation won't throw, or otherwise, returns `nullptr`.
 
 These functions are not visible to ordinary [unqualified](https://en.cppreference.com/w/cpp/language/unqualified_lookup) or [qualified lookup](https://en.cppreference.com/w/cpp/language/qualified_lookup). It can only be found by [argument-dependent lookup](https://en.cppreference.com/w/cpp/language/adl) when `proxy_indirect_accessor<F>` (for `rtti` or `indirect_rtti`) or `proxy<F>` (for `direct_rtti`) is an associated class of the arguments. Usage of these functions is similar to [`std::any_cast`](https://en.cppreference.com/w/cpp/utility/any/any_cast).
 

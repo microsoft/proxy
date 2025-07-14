@@ -5,9 +5,11 @@
 > Namespace: `pro::inline v4`
 
 ```cpp
+// (1)
 template <class R, facade F>
 const R& proxy_reflect(const proxy_indirect_accessor<F>& p) noexcept;
 
+// (2)
 template <class R, facade F>
 const R& proxy_reflect(const proxy<F>& p) noexcept;
 ```
