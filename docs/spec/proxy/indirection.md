@@ -66,6 +66,4 @@ int main() {
 
 ## See Also
 
-- [function template `access_proxy`](../access_proxy.md)
-- [function template `proxy_invoke`](../proxy_invoke.md)
 - [class template `proxy_indirect_accessor`](../proxy_indirect_accessor.md)

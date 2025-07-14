@@ -5,11 +5,19 @@
 > Namespace: `pro::inline v4`
 
 ```cpp
-template <bool IsDirect, class R, facade F>
+// (1)
+template <class R, facade F>
+const R& proxy_reflect(const proxy_indirect_accessor<F>& p) noexcept;
+
+// (2)
+template <class R, facade F>
 const R& proxy_reflect(const proxy<F>& p) noexcept;
 ```
 
-Let `P` be the type of the contained value of `p`. Retrieves a value of type `const R&` constructed from [`std::in_place_type<T>`](https://en.cppreference.com/w/cpp/utility/in_place), where `T` is `P` when `IsDirect` is `true`, or otherwise `T` is `typename std::pointer_traits<P>::element_type` when `IsDirect` is `false`. There shall be a reflection type `Refl` defined in `typename F::reflection_types` where `Refl::is_direct == IsDirect && std::is_same_v<typename Refl::reflection_type, R>` is `true`. The behavior is undefined if `p` does not contain a value.
+Acquires reflection information of a contained type.
+
+- `(1)` Let `P` be the contained type of the `proxy` object associated to `p`. Returns a `const` reference of `R` direct-non-list-initialized with [`std::in_place_type<typename std::pointer_traits<P>::element_type>`](https://en.cppreference.com/w/cpp/utility/in_place).
+- `(2)` Let `P` be the contained type of `p`. Returns a `const` reference of `R` direct-non-list-initialized with [`std::in_place_type<P>`](https://en.cppreference.com/w/cpp/utility/in_place). The behavior is undefined if `p` does not contain a value.
 
 The reference obtained from `proxy_reflect()` may be invalidated if `p` is subsequently modified.
 
@@ -32,11 +40,11 @@ public:
   constexpr explicit CopyabilityReflector(std::in_place_type_t<T>)
       : copyable_(std::is_copy_constructible_v<T>) {}
 
-  template <class F, bool IsDirect, class R>
+  template <class P, class R>
   struct accessor {
     bool IsCopyable() const noexcept {
       const CopyabilityReflector& self =
-          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
+          pro::proxy_reflect<R>(static_cast<const P&>(*this));
       return self.copyable_;
     }
   };

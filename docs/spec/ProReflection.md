@@ -6,7 +6,7 @@ A type `R` meets the *ProReflection* requirements of a type `P` if `R` meets the
 
 | Expressions                                         | Semantics                                                    |
 | --------------------------------------------------- | ------------------------------------------------------------ |
-| `typename R::reflector_type{std::in_place_type<T>}` | A [core constant expression](https://en.cppreference.com/w/cpp/language/constant_expression) that constructs a value of type `typename R::reflector_type`, reflecting implementation-defined metadata of type `T`. |
+| `typename R::reflector_type(std::in_place_type<T>)` | A [core constant expression](https://en.cppreference.com/w/cpp/language/constant_expression) that constructs a value of type `typename R::reflector_type`, reflecting implementation-defined metadata of type `T`. |
 
 ## See Also
 

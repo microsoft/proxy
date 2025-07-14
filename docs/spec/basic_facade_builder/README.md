@@ -12,22 +12,20 @@ constexpr constraint_level default-cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min()); // exposition only
 ```
 
-*default-size* and *default-cl* denote that a field in [`proxiable_ptr_constraints`](../proxiable_ptr_constraints.md) is not specified in the template parameters of a `basic_facade_builder` specialization. In an instantiation of `proxiable_ptr_constraints`, any meaningful value of `max_size` and `max_align` is less than *default-size*; any meaningful value of `copyability`, `relocatability`, and `destructibility` is greater than *default-cl*.
+Given a [facade](../facade.md ) type `F`, any meaningful value of `F::max_size` and `F::max_align` is less than *default-size*; any meaningful value of `F::copyability`, `F::relocatability`, and `F::destructibility` is greater than *default-cl*.
 
 ```cpp
-template <class Cs, class Rs, proxiable_ptr_constraints C>
+template <class Cs, class Rs, std::size_t MaxSize, std::size_t MaxAlign,
+          constraint_level Copyability, constraint_level Relocatability,
+          constraint_level Destructibility>
 class basic_facade_builder;
 
-using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
-    proxiable_ptr_constraints{
-        .max_size = default-size,
-        .max_align = default-size,
-        .copyability = default-cl,
-        .relocatability = default-cl,
-        .destructibility = default-cl}>;
+using facade_builder =
+    basic_facade_builder<std::tuple<>, std::tuple<>, default-size, default-size,
+                         default-cl, default-cl, default-cl>;
 ```
 
-`class Cs`, `class Rs`, and `proxiable_ptr_constraints C` are the template parameters of `basic_facade_builder`. `basic_facade_builder` provides a member type `build` that compiles the template parameters into a [`facade`](../facade.md) type. The template parameters can be modified via various member alias templates that specify `basic_facade_builder` with the modified template parameters.
+`basic_facade_builder` provides a member type `build` that compiles the template parameters into a [`facade`](../facade.md) type. The template parameters can be modified via various member alias templates that specify `basic_facade_builder` with the modified template parameters.
 
 ## Member Types
 
@@ -42,11 +40,11 @@ using facade_builder = basic_facade_builder<std::tuple<>, std::tuple<>,
 | [`add_convention`<br />`add_indirect_convention`<br />`add_direct_convention`](add_convention.md) | Adds a convention to the template parameters                 |
 | [`add_facade`](add_facade.md)                                | Adds a facade to the template parameters                     |
 | [`add_reflection`<br />`add_indirect_reflection`<br />`add_direct_reflection`](add_reflection.md) | Adds a reflection to the template parameters                 |
-| [`restrict_layout`](restrict_layout.md)                      | Specifies maximum `max_size` and `max_align` of `C` in the template parameters |
+| [`restrict_layout`](restrict_layout.md)                      | Specifies maximum `MaxSize` and `MaxAlign` in the template parameters |
 | [`support`](support.md)                                      | Specifies a custom skill                                     |
-| [`support_copy`](support_copy.md)                            | Specifies minimum `copyability` of `C` in the template parameters |
-| [`support_destruction`](support_destruction.md)              | Specifies minimum `destructibility` of `C` in the template parameters |
-| [`support_relocation`](support_relocation.md)                | Specifies minimum `relocatability` of `C` in the template parameters |
+| [`support_copy`](support_copy.md)                            | Specifies minimum `Copyability` in the template parameters   |
+| [`support_destruction`](support_destruction.md)              | Specifies minimum `Destructibility` in the template parameters |
+| [`support_relocation`](support_relocation.md)                | Specifies minimum `Relocatability` in the template parameters |
 
 ## Member Functions
 

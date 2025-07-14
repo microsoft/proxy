@@ -38,7 +38,7 @@ Throws any exception thrown by allocation or the constructor of `T`.
 
 ## Notes
 
-The implementation of `allocated-ptr` may vary depending on the definition of `F`. Specifically, when `F::constraints.max_size` and `F::constraints.max_align` are not large enough to hold both a pointer to the allocated memory and a copy of the allocator, `allocated-ptr` shall allocate additional storage for the allocator.
+The implementation of `allocated-ptr` may vary depending on the definition of `F`. Specifically, when `F::max_size` and `F::max_align` are not large enough to hold both a pointer to the allocated memory and a copy of the allocator, `allocated-ptr` shall allocate additional storage for the allocator.
 
 ## Example
 

@@ -1,14 +1,14 @@
 # `proxy<F>::~proxy`
 
 ```cpp
-~proxy() requires(F::constraints.destructibility == constraint_level::trivial)
+~proxy() requires(F::destructibility == constraint_level::trivial)
     = default;
-~proxy() noexcept(F::constraints.destructibility == constraint_level::nothrow)
-    requires(F::constraints.destructibility == constraint_level::nontrivial ||
-        F::constraints.destructibility == constraint_level::nothrow);
+~proxy() noexcept(F::destructibility == constraint_level::nothrow)
+    requires(F::destructibility == constraint_level::nontrivial ||
+        F::destructibility == constraint_level::nothrow);
 ```
 
-Destroys the `proxy` object. If the `proxy` contains a value, the contained value is also destroyed. The destructor is trivial when `F::constraints.destructibility` is `constraint_level::trivial`.
+Destroys the `proxy` object. If the `proxy` contains a value, the contained value is also destroyed. The destructor is trivial when `F::destructibility` is `constraint_level::trivial`.
 
 ## Example
 

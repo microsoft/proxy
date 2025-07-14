@@ -2,8 +2,8 @@
 
 ```cpp
 void reset()
-    noexcept(F::constraints.destructibility >= constraint_level::nothrow)
-    requires(F::constraints.destructibility >= constraint_level::nontrivial);
+    noexcept(F::destructibility >= constraint_level::nothrow)
+    requires(F::destructibility >= constraint_level::nontrivial);
 ```
 
 Destroys the contained value if it exists. After the call, `*this` does not contain a value.

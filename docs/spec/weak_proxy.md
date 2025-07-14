@@ -24,9 +24,13 @@ Class template `weak_facade` is a [facade](facade.md) type for weak pointers (e.
 
 ## Member Constants of `weak_facade`
 
-| Name                               | Description                    |
-| ---------------------------------- | ------------------------------ |
-| `constraints` [static] [constexpr] | Equivalent to `F::constraints` |
+| Name                                   | Definition           |
+| -------------------------------------- | -------------------- |
+| `max_size` [static] [constexpr]        | `F::max_size`        |
+| `max_align` [static] [constexpr]       | `F::max_align`       |
+| `copyability` [static] [constexpr]     | `F::copyability`     |
+| `relocatability` [static] [constexpr]  | `F::relocatability`  |
+| `destructibility` [static] [constexpr] | `F::destructibility` |
 
 ## Example
 

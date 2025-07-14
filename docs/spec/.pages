@@ -14,7 +14,6 @@ nav:
     - implicit_conversion_dispatch: implicit_conversion_dispatch
     - not_implemented: not_implemented.md
     - operator_dispatch: operator_dispatch
-    - proxiable_ptr_constraints: proxiable_ptr_constraints.md
     - proxy_indirect_accessor: proxy_indirect_accessor.md
     - proxy_view<br />observer_facade: proxy_view.md
     - proxy: proxy
@@ -27,7 +26,6 @@ nav:
     - skills::format<br />skills::wformat: skills_format.md
     - "skills::rtti<br />skills::indirect_rtti<br />skills::direct_rtti": skills_rtti
   - Functions:
-    - access_proxy: access_proxy.md
     - allocate_proxy_shared: allocate_proxy_shared.md
     - allocate_proxy: allocate_proxy.md
     - make_proxy_inplace: make_proxy_inplace.md

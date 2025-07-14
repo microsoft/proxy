@@ -5,11 +5,11 @@ template <constraint_level CL>
 using support_copy = basic_facade_builder</* see below */>;
 ```
 
-The alias template `support_copy` of `basic_facade_builder<Cs, Rs, C>` adds copyability support to the template parameters, specifically `C::copyability`. After the operation, `C::copyability` becomes `std::max(C::copyability, CL)`.
+The alias template `support_copy` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` adds copyability support to the template parameters. After the operation, `Copyability` becomes `std::max(Copyability, CL)`.
 
 ## Notes
 
-If no copyability support is applied before specifying [`build`](build.md), the default value of `build::constraints.copyability` is `pro::constraint_level::none`.
+If no copyability support is applied before specifying [`build`](build.md), the default value of `build::copyability` is `pro::constraint_level::none`.
 
 ## Example
 

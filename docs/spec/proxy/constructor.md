@@ -6,18 +6,18 @@ proxy() noexcept = default;
 proxy(std::nullptr_t) noexcept;
 
 // (2)
-proxy(const proxy&) noexcept requires(F::constraints.copyability ==
+proxy(const proxy&) noexcept requires(F::copyability ==
     constraint_level::trivial) = default;
 proxy(const proxy& rhs)
-    noexcept(F::constraints.copyability == constraint_level::nothrow)
-    requires(F::constraints.copyability == constraint_level::nontrivial ||
-        F::constraints.copyability == constraint_level::nothrow);
+    noexcept(F::copyability == constraint_level::nothrow)
+    requires(F::copyability == constraint_level::nontrivial ||
+        F::copyability == constraint_level::nothrow);
 
 // (3)
 proxy(proxy&& rhs)
-    noexcept(F::constraints.relocatability == constraint_level::nothrow)
-    requires(F::constraints.relocatability >= constraint_level::nontrivial &&
-        F::constraints.copyability != constraint_level::trivial);
+    noexcept(F::relocatability == constraint_level::nothrow)
+    requires(F::relocatability >= constraint_level::nontrivial &&
+        F::copyability != constraint_level::trivial);
 
 // (4)
 template <class P>
@@ -42,8 +42,8 @@ explicit proxy(std::in_place_type_t<P>, std::initializer_list<U> il,
 Creates a new `proxy`.
 
 - `(1)` Default constructor and the constructor taking `nullptr` construct a `proxy` that does not contain a value.
-- `(2)` Copy constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. As per the `requires` clause, the copy constructor is trivial when `F::constraints.copyability == constraint_level::trivial`.
-- `(3)` Move constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. `rhs` is in a valid but unspecified state after move construction. As per the `requires` clause, the move constructor does not participate in overload resolution when `F::constraints.copyability == constraint_level::trivial`, so that a move construction falls back to the trivial copy constructor.
+- `(2)` Copy constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. As per the `requires` clause, the copy constructor is trivial when `F::copyability == constraint_level::trivial`.
+- `(3)` Move constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. `rhs` is in a valid but unspecified state after move construction. As per the `requires` clause, the move constructor does not participate in overload resolution when `F::copyability == constraint_level::trivial`, so that a move construction falls back to the trivial copy constructor.
 - `(4)` Let `VP` be `std::decay_t<P>`. Constructor taking a value of pointer constructs a `proxy` whose contained value is of type `VP` and direct-non-list-initialized with `std::forward<P>(ptr)`. This overload participates in overload resolution only if `std::decay_t<P>` is not a specialization of `proxy` nor a specialization of `std::in_place_type_t`.
 - `(5)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `std::forward<Args>(args)...`.
 - `(6)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `il, std::forward<Args>(args)...`.

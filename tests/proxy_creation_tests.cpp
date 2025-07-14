@@ -50,11 +50,11 @@ struct LifetimeModelReflector {
   constexpr explicit LifetimeModelReflector(std::in_place_type_t<T>)
       : Type(LifetimeModelType::kNone) {}
 
-  template <class F, bool IsDirect, class R>
+  template <class Self, class R>
   struct accessor {
     LifetimeModelType GetLifetimeType() const noexcept {
       const LifetimeModelReflector& refl =
-          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(*this));
+          pro::proxy_reflect<R>(static_cast<const Self&>(*this));
       return refl.Type;
     }
   };

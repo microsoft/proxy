@@ -5,7 +5,16 @@ template <facade F, bool WithUpwardConversion = false>
 using add_facade = basic_facade_builder</* see below */>;
 ```
 
-The alias template `add_facade` of `basic_facade_builder<Cs, Rs, C>` adds a [facade](../facade.md) type into the template parameters. It merges `typename F::convention_types` into `Cs`, `typename F::reflection_types` into `Rs`, and `F::constraints` into `C`. Optionally, it adds a convention for implicit upward conversion into `Cs` when `WithUpwardConversion` is `true`.
+The alias template `add_facade` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` adds a [facade](../facade.md) type into the template parameters. Specifically, it
+
+- merges `typename F::convention_types` into `Cs`, and
+- merges `typename F::reflection_types` into `Rs`, and
+- sets `MaxSize` to `std::min(MaxSize, F::max_size)`, and
+- sets `MaxAlign` to `std::min(MaxAlign, F::max_align)`, and
+- sets `Copyability` to `std::max(Copyability, F::copyability)`, and
+- sets `Relocatability` to `std::max(Relocatability, F::relocatability)`, and
+- sets `Destructibility` to `std::max(Destructibility, F::destructibility)`, and
+- optionally, adds a convention for implicit upward conversion into `Cs` when `WithUpwardConversion` is `true`.
 
 ## Notes
 

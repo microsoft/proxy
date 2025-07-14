@@ -16,17 +16,6 @@ struct TestFacade : pro::facade_builder                 //
 
 namespace details = proxy_rtti_tests_details;
 
-TEST(ProxyRttiTests, TestIndirectCast_Void_Fail) {
-  pro::proxy<details::TestFacade> p;
-  bool exception_thrown = false;
-  try {
-    proxy_cast<int>(*p);
-  } catch (const pro::bad_proxy_cast&) {
-    exception_thrown = true;
-  }
-  ASSERT_TRUE(exception_thrown);
-}
-
 TEST(ProxyRttiTests, TestIndirectCast_Ref_Succeed) {
   int v = 123;
   pro::proxy<details::TestFacade> p = &v;
@@ -141,26 +130,10 @@ TEST(ProxyRttiTests, TestIndirectCast_ConstPtr_Fail) {
   ASSERT_EQ(v, 123);
 }
 
-TEST(ProxyRttiTests, TestIndirectTypeid_Void) {
-  pro::proxy<details::TestFacade> p;
-  ASSERT_EQ(proxy_typeid(*p), typeid(void));
-}
-
-TEST(ProxyRttiTests, TestIndirectTypeid_Value) {
+TEST(ProxyRttiTests, TestIndirectTypeid) {
   int a = 123;
   pro::proxy<details::TestFacade> p = &a;
   ASSERT_EQ(proxy_typeid(*p), typeid(int));
-}
-
-TEST(ProxyRttiTests, TestDirectCast_Void_Fail) {
-  pro::proxy<details::TestFacade> p;
-  bool exception_thrown = false;
-  try {
-    proxy_cast<int>(p);
-  } catch (const pro::bad_proxy_cast&) {
-    exception_thrown = true;
-  }
-  ASSERT_TRUE(exception_thrown);
 }
 
 TEST(ProxyRttiTests, TestDirectCast_Ref_Succeed) {
@@ -280,12 +253,7 @@ TEST(ProxyRttiTests, TestDirectCast_ConstPtr_Fail) {
   ASSERT_EQ(v, 123);
 }
 
-TEST(ProxyRttiTests, TestDirectTypeid_Void) {
-  pro::proxy<details::TestFacade> p;
-  ASSERT_EQ(proxy_typeid(p), typeid(void));
-}
-
-TEST(ProxyRttiTests, TestDirectTypeid_Value) {
+TEST(ProxyRttiTests, TestDirectTypeid) {
   int a = 123;
   pro::proxy<details::TestFacade> p = &a;
   ASSERT_EQ(proxy_typeid(p), typeid(int*));

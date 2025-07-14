@@ -27,7 +27,6 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`implicit_conversion_dispatch`](implicit_conversion_dispatch/README.md) | Dispatch type for implicit conversion expressions with accessibility |
 | [`not_implemented` ](not_implemented.md)                     | Exception thrown by `weak_dispatch` for the default implementation |
 | [`operator_dispatch`](operator_dispatch/README.md)           | Dispatch type for operator expressions with accessibility    |
-| [`proxiable_ptr_constraints`](proxiable_ptr_constraints.md)  | Defines the constraints of a pointer type to instantiate a `proxy` |
 | [`proxy_indirect_accessor`](proxy_indirect_accessor.md)      | Provides indirection accessibility for `proxy`               |
 | [`proxy_view`<br />`observer_facade`](proxy_view.md)         | Non-owning `proxy` optimized for raw pointer types           |
 | [`proxy`](proxy/README.md)                                   | Wraps a pointer object matching specified facade             |
@@ -47,7 +46,6 @@ This document provides the API specifications for the C++ library Proxy (version
 
 | Name                                                | Description                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------ |
-| [`access_proxy`](access_proxy.md)                   | Accesses a `proxy` object via an accessor                    |
 | [`allocate_proxy_shared`](allocate_proxy_shared.md) | Creates a `proxy` object with shared ownership using an allocator |
 | [`allocate_proxy`](allocate_proxy.md)               | Creates a `proxy` object with an allocator                   |
 | [`make_proxy_inplace`](make_proxy_inplace.md)       | Creates a `proxy` object with strong no-allocation guarantee |
@@ -55,7 +53,7 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`make_proxy_view`](make_proxy_view.md)             | Creates a `proxy_view` object                                |
 | [`make_proxy`](make_proxy.md)                       | Creates a `proxy` object potentially with heap allocation    |
 | [`proxy_invoke`](proxy_invoke.md)                   | Invokes a `proxy` with a specified convention                |
-| [`proxy_reflect`](proxy_reflect.md)                 | Acquires reflection information of the underlying pointer type |
+| [`proxy_reflect`](proxy_reflect.md)                 | Acquires reflection information of a contained type          |
 
 ## Header `<proxy_macros.h>`
 

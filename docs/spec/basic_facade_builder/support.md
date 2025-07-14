@@ -8,7 +8,7 @@ template <template <class> class Skill>
 using support = Skill<basic_facade_builder>;
 ```
 
-The alias template `support` modifies template paratemeters with a custom skill. The expression inside `requires` is equivalent to `Skill<basic_facade_builder<Cs, Rs, C>>` is a specialization of `basic_facade_builder`.
+The alias template `support` modifies template paratemeters with a custom skill. The expression inside `requires` is equivalent to `Skill<basic_facade_builder>` is a specialization of `basic_facade_builder`.
 
 ## Notes
 

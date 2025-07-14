@@ -8,10 +8,10 @@ const std::type_info& proxy_typeid(const proxy_indirect_accessor<F>& operand) no
 const std::type_info& proxy_typeid(const proxy<F>& operand) noexcept;
 ```
 
-Returns the `typeid` of the contained type of `proxy<F>` where `F` is a [facade](../facade.md) type built from `basic_facade_builder`.
+Returns the `typeid` of the contained type of `operand`.
 
-- `(1)` Let `p` be [`access_proxy`](../access_proxy.md)`<F>(operand)`, `ptr` be the contained value of `p` (if any). Returns `typeid(std::decay_t<decltype(*std::as_const(ptr))>)` if `p` contains a value, or otherwise, `typeid(void)`.
-- `(2)` Let `ptr` be the contained value of `operand` (if any). Returns `typeid(std::decay_t<decltype(ptr)>)` if `operand` contains a value `ptr`, or otherwise, `typeid(void)`.
+- `(1)` Let `P` be the contained type of the `proxy` object associated to `operand`. Returns `typeid(typename std::pointer_traits<P>::element_type)`.
+- `(2)` Let `P` be the contained type of `operand`. Returns `typeid(P)`. The behavior is undefined if `operand` does not contain a value.
 
 These functions are not visible to ordinary [unqualified](https://en.cppreference.com/w/cpp/language/unqualified_lookup) or [qualified lookup](https://en.cppreference.com/w/cpp/language/qualified_lookup). It can only be found by [argument-dependent lookup](https://en.cppreference.com/w/cpp/language/adl) when `proxy_indirect_accessor<F>` (for `rtti` or `indirect_rtti`) or `proxy<F>` (for `direct_rtti`) is an associated class of the arguments.
 
@@ -27,9 +27,7 @@ struct RttiAware : pro::facade_builder          //
                    ::build {};
 
 int main() {
-  pro::proxy<RttiAware> p;
-  std::cout << proxy_typeid(*p).name() << "\n"; // Prints "v" (assuming GCC)
-  p = pro::make_proxy<RttiAware>(123);
+  pro::proxy<RttiAware> p = pro::make_proxy<RttiAware>(123);
   std::cout << proxy_typeid(*p).name() << "\n"; // Prints "i" (assuming GCC)
 }
 ```

@@ -16,7 +16,7 @@ PRO_DEF_FREE_DISPATCH(dispatch_name, func_name);
 PRO_DEF_FREE_DISPATCH(dispatch_name, func_name, accessibility_func_name);
 ```
 
-`(1)` Equivalent to `PRO_DEF_FREE_DISPATCH(dispatch_name, func_name, func_name);`
+`(1)` Equivalent to `PRO_DEF_FREE_DISPATCH(dispatch_name, func_name, func_name)`.
 
 `(2)` Defines a class named `dispatch_name` of free function call expressions of `func_name` with accessibility via free function overloads named `accessibility_func_name`. Effectively equivalent to:
 
@@ -29,17 +29,17 @@ struct dispatch_name {
     return func_name(std::forward<T>(self), std::forward<Args>(args)...);
   }
 
-  template <class F, bool IsDirect, class D, class... Os>
+  template <class P, class D, class... Os>
   struct accessor {
     accessor() = delete;
   };
-  template <class F, bool IsDirect, class D, class... Os>
-      requires(sizeof...(Os) > 1u && (std::is_constructible_v<accessor<F, IsDirect, D, Os>> && ...))
-  struct accessor<F, IsDirect, D, Os...> : accessor<F, IsDirect, D, Os>... {};
-  template <class F, bool IsDirect, class D, class R, class... Args>
-  struct accessor<F, IsDirect, D, R(Args...) cv ref noex> {
-    friend R accessibility_func_name(accessor_arg cv ref self, Args... args) noex {
-      return pro::proxy_invoke<IsDirect, D, R(Args...) cv ref noex>(pro::access_proxy<F>(std::forward<accessor_arg cv ref>(self)), std::forward<Args>(args)...);
+  template <class P, class D, class... Os>
+      requires(sizeof...(Os) > 1u && (std::is_constructible_v<accessor<P, D, Os>> && ...))
+  struct accessor<P, D, Os...> : accessor<P, D, Os>... {};
+  template <class P, class D, class R, class... Args>
+  struct accessor<P, D, R(Args...) cv ref noex> {
+    friend R accessibility_func_name(P cv <ref ? ref : &> self, Args... args) noex {
+      return pro::proxy_invoke<D, R(Args...) cv ref noex>(static_cast<P cv <ref ? ref : &>>(self), std::forward<Args>(args)...);
     }
   };
 }

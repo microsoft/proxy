@@ -5,11 +5,11 @@ template <constraint_level CL>
 using support_relocation = basic_facade_builder</* see below */>;
 ```
 
-The alias template `support_relocation` of `basic_facade_builder<Cs, Rs, C>` adds relocatability support to the template parameters, specifically `C::relocatability`. After the operation, `C::relocatability` becomes `std::max(C::relocatability, CL)`.
+The alias template `support_relocation` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` adds relocatability support to the template parameters. After the operation, `Relocatability` becomes `std::max(Relocatability, CL)`.
 
 ## Notes
 
-If no relocatability support is applied before specifying [`build`](build.md), the default value of `build::constraints.relocatability` is `pro::constraint_level::nothrow`.
+If no relocatability support is applied before specifying [`build`](build.md), the default value of `build::relocatability` is `pro::constraint_level::nothrow`.
 
 ## Example
 

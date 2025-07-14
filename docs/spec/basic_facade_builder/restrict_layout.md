@@ -6,11 +6,11 @@ template <std::size_t PtrSize, std::size_t PtrAlign = /* see below */>
 using restrict_layout = basic_facade_builder</* see below */>;
 ```
 
-The alias template `restrict_layout` of `basic_facade_builder<Cs, Rs, C>` adds layout restrictions to the template parameters, specifically `C::max_size` and `C::max_align`. The default value of `PtrAlign` is the maximum possible alignment of an object of size `PtrSize`, not greater than `alignof(std::max_align_t`). After applying the restriction, `C::max_size` becomes `std::min(C::max_size, PtrSize)`, and `C::max_align` becomes `std::min(C::max_align, PtrAlign)`.
+The alias template `restrict_layout` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` adds layout restrictions to the template parameters. The default value of `PtrAlign` is the maximum possible alignment of an object of size `PtrSize`, not greater than `alignof(std::max_align_t`). After applying the restriction, `MaxSize` becomes `std::min(MaxSize, PtrSize)`, and `MaxAlign` becomes `std::min(C::max_align, MaxAlign)`.
 
 ## Notes
 
-If no layout restriction is applied before specifying [`build`](build.md), the default value of `build::constraints.max_size` is `sizeof(void*) * 2`, and the default value of `build::constraints.max_align` is `alignof(void*)`.
+If no layout restriction is applied before specifying [`build`](build.md), the default value of `build::max_size` is `sizeof(void*) * 2`, and the default value of `build::max_align` is `alignof(void*)`.
 
 ## Example
 

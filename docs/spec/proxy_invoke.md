@@ -5,36 +5,37 @@
 > Namespace: `pro::inline v4`
 
 ```cpp
-template <bool IsDirect, class D, class O, facade F, class... Args>
-/* see below */ proxy_invoke(proxy<F>& p, Args&&... args);
+// (1)
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(proxy_indirect_accessor<F>& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(const proxy_indirect_accessor<F>& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(proxy_indirect_accessor<F>&& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(const proxy_indirect_accessor<F>&& p, Args&&... args);
 
-template <bool IsDirect, class D, class O, facade F, class... Args>
-/* see below */ proxy_invoke(const proxy<F>& p, Args&&... args);
-
-template <bool IsDirect, class D, class O, facade F, class... Args>
-/* see below */ proxy_invoke(proxy<F>&& p, Args&&... args);
-
-template <bool IsDirect, class D, class O, facade F, class... Args>
-/* see below */ proxy_invoke(const proxy<F>&& p, Args&&... args);
+// (2)
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(proxy<F>& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(const proxy<F>& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(proxy<F>&& p, Args&&... args);
+template <class D, class O, facade F, class... Args>
+return-type-of<O> proxy_invoke(const proxy<F>&& p, Args&&... args);
 ```
 
-Invokes a `proxy` with a specified dispatch type, an overload type, and arguments. There shall be a convention type `Conv` defined in `typename F::convention_types` where
+Invokes a `proxy` with a specified dispatch type, an overload type, and arguments. Let `Args2...` be the argument types of `O`, `R` be the return type of `O`. `return-type-of<O>` is `R`.
 
-- `Conv::is_direct == IsDirect` is `true`, and
+- `(1)` Let `ptr` be the contained value of the `proxy` object associated to `p` with the same cv ref-qualifiers. Equivalent to [`INVOKE<R>`](https://en.cppreference.com/w/cpp/utility/functional)`(D(), *ptr, static_cast<Args2>(args)...)`.
+- `(2)` Let `ptr` be the contained value of `p` with the same cv ref-qualifiers. Equivalent to [`INVOKE<R>`](https://en.cppreference.com/w/cpp/utility/functional)`(D(), ptr, static_cast<Args2>(args)...)`.  The behavior is undefined if `p` does not contain a value.
+
+There shall be a convention type `Conv` defined in `typename F::convention_types` where
+
+- `Conv::is_direct` is `false` (for `(1)`) or `true` (for `(2)`), and
 - `typename Conv::dispatch_type` is `D`, and
 - there shall be an overload type `O1` defined in `typename Conv::overload_types` where [`substituted-overload`](ProOverload.md)`<O1, F>` is `O`.
-
-Let `ptr` be the contained value of `p` with the same cv ref-qualifiers, `Args2...` be the argument types of `O`, `R` be the return type of `O`,
-
-- if `IsDirect` is `true`, let `v` be `std::forward<decltype(ptr)>(ptr)`, or otherwise,
-- if `IsDirect` is `false`, let `v` be `*std::forward<decltype(ptr)>(ptr)`,
-
-equivalent to:
-
-- [`INVOKE<R>`](https://en.cppreference.com/w/cpp/utility/functional)`(D{}, std::forward<decltype(v)>(v), static_cast<Args2>(args)...)` if the expression is well-formed, or otherwise,
-- [`INVOKE<R>`](https://en.cppreference.com/w/cpp/utility/functional)`(D{}, nullptr, static_cast<Args2>(args)...)`.
-
-The behavior is undefined if `p` does not contain a value.
 
 ## Notes
 
@@ -61,12 +62,11 @@ int main() {
   int a = 123;
   pro::proxy<Stringable> p = &a;
   std::cout << ToString(*p) << "\n"; // Invokes with accessor, prints: "123"
-  std::cout << pro::proxy_invoke<false, FreeToString, std::string() const>(p)
+  std::cout << pro::proxy_invoke<FreeToString, std::string() const>(*p)
             << "\n"; // Invokes with proxy_invoke, also prints: "123"
 }
 ```
 
 ## See Also
 
-- [function template `access_proxy`](access_proxy.md)
 - [function template `proxy_reflect`](proxy_reflect.md)
