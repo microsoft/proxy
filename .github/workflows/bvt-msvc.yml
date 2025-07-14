@@ -12,11 +12,11 @@ jobs:
 
     - name: build and run test with MSVC
       run: |
-        cmake -B build -DCMAKE_CXX_STANDARD=23 -DPROXY_BUILD_MODULES=TRUE
-        cmake --build build --config Release -j
-        ctest --test-dir build -j
-        mkdir build\drop > $null
-        .\tools\dump_build_env_msvc.ps1 -OutputPath build\drop\env-info.json
+        cmake -B build -DCMAKE_CXX_STANDARD=23 -DPROXY_BUILD_MODULES=TRUE `
+          && cmake --build build --config Release -j `
+          && ctest --test-dir build -j `
+          && mkdir build\drop > $null `
+          && .\tools\dump_build_env_msvc.ps1 -OutputPath build\drop\env-info.json
 
     - name: run benchmarks
       run: |

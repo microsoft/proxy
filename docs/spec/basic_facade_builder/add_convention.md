@@ -11,7 +11,7 @@ template <class D, class... Os> requires(/* see below */)
 using add_direct_convention = basic_facade_builder</* see below */>;
 ```
 
-The alias templates `add_convention`, `add_indirect_convention`, and `add_direct_convention` of `basic_facade_builder<Cs, Rs, C>` add convention types to the template parameters. The expression inside `requires` is equivalent to `sizeof...(Os) > 0u` and each type in `Os` meets the [*ProOverload* requirements](../ProOverload.md). Let `F` be a facade type,
+The alias templates `add_convention`, `add_indirect_convention`, and `add_direct_convention` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` add convention types to the template parameters. The expression inside `requires` is equivalent to `sizeof...(Os) > 0u` and each type in `Os` meets the [*ProOverload* requirements](../ProOverload.md). Let `F` be a facade type,
 
 - `add_convention` is equivalent to `add_indirect_convention`.
 - `add_indirect_convention` merges an implementation-defined convention type `IC` into `Cs`, where:

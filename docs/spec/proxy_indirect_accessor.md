@@ -20,4 +20,5 @@ Class template `proxy_indirect_accessor` provides indirection accessibility for 
 
 ## See also
 
-- [function template `access_proxy`](access_proxy.md)
+- [function template `proxy_invoke`](proxy_invoke.md)
+- [function template `proxy_reflect`](proxy_reflect.md)

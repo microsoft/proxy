@@ -21,4 +21,4 @@ The specific semantics of each value depends on its context.
 
 ## See Also
 
-- [class `proxiable_ptr_constraints`](proxiable_ptr_constraints.md)
+- [concept `facade`](facade.md)

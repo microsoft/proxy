@@ -24,9 +24,13 @@ Class template `observer_facade` is a [facade](facade.md) type for observer poin
 
 ## Member Constants of `observer_facade`
 
-| Name                               | Description                                                  |
-| ---------------------------------- | ------------------------------------------------------------ |
-| `constraints` [static] [constexpr] | A value of type `proxiable_ptr_constraints` indicating constraints for an observer pointer type. |
+| Name                                   | Definition                  |
+| -------------------------------------- | --------------------------- |
+| `max_size` [static] [constexpr]        | `sizeof(void*)`             |
+| `max_align` [static] [constexpr]       | `alignof(void*)`            |
+| `copyability` [static] [constexpr]     | `constraint_level::trivial` |
+| `relocatability` [static] [constexpr]  | `constraint_level::trivial` |
+| `destructibility` [static] [constexpr] | `constraint_level::trivial` |
 
 ## Example
 

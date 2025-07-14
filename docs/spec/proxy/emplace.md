@@ -5,18 +5,18 @@
 template <class P, class... Args>
 P& emplace(Args&&... args)
     noexcept(std::is_nothrow_constructible_v<P, Args...> &&
-        F::constraints.destructibility >= constraint_level::nothrow)
+        F::destructibility >= constraint_level::nothrow)
     requires(std::is_constructible_v<P, Args...> &&
-        F::constraints.destructibility >= constraint_level::nontrivial);
+        F::destructibility >= constraint_level::nontrivial);
 
 // (2)
 template <class P, class U, class... Args>
 P& emplace(std::initializer_list<U> il, Args&&... args)
     noexcept(std::is_nothrow_constructible_v<
         P, std::initializer_list<U>&, Args...> &&
-        F::constraints.destructibility >= constraint_level::nothrow)
+        F::destructibility >= constraint_level::nothrow)
     requires(std::is_constructible_v<P, std::initializer_list<U>&, Args...> &&
-        F::constraints.destructibility >= constraint_level::nontrivial);
+        F::destructibility >= constraint_level::nontrivial);
 ```
 
 The `emplace` function templates change the contained value to an object of type `P` constructed from the arguments.

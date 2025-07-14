@@ -45,36 +45,14 @@ static_assert(
 
 namespace details = proxy_fmt_format_tests_details;
 
-TEST(ProxyFmtFormatTests, TestFormat_Null) {
-  pro::proxy<details::Formattable> p;
-  bool exception_thrown = false;
-  try {
-    std::ignore = fmt::format("{}", *p);
-  } catch (const fmt::format_error&) {
-    exception_thrown = true;
-  }
-  ASSERT_TRUE(exception_thrown);
-}
-
-TEST(ProxyFmtFormatTests, TestFormat_Value) {
+TEST(ProxyFmtFormatTests, TestFormat) {
   int v = 123;
   pro::proxy<details::Formattable> p = &v;
   ASSERT_EQ(fmt::format("{}", *p), "123");
   ASSERT_EQ(fmt::format("{:*<6}", *p), "123***");
 }
 
-TEST(ProxyFmtFormatTests, TestWformat_Null) {
-  pro::proxy<details::Formattable> p;
-  bool exception_thrown = false;
-  try {
-    std::ignore = fmt::format(L"{}", *p);
-  } catch (const fmt::format_error&) {
-    exception_thrown = true;
-  }
-  ASSERT_TRUE(exception_thrown);
-}
-
-TEST(ProxyFmtFormatTests, TestWformat_Value) {
+TEST(ProxyFmtFormatTests, TestWformat) {
   int v = 123;
   pro::proxy<details::Formattable> p = &v;
   ASSERT_EQ(fmt::format(L"{}", *p), L"123");

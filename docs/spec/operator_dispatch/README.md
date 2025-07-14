@@ -15,10 +15,10 @@ Class template `operator_dispatch` is a [dispatch](../ProDispatch.md) type for o
 
 ## Supported SOPs
 
-As per C++20 specifications, there are 44 different SOPs. `operator_dispatch` supports the following 36 SOPs:
+As per C++20 specifications, there are 45 different SOPs. `operator_dispatch` supports the following 37 SOPs:
 
 ```text
-"+", "-", "*", "/", "%", "++", "--", "==", "!=", ">", "<", ">=", "<=", "<=>", "!", "&&", "||", "~", "&", "|", "^", "<<", ">>", "+=", "-=", "*=", "/=", "&=", "|=", "^=", "<<=", ">>=", ",", "->*", "()", "[]"
+"+", "-", "*", "/", "%", "++", "--", "==", "!=", ">", "<", ">=", "<=", "<=>", "!", "&&", "||", "~", "&", "|", "^", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=", ",", "->*", "()", "[]"
 ```
 
 The following 8 SOPs are not supported:
@@ -64,6 +64,7 @@ Let `self` be the operand of [`proxy`](../proxy/README.md), and `other` and `oth
 | `operator_dispatch<"-=", false>`  | `self -= other`         |
 | `operator_dispatch<"*=", false>`  | `self *= other`         |
 | `operator_dispatch<"/=", false>`  | `self /= other`         |
+| `operator_dispatch<"%=", false>`  | `self %= other`         |
 | `operator_dispatch<"&=", false>`  | `self &= other`         |
 | `operator_dispatch<"|=", false>`  | `self |= other`         |
 | `operator_dispatch<"^=", false>`  | `self ^= other`         |
@@ -96,6 +97,7 @@ Let `self` be the operand of [`proxy`](../proxy/README.md), and `other` and `oth
 | `operator_dispatch<"-=", true>`   | `other -= self`         |
 | `operator_dispatch<"*=", true>`   | `other *= self`         |
 | `operator_dispatch<"/=", true>`   | `other /= self`         |
+| `operator_dispatch<"%=", true>`   | `other %= self`         |
 | `operator_dispatch<"&=", true>`   | `other &= self`         |
 | `operator_dispatch<"|=", true>`   | `other |= self`         |
 | `operator_dispatch<"^=", true>`   | `other ^= self`         |

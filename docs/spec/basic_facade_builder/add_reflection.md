@@ -11,7 +11,7 @@ template <class R>
 using add_direct_reflection = basic_facade_builder</* see below */>;
 ```
 
-The alias templates `add_reflection`, `add_indirect_reflection` and `add_direct_reflection` of `basic_facade_builder<Cs, Rs, C>` add reflection types to the template parameters. Specifically,
+The alias templates `add_reflection`, `add_indirect_reflection` and `add_direct_reflection` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability, Relocatability, Destructibility>` add reflection types to the template parameters. Specifically,
 
 - `add_reflection` is equivalent to `add_indirect_reflection`.
 - `add_indirect_reflection` merges an implementation-defined reflection type `Refl` into `Rs`, where:
@@ -43,23 +43,15 @@ public:
   constexpr explicit LayoutReflector(std::in_place_type_t<T>)
       : Size(sizeof(T)), Align(alignof(T)) {}
 
-  template <class F, bool IsDirect, class R>
+  template <class P, class R>
   struct accessor {
-    friend std::size_t
-        SizeOf(const std::conditional_t<IsDirect, pro::proxy<F>,
-                                        pro::proxy_indirect_accessor<F>>&
-                   self) noexcept {
-      const LayoutReflector& refl =
-          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+    friend std::size_t SizeOf(const P& self) noexcept {
+      const LayoutReflector& refl = pro::proxy_reflect<R>(self);
       return refl.Size;
     }
 
-    friend std::size_t
-        AlignOf(const std::conditional_t<IsDirect, pro::proxy<F>,
-                                         pro::proxy_indirect_accessor<F>>&
-                    self) noexcept {
-      const LayoutReflector& refl =
-          pro::proxy_reflect<IsDirect, R>(pro::access_proxy<F>(self));
+    friend std::size_t AlignOf(const P& self) noexcept {
+      const LayoutReflector& refl = pro::proxy_reflect<R>(self);
       return refl.Align;
     }
   };

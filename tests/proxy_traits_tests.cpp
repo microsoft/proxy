@@ -44,14 +44,11 @@ using MockFunctionPtr = void (*)();
 struct DefaultFacade : pro::facade_builder::build {};
 static_assert(
     std::is_same_v<pro::proxy<DefaultFacade>::facade_type, DefaultFacade>);
-static_assert(DefaultFacade::constraints.copyability ==
-              pro::constraint_level::none);
-static_assert(DefaultFacade::constraints.relocatability ==
-              pro::constraint_level::nothrow);
-static_assert(DefaultFacade::constraints.destructibility ==
-              pro::constraint_level::nothrow);
-static_assert(DefaultFacade::constraints.max_size >= 2 * sizeof(void*));
-static_assert(DefaultFacade::constraints.max_align >= sizeof(void*));
+static_assert(DefaultFacade::copyability == pro::constraint_level::none);
+static_assert(DefaultFacade::relocatability == pro::constraint_level::nothrow);
+static_assert(DefaultFacade::destructibility == pro::constraint_level::nothrow);
+static_assert(DefaultFacade::max_size >= 2 * sizeof(void*));
+static_assert(DefaultFacade::max_align >= sizeof(void*));
 static_assert(std::is_same_v<DefaultFacade::convention_types, std::tuple<>>);
 static_assert(std::is_same_v<DefaultFacade::reflection_types, std::tuple<>>);
 static_assert(
@@ -274,38 +271,32 @@ struct FacadeWithTupleLikeConventions {
   };
   using convention_types = std::array<ToStringConvention, 1>;
   using reflection_types = std::tuple<>;
-  static constexpr auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 2 * sizeof(void*);
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(pro::facade<FacadeWithTupleLikeConventions>);
 
 struct BadFacade_MissingConventionTypes {
   using reflection_types = std::tuple<>;
-  static constexpr auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 2 * sizeof(void*);
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_MissingConventionTypes>);
 
 struct BadFacade_BadConventionTypes {
   using convention_types = int;
   using reflection_types = std::tuple<>;
-  static constexpr auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 2 * sizeof(void*);
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_BadConventionTypes>);
 
@@ -325,53 +316,45 @@ static_assert(!pro::facade<BadFacade_BadConstraints_UnexpectedType>);
 struct BadFacade_BadConstraints_BadAlignment {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<>;
-  static constexpr pro::proxiable_ptr_constraints constraints{
-      .max_size = 6u,
-      .max_align = 6u, // Should be a power of 2
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 6u;
+  static constexpr std::size_t max_align = 6u; // Should be a power of 2
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_BadAlignment>);
 
 struct BadFacade_BadConstraints_BadSize {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<>;
-  static constexpr pro::proxiable_ptr_constraints constraints{
-      .max_size = 6u, // Should be a multiple of max_alignment
-      .max_align = 4u,
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size =
+      6u; // Should be a multiple of max_alignment
+  static constexpr std::size_t max_align = 4u;
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
 
 struct BadFacade_BadConstraints_NotConstant {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<>;
-  static const pro::proxiable_ptr_constraints constraints;
+  static const std::size_t max_size;
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_NotConstant>);
-const pro::proxiable_ptr_constraints
-    BadFacade_BadConstraints_NotConstant::constraints{
-        .max_size = 2 * sizeof(void*),
-        .max_align = alignof(void*),
-        .copyability = pro::constraint_level::none,
-        .relocatability = pro::constraint_level::nothrow,
-        .destructibility = pro::constraint_level::nothrow,
-    };
-
+const std::size_t BadFacade_BadConstraints_NotConstant::max_size =
+    2 * sizeof(void*);
 struct BadFacade_MissingReflectionTypes {
   using convention_types = std::tuple<>;
-  static constexpr auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 2 * sizeof(void*);
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_MissingReflectionTypes>);
 
@@ -381,13 +364,11 @@ struct BadReflection {
 struct BadFacade_BadReflectionType {
   using convention_types = std::tuple<>;
   using reflection_types = std::tuple<BadReflection>;
-  static constexpr auto constraints = pro::proxiable_ptr_constraints{
-      .max_size = 2 * sizeof(void*),
-      .max_align = alignof(void*),
-      .copyability = pro::constraint_level::none,
-      .relocatability = pro::constraint_level::nothrow,
-      .destructibility = pro::constraint_level::nothrow,
-  };
+  static constexpr std::size_t max_size = 2 * sizeof(void*);
+  static constexpr std::size_t max_align = alignof(void*);
+  static constexpr auto copyability = pro::constraint_level::none;
+  static constexpr auto relocatability = pro::constraint_level::nothrow;
+  static constexpr auto destructibility = pro::constraint_level::nothrow;
 };
 static_assert(!pro::facade<BadFacade_BadReflectionType>);
 
@@ -406,7 +387,7 @@ struct FacadeWithSizeOfNonPowerOfTwo : pro::facade_builder   //
                                        ::restrict_layout<6u> //
                                        ::build {};
 static_assert(pro::facade<FacadeWithSizeOfNonPowerOfTwo>);
-static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_size == 6u);
-static_assert(FacadeWithSizeOfNonPowerOfTwo::constraints.max_align == 2u);
+static_assert(FacadeWithSizeOfNonPowerOfTwo::max_size == 6u);
+static_assert(FacadeWithSizeOfNonPowerOfTwo::max_align == 2u);
 
 } // namespace proxy_traits_tests_details
