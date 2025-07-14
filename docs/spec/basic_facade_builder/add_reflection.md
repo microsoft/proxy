@@ -17,11 +17,11 @@ The alias templates `add_reflection`, `add_indirect_reflection` and `add_direct_
 - `add_indirect_reflection` merges an implementation-defined reflection type `Refl` into `Rs`, where:
   - `Refl::is_direct` is `false`.
   - `typename Refl::reflector_type` is `R`.
-  - `typename Refl::template accessor<F>` is `typename R::template accessor<F, false, R>` if applicable.
+  - `typename Refl::template accessor<F>` is `typename R::template accessor<proxy_indirect_accessor<F>, R>` if applicable.
 - `add_direct_reflection` merges an implementation-defined reflection type `Refl` into `Rs`, where:
   - `Refl::is_direct` is `true`.
   - `typename Refl::reflector_type` is `R`.
-  - `typename Refl::template accessor<F>` is `typename R::template accessor<F, true, R>` if applicable.
+  - `typename Refl::template accessor<F>` is `typename R::template accessor<proxy<F>, R>` if applicable.
 
 When `Rs` already contains `Refl`, the template parameters shall not change.
 
