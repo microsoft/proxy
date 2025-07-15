@@ -20,7 +20,7 @@ Specifies a [facade](../facade.md) type deduced from the template parameters of 
 | `max_size` [static] [constexpr]        | `MaxSize == default-size ? sizeof(void*) * 2u : MaxSize`     |
 | `max_align` [static] [constexpr]       | `MaxAlign == default-size ? alignof(void*) : MaxAlign`       |
 | `copyability` [static] [constexpr]     | `Copyability == default-cl ? constraint_level::none : Copyability` |
-| `relocatability` [static] [constexpr]  | `Relocatability == default-cl ? constraint_level::nothrow : Relocatability` |
+| `relocatability` [static] [constexpr]  | `Relocatability == default-cl ? constraint_level::trivial : Relocatability` |
 | `destructibility` [static] [constexpr] | `Destructibility == default-cl ? constraint_level::nothrow : Destructibility` |
 
 ## Notes
