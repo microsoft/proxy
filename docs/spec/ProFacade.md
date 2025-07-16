@@ -23,16 +23,23 @@ Relocatability is defined as *move-construct an object and then destroy the orig
 | `constraint_level::nothrow`    | `std::is_nothrow_move_constructible_v<P> && std::is_nothrow_destructible_v<P>` |
 | `constraint_level::trivial`    | *trivially relocatable* (see below)                          |
 
-C++26 introduces the type trait `std::is_trivially_relocatable_v` ([P2786R13](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html)). The library supports C++20/23 and C++26 with a three-stage evaluation:
+C++26 introduces the type trait `std::is_trivially_relocatable_v` ([P2786R13](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html)). The library evaluates *trivial relocatability* as follows:
 
-1. If `std::is_trivially_relocatable_v<P>` is available **and evaluates to `true`**, the requirement is satisfied.
-2. Otherwise, a conservative fallback is applied: `std::is_trivially_move_constructible_v<P> && std::is_trivially_destructible_v<P>`.
-3. If the fallback is `false`, the library consults an explicit curated allow-list of types that are known to be safely relocatable:
-  - `std::unique_ptr<T, D>` when `D` is itself trivially relocatable
-  - `std::shared_ptr<T>`
+- When `std::is_trivially_relocatable_v<P>` is available
+  – If the trait evaluates to `true`, the requirement is met.
+  – If it evaluates to `false`, the library falls back to the **allow-list** (see below).
+
+- When the trait is **not** available
+  – A conservative check is used: `std::is_trivially_move_constructible_v<P> && std::is_trivially_destructible_v<P>`
+  – If that check is `false`, the allow-list is consulted.
+
+The allow-list contains types that are known to be safely relocatable even when the compiler cannot confirm it:
+
+  - `std::unique_ptr<T, D>` when `D` is trivially relocatable  
+  - `std::shared_ptr<T>`  
   - `std::weak_ptr<T>`
 
-This sequence reduces the risk of false negatives while compiler support for C++26 is still being rolled out, without compromising safety.
+This strategy avoids false negatives caused by gaps in current compiler implementations of the C++26 feature set while maintaining safety.
 
 ## See Also
 

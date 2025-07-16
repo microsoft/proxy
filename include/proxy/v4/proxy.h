@@ -173,16 +173,17 @@ consteval bool has_relocatability(constraint_level level) {
     return std::is_nothrow_move_constructible_v<T> &&
            std::is_nothrow_destructible_v<T>;
   case constraint_level::trivial:
+    if constexpr (
 #if __cpp_lib_trivially_relocatable >= 202502L
-    if constexpr (std::is_trivially_relocatable_v<T>) {
-      return true;
-    }
+        std::is_trivially_relocatable_v<T>
+#else
+        std::is_trivially_move_constructible_v<T> &&
+        std::is_trivially_destructible_v<T>
 #endif // __cpp_lib_trivially_relocatable >= 202502L
-    if constexpr (tr_override_traits<T>::applicable) {
+    ) {
       return true;
     } else {
-      return std::is_trivially_move_constructible_v<T> &&
-             std::is_trivially_destructible_v<T>;
+      return tr_override_traits<T>::applicable;
     }
   default:
     return false;
