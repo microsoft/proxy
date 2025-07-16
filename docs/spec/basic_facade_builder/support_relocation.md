@@ -9,7 +9,7 @@ The alias template `support_relocation` of `basic_facade_builder<Cs, Rs, MaxSize
 
 ## Notes
 
-If no relocatability support is applied before specifying [`build`](build.md), the default value of `build::relocatability` is `pro::constraint_level::nothrow`.
+If no relocatability support is applied before specifying [`build`](build.md), the default value of `build::relocatability` is `pro::constraint_level::trivial`. Please refer to [the *ProFacade* requirements](../ProFacade.md) for more details.
 
 ## Example
 

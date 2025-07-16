@@ -13,6 +13,19 @@
 
 namespace {
 
+struct SmallObject3;
+
+} // namespace
+
+namespace pro::inline v4::details {
+
+template <>
+struct tr_override_traits<SmallObject3> : applicable_traits {};
+
+} // namespace pro::inline v4::details
+
+namespace {
+
 constexpr int TestManagedObjectCount = 600000;
 constexpr int TypeSeriesCount = 3;
 

@@ -40,6 +40,12 @@
 #error Proxy requires C++20 attribute no_unique_address.
 #endif
 
+#if __cpp_trivial_relocatability >= 202502L
+#define PROD_TR_IF_ELIGIBLE trivially_relocatable_if_eligible
+#else
+#define PROD_TR_IF_ELIGIBLE
+#endif // __cpp_trivial_relocatability >= 202502L
+
 namespace pro::inline v4 {
 
 namespace details {
@@ -139,6 +145,9 @@ template <class T, qualifier_type Q>
 using add_qualifier_ptr_t = std::remove_reference_t<add_qualifier_t<T, Q>>*;
 
 template <class T>
+struct tr_override_traits : inapplicable_traits {};
+
+template <class T>
 consteval bool has_copyability(constraint_level level) {
   switch (level) {
   case constraint_level::none:
@@ -164,8 +173,18 @@ consteval bool has_relocatability(constraint_level level) {
     return std::is_nothrow_move_constructible_v<T> &&
            std::is_nothrow_destructible_v<T>;
   case constraint_level::trivial:
-    return std::is_trivially_move_constructible_v<T> &&
-           std::is_trivially_destructible_v<T>;
+    if constexpr (
+#if __cpp_lib_trivially_relocatable >= 202502L
+        std::is_trivially_relocatable_v<T>
+#else
+        std::is_trivially_move_constructible_v<T> &&
+        std::is_trivially_destructible_v<T>
+#endif // __cpp_lib_trivially_relocatable >= 202502L
+    ) {
+      return true;
+    } else {
+      return tr_override_traits<T>::applicable;
+    }
   default:
     return false;
   }
@@ -587,6 +606,20 @@ template <class A1, class A2>
 using merged_composite_accessor =
     typename composite_accessor_merge_traits<A1, A2>::type;
 
+struct tr_blocker {
+  tr_blocker() = default;
+  tr_blocker(const tr_blocker&) noexcept {}
+  tr_blocker& operator=(const tr_blocker&) noexcept { return *this; }
+};
+template <class A, bool TR>
+struct conditional_tr_accessor_traits : std::type_identity<A> {};
+template <class... As>
+struct conditional_tr_accessor_traits<composite_accessor_impl<As...>, false>
+    : std::type_identity<composite_accessor_impl<tr_blocker, As...>> {};
+template <class A, bool TR>
+using conditional_tr_accessor_t =
+    typename conditional_tr_accessor_traits<A, TR>::type;
+
 template <class P>
 struct ptr_traits : inapplicable_traits {};
 template <class P>
@@ -729,9 +762,10 @@ struct facade_traits<F>
   using indirect_accessor =
       merged_composite_accessor<typename facade_traits::conv_indirect_accessor,
                                 typename facade_traits::refl_indirect_accessor>;
-  using direct_accessor =
+  using direct_accessor = conditional_tr_accessor_t<
       merged_composite_accessor<typename facade_traits::conv_direct_accessor,
-                                typename facade_traits::refl_direct_accessor>;
+                                typename facade_traits::refl_direct_accessor>,
+      F::relocatability == constraint_level::trivial>;
 
   template <class P>
   static consteval void diagnose_proxiable() {
@@ -925,8 +959,9 @@ const R& proxy_reflect(const proxy<F>& p) noexcept {
 }
 
 template <facade F>
-class proxy : public details::facade_traits<F>::direct_accessor,
-              public details::inplace_ptr<proxy_indirect_accessor<F>> {
+class proxy PROD_TR_IF_ELIGIBLE
+    : public details::facade_traits<F>::direct_accessor,
+      public details::inplace_ptr<proxy_indirect_accessor<F>> {
   friend struct details::proxy_helper<F>;
   static_assert(details::facade_traits<F>::applicable);
 
@@ -945,7 +980,7 @@ public:
             proxy_indirect_accessor<F>>() /* Make GCC happy */ {
     initialize(rhs);
   }
-  proxy(proxy&& rhs) noexcept(F::relocatability == constraint_level::nothrow)
+  proxy(proxy&& rhs) noexcept(F::relocatability >= constraint_level::nothrow)
     requires(F::relocatability >= constraint_level::nontrivial &&
              F::copyability != constraint_level::trivial)
   {
@@ -1254,8 +1289,9 @@ protected:
 };
 
 template <class T, class Alloc>
-class PRO4D_ENFORCE_EBO allocated_ptr : private alloc_aware<Alloc>,
-                                        public indirect_ptr<inplace_ptr<T>> {
+class PRO4D_ENFORCE_EBO allocated_ptr PROD_TR_IF_ELIGIBLE
+    : private alloc_aware<Alloc>,
+      public indirect_ptr<inplace_ptr<T>> {
 public:
   template <class... Args>
   allocated_ptr(const Alloc& alloc, Args&&... args)
@@ -1289,7 +1325,8 @@ struct PRO4D_ENFORCE_EBO compact_ptr_storage : alloc_aware<Alloc>,
         inplace_ptr<T>(std::in_place, std::forward<Args>(args)...) {}
 };
 template <class T, class Alloc>
-class compact_ptr : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
+class compact_ptr PROD_TR_IF_ELIGIBLE
+    : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
   using Storage = compact_ptr_storage<T, Alloc>;
 
 public:
@@ -1326,7 +1363,7 @@ struct PRO4D_ENFORCE_EBO shared_compact_ptr_storage
         inplace_ptr<T>(std::in_place, std::forward<Args>(args)...) {}
 };
 template <class T, class Alloc>
-class shared_compact_ptr
+class shared_compact_ptr PROD_TR_IF_ELIGIBLE
     : public indirect_ptr<shared_compact_ptr_storage<T, Alloc>> {
   using Storage = shared_compact_ptr_storage<T, Alloc>;
 
@@ -1369,7 +1406,7 @@ struct strong_weak_compact_ptr_storage : strong_weak_compact_ptr_storage_base,
 template <class T, class Alloc>
 class weak_compact_ptr;
 template <class T, class Alloc>
-class strong_compact_ptr
+class strong_compact_ptr PROD_TR_IF_ELIGIBLE
     : public indirect_ptr<strong_weak_compact_ptr_storage<T, Alloc>> {
   friend class weak_compact_ptr<T, Alloc>;
   using Storage = strong_weak_compact_ptr_storage<T, Alloc>;
@@ -1416,7 +1453,7 @@ private:
       : indirect_ptr<Storage>(ptr) {}
 };
 template <class T, class Alloc>
-class weak_compact_ptr {
+class weak_compact_ptr PROD_TR_IF_ELIGIBLE {
 public:
   weak_compact_ptr(const strong_compact_ptr<T, Alloc>& rhs) noexcept
       : ptr_(rhs.ptr_) {
@@ -1451,6 +1488,25 @@ public:
 private:
   strong_weak_compact_ptr_storage<T, Alloc>* ptr_;
 };
+
+template <class T, class D>
+  requires(has_relocatability<D>(constraint_level::trivial))
+struct tr_override_traits<std::unique_ptr<T, D>> : applicable_traits {};
+template <class T>
+struct tr_override_traits<std::shared_ptr<T>> : applicable_traits {};
+template <class T>
+struct tr_override_traits<std::weak_ptr<T>> : applicable_traits {};
+template <class T, class Alloc>
+  requires(has_relocatability<Alloc>(constraint_level::trivial))
+struct tr_override_traits<allocated_ptr<T, Alloc>> : applicable_traits {};
+template <class T, class Alloc>
+struct tr_override_traits<compact_ptr<T, Alloc>> : applicable_traits {};
+template <class T, class Alloc>
+struct tr_override_traits<shared_compact_ptr<T, Alloc>> : applicable_traits {};
+template <class T, class Alloc>
+struct tr_override_traits<strong_compact_ptr<T, Alloc>> : applicable_traits {};
+template <class T, class Alloc>
+struct tr_override_traits<weak_compact_ptr<T, Alloc>> : applicable_traits {};
 
 struct weak_conversion_dispatch;
 template <class... Cs>
@@ -2053,7 +2109,7 @@ struct basic_facade_builder {
       MaxAlign == details::invalid_size ? alignof(details::ptr_prototype)
                                         : MaxAlign,
       Copyability == details::invalid_cl ? constraint_level::none : Copyability,
-      Relocatability == details::invalid_cl ? constraint_level::nothrow
+      Relocatability == details::invalid_cl ? constraint_level::trivial
                                             : Relocatability,
       Destructibility == details::invalid_cl ? constraint_level::nothrow
                                              : Destructibility>;
@@ -2577,6 +2633,7 @@ private:
 } // namespace std
 #endif // __STDC_HOSTED__ && __has_include(<format>)
 
+#undef PROD_TR_IF_ELIGIBLE
 #undef PROD_NO_UNIQUE_ADDRESS_ATTRIBUTE
 
 #endif // MSFT_PROXY_V4_PROXY_H_
