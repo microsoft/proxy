@@ -30,9 +30,9 @@ static_assert(
     !std::is_default_constructible_v<
         fmt::formatter<pro::proxy_indirect_accessor<NonFormattable>, wchar_t>>);
 
-struct Formattable : pro::facade_builder                 //
-                     ::support<pro::skills::fmt_format>  //
-                     ::support<pro::skills::fmt_wformat> //
+struct Formattable : pro::facade_builder                   //
+                     ::add_skill<pro::skills::fmt_format>  //
+                     ::add_skill<pro::skills::fmt_wformat> //
                      ::build {};
 
 static_assert(std::is_default_constructible_v<

@@ -2101,7 +2101,7 @@ struct basic_facade_builder {
                            Relocatability,
                            details::merge_constraint(Destructibility, CL)>;
   template <template <class> class Skill>
-  using support = Skill<basic_facade_builder>;
+  using add_skill = Skill<basic_facade_builder>;
   using build = details::facade_impl<
       Cs, Rs,
       MaxSize == details::invalid_size ? sizeof(details::ptr_prototype)
@@ -2359,6 +2359,10 @@ using direct_rtti = typename FB::template add_direct_convention<
 template <class FB>
 using rtti = indirect_rtti<FB>;
 #endif // __cpp_rtti >= 199711L
+
+template <class FB>
+using slim =
+    typename FB::template restrict_layout<sizeof(void*), alignof(void*)>;
 
 template <class FB>
 using as_view = typename FB::template add_direct_convention<

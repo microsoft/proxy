@@ -51,6 +51,7 @@ using skills::rtti;
 
 using skills::as_view;
 using skills::as_weak;
+using skills::slim;
 
 } // namespace skills
 

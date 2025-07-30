@@ -39,8 +39,8 @@ Class template `weak_facade` is a [facade](facade.md) type for weak pointers (e.
 
 #include <proxy/proxy.h>
 
-struct Formattable : pro::facade_builder            //
-                     ::support<pro::skills::format> //
+struct Formattable : pro::facade_builder              //
+                     ::add_skill<pro::skills::format> //
                      ::build {};
 
 int main() {

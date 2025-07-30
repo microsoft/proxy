@@ -20,7 +20,7 @@ using SelfComparisonOverload = bool(const pro::proxy<F>& rhs) const noexcept;
 template <class T>
 struct Iterator
     : pro::facade_builder                                                    //
-      ::support<pro::skills::direct_rtti>                                    //
+      ::add_skill<pro::skills::direct_rtti>                                  //
       ::restrict_layout<4 * sizeof(void*)>                                   //
       ::add_direct_convention<pro::operator_dispatch<"++">, void() noexcept> //
       ::add_direct_convention<

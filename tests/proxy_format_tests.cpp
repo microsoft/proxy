@@ -15,9 +15,9 @@ static_assert(
     !std::is_default_constructible_v<
         std::formatter<pro::proxy_indirect_accessor<NonFormattable>, wchar_t>>);
 
-struct Formattable : pro::facade_builder             //
-                     ::support<pro::skills::format>  //
-                     ::support<pro::skills::wformat> //
+struct Formattable : pro::facade_builder               //
+                     ::add_skill<pro::skills::format>  //
+                     ::add_skill<pro::skills::wformat> //
                      ::build {};
 
 static_assert(std::is_default_constructible_v<

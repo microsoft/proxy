@@ -25,6 +25,7 @@ nav:
     - skills::fmt_format<br />skills::fmt_wformat: skills_fmt_format.md
     - skills::format<br />skills::wformat: skills_format.md
     - "skills::rtti<br />skills::indirect_rtti<br />skills::direct_rtti": skills_rtti
+    - skills::slim: skills_slim.md
   - Functions:
     - allocate_proxy_shared: allocate_proxy_shared.md
     - allocate_proxy: allocate_proxy.md

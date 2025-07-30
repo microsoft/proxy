@@ -25,9 +25,9 @@ Let `p` be a value of type `proxy<F>`, `ptr` be the contained value of `p` (if a
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder             //
-                   ::support<pro::skills::rtti>    //
-                   ::support<pro::skills::as_view> //
+struct RttiAware : pro::facade_builder               //
+                   ::add_skill<pro::skills::rtti>    //
+                   ::add_skill<pro::skills::as_view> //
                    ::build {};
 
 int main() {
@@ -41,5 +41,5 @@ int main() {
 
 ## See Also
 
-- [`basic_facade_builder::support`](basic_facade_builder/support.md)
+- [`basic_facade_builder::add_skill`](basic_facade_builder/add_skill.md)
 - [class template `facade_aware_overload_t`](facade_aware_overload_t.md)
