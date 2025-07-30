@@ -174,7 +174,7 @@ static_assert(sizeof(pro::proxy<CopyableFacade>) ==
 
 struct CopyableSmallFacade
     : pro::facade_builder                               //
-      ::restrict_layout<sizeof(void*), alignof(void*)>  //
+      ::add_skill<pro::skills::slim>                    //
       ::support_copy<pro::constraint_level::nontrivial> //
       ::build {};
 static_assert(!pro::proxiable<MockMovablePtr, CopyableSmallFacade>);
