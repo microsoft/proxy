@@ -207,39 +207,27 @@ consteval bool has_destructibility(constraint_level level) {
 
 template <class F>
 struct proxy_helper {
+  template <class P>
+  struct resetting_guard {
+    explicit resetting_guard(proxy<F>& p) noexcept : p_(p) {}
+    ~resetting_guard() noexcept(std::is_nothrow_destructible_v<P>) {
+      std::destroy_at(std::addressof(get_ptr<P, qualifier_type::lv>(p_)));
+      p_.meta_.reset();
+    }
+
+  private:
+    proxy<F>& p_;
+  };
+
   static inline const auto& get_meta(const proxy<F>& p) noexcept {
     assert(p.has_value());
     return *p.meta_.operator->();
   }
-  static inline void reset_meta(proxy<F>& p) noexcept { p.meta_.reset(); }
   template <class P, qualifier_type Q>
   static add_qualifier_t<P, Q> get_ptr(add_qualifier_t<proxy<F>, Q> p) {
-    if constexpr (std::is_same_v<P, proxy<F>>) {
-      return std::forward<add_qualifier_t<P, Q>>(p);
-    } else {
-      return static_cast<add_qualifier_t<P, Q>>(
-          *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(p.ptr_)));
-    }
+    return static_cast<add_qualifier_t<P, Q>>(
+        *std::launder(reinterpret_cast<add_qualifier_ptr_t<P, Q>>(p.ptr_)));
   }
-};
-
-template <class F, class P>
-class proxy_resetting_guard {
-public:
-  explicit proxy_resetting_guard(proxy<F>& p) noexcept : p_(p) {}
-  proxy_resetting_guard(const proxy_resetting_guard&) = delete;
-  ~proxy_resetting_guard() noexcept(false) {
-    if constexpr (std::is_same_v<P, proxy<F>>) {
-      p_.reset();
-    } else {
-      std::destroy_at(std::addressof(
-          proxy_helper<F>::template get_ptr<P, qualifier_type::lv>(p_)));
-      proxy_helper<F>::reset_meta(p_);
-    }
-  }
-
-private:
-  proxy<F>& p_;
 };
 
 template <bool IsDirect, class P, qualifier_type Q>
@@ -285,7 +273,7 @@ template <class F, bool IsDirect, class D, class P, qualifier_type Q, bool NE,
 R invoke_dispatch(add_qualifier_t<proxy<F>, Q> self,
                   Args... args) noexcept(NE) {
   if constexpr (Q == qualifier_type::rv) {
-    proxy_resetting_guard<F, P> guard{self};
+    typename proxy_helper<F>::template resetting_guard<P> guard{self};
     return invoke_dispatch_impl<D, R>(
         get_operand<IsDirect>(
             proxy_helper<F>::template get_ptr<P, Q>(std::move(self))),
