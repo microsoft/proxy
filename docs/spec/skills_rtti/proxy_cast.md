@@ -63,8 +63,8 @@ These functions are not visible to ordinary [unqualified](https://en.cppreferenc
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder          //
-                   ::support<pro::skills::rtti> //
+struct RttiAware : pro::facade_builder            //
+                   ::add_skill<pro::skills::rtti> //
                    ::build {};
 
 int main() {

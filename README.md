@@ -57,7 +57,7 @@ Let's get started with the following "Hello World" example ([run](https://godbol
 #include <proxy/proxy.h>
 
 struct Formattable : pro::facade_builder
-    ::support<pro::skills::format>
+    ::add_skill<pro::skills::format>
     ::build {};
 
 int main() {
@@ -81,7 +81,7 @@ Here is a step-by-step explanation:
 - `#include <proxy/proxy.h>`: For the "Proxy" library. Most of the facilities of the library are defined in namespace `pro`.
 - `struct Formattable : pro::facade_builder ... ::build {}`: Defines a facade type `Formattable`. The term "facade", formally defined as the [*ProFacade* requirements](https://microsoft.github.io/proxy/spec/ProFacade), is how the "Proxy" library models runtime abstraction. Specifically,
   - [`pro::facade_builder`](https://microsoft.github.io/proxy/spec/basic_facade_builder): Provides capability to build a facade type at compile-time.
-  - [`support`](https://microsoft.github.io/proxy/spec/basic_facade_builder/support)`<`[`pro::skills::format`](https://microsoft.github.io/proxy/spec/skills_format)`>`: Specifies the capability of formatting (via [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format)).
+  - [`add_skill`](https://microsoft.github.io/proxy/spec/basic_facade_builder/add_skill)`<`[`pro::skills::format`](https://microsoft.github.io/proxy/spec/skills_format)`>`: Specifies the capability of formatting (via [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format)).
   - [`build`](https://microsoft.github.io/proxy/docs/basic_facade_builder/build.html): Builds the context into a facade type.
 - [`pro::proxy`](https://microsoft.github.io/proxy/spec/proxy)`<Formattable> p1 = &str`: Creates a `proxy` object from a raw pointer of `std::string`. `p1` behaves like a raw pointer, and does not have ownership of the underlying `std::string`. If the lifetime of `str` ends before `p1`, `p1` becomes dangling.
 - `std::format("*p1 = {}\n", *p1)`: This is how it works. `*p1` is formatted as "Hello World" because the capability was defined in the facade `Formattable`, so it works as if by calling `std::format("*p1 = {}\n", str)`.

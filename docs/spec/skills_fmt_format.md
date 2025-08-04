@@ -35,8 +35,8 @@ This facility requires [the {fmt} library](https://github.com/fmtlib/fmt) to be 
 #include <proxy/proxy.h>
 #include <proxy/proxy_fmt.h>
 
-struct Formattable : pro::facade_builder                //
-                     ::support<pro::skills::fmt_format> //
+struct Formattable : pro::facade_builder                  //
+                     ::add_skill<pro::skills::fmt_format> //
                      ::build {};
 
 int main() {
@@ -47,5 +47,5 @@ int main() {
 
 ## See Also
 
-- [`basic_facade_builder::support`](basic_facade_builder/support.md)
+- [`basic_facade_builder::add_skill`](basic_facade_builder/add_skill.md)
 - [alias template `skills::format`](skills_format.md)

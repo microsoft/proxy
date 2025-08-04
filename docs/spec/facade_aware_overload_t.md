@@ -36,9 +36,9 @@ pro::proxy<F> operator+(const T& value,
 }
 
 struct Addable
-    : pro::facade_builder            //
-      ::support<pro::skills::rtti>   //
-      ::support<pro::skills::format> //
+    : pro::facade_builder              //
+      ::add_skill<pro::skills::rtti>   //
+      ::add_skill<pro::skills::format> //
       ::add_convention<pro::operator_dispatch<"+">,
                        pro::facade_aware_overload_t<BinaryOverload>> //
       ::build {};

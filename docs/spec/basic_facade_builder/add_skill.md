@@ -1,14 +1,14 @@
-# `basic_facade_builder::support`
+# `basic_facade_builder::add_skill`
 
 > Since: 4.0.0
 
 ```cpp
 template <template <class> class Skill>
     requires(/* see below */)
-using support = Skill<basic_facade_builder>;
+using add_skill = Skill<basic_facade_builder>;
 ```
 
-The alias template `support` modifies template paratemeters with a custom skill. The expression inside `requires` is equivalent to `Skill<basic_facade_builder>` is a specialization of `basic_facade_builder`.
+The alias template `add_skill` modifies template paratemeters with a custom skill. The expression inside `requires` is equivalent to `Skill<basic_facade_builder>` is a specialization of `basic_facade_builder`.
 
 ## Notes
 
@@ -25,10 +25,12 @@ template <class FB>
 using SharedSlim = typename FB                                //
     ::template restrict_layout<sizeof(void*), alignof(void*)> //
     ::template support_copy<pro::constraint_level::nothrow>   //
-    ::template support<pro::skills::as_weak>;
+    ::template add_skill<pro::skills::as_weak>;
 
-struct SharedFormattable : pro::facade_builder ::support<SharedSlim>::support<
-                               pro::skills::format>::build {};
+struct SharedFormattable : pro::facade_builder              //
+                           ::add_skill<SharedSlim>          //
+                           ::add_skill<pro::skills::format> //
+                           ::build {};
 
 int main() {
   // Raw pointer does not have shared semantics

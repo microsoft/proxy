@@ -25,8 +25,8 @@ The alias templates `format` and `wformat` modify a specialization of [`basic_fa
 
 #include <proxy/proxy.h>
 
-struct Formattable : pro::facade_builder            //
-                     ::support<pro::skills::format> //
+struct Formattable : pro::facade_builder              //
+                     ::add_skill<pro::skills::format> //
                      ::build {};
 
 int main() {
@@ -38,5 +38,5 @@ int main() {
 
 ## See Also
 
-- [`basic_facade_builder::support`](basic_facade_builder/support.md)
+- [`basic_facade_builder::add_skill`](basic_facade_builder/add_skill.md)
 - [alias template `skills::fmt_format`](skills_fmt_format.md)

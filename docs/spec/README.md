@@ -41,6 +41,7 @@ This document provides the API specifications for the C++ library Proxy (version
 | [`skills::as_weak`](skills_as_weak.md)                       | `facade` skill set: implicit conversion to `weak_proxy`      |
 | [`skills::format`<br />`skills::wformat`](skills_format.md)  | `facade` skill set: formatting via the [standard formatting functions](https://en.cppreference.com/w/cpp/utility/format) |
 | [`skills::rtti`<br />`skills::indirect_rtti`<br />`skills::direct_rtti` ](skills_rtti/README.md) | `facade` skill set: RTTI via `proxy_cast` and `proxy_typeid` |
+| [`skills::slim`](skills_slim.md)                             | `facade` skill set: restriction to slim pointer types        |
 
 ### Functions
 

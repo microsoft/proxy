@@ -44,8 +44,8 @@ Throws any exception thrown by allocation and the constructor of `T`.
 
 struct RttiAware : pro::facade_builder                            //
                    ::support_copy<pro::constraint_level::nothrow> //
-                   ::support<pro::skills::rtti>                   //
-                   ::support<pro::skills::as_weak>                //
+                   ::add_skill<pro::skills::rtti>                 //
+                   ::add_skill<pro::skills::as_weak>              //
                    ::build {};
 
 int main() {

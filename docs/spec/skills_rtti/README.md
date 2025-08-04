@@ -32,9 +32,9 @@ The alias templates `rtti`, `indirect_rtti`, and `direct_rtti` modify a speciali
 
 #include <proxy/proxy.h>
 
-struct RttiAware : pro::facade_builder                 //
-                   ::support<pro::skills::rtti>        //
-                   ::support<pro::skills::direct_rtti> //
+struct RttiAware : pro::facade_builder                   //
+                   ::add_skill<pro::skills::rtti>        //
+                   ::add_skill<pro::skills::direct_rtti> //
                    ::build {};
 
 int main() {
@@ -49,5 +49,5 @@ int main() {
 
 ## See Also
 
-- [`basic_facade_builder::support`](../basic_facade_builder/support.md)
+- [`basic_facade_builder::add_skill`](../basic_facade_builder/add_skill.md)
 - [`basic_facade_builder::add_reflection`](../basic_facade_builder/add_reflection.md)

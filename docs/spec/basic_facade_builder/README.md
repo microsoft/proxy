@@ -40,8 +40,8 @@ using facade_builder =
 | [`add_convention`<br />`add_indirect_convention`<br />`add_direct_convention`](add_convention.md) | Adds a convention to the template parameters                 |
 | [`add_facade`](add_facade.md)                                | Adds a facade to the template parameters                     |
 | [`add_reflection`<br />`add_indirect_reflection`<br />`add_direct_reflection`](add_reflection.md) | Adds a reflection to the template parameters                 |
+| [`add_skill`](add_skill.md)                                  | Adds a custom skill                                          |
 | [`restrict_layout`](restrict_layout.md)                      | Specifies maximum `MaxSize` and `MaxAlign` in the template parameters |
-| [`support`](support.md)                                      | Specifies a custom skill                                     |
 | [`support_copy`](support_copy.md)                            | Specifies minimum `Copyability` in the template parameters   |
 | [`support_destruction`](support_destruction.md)              | Specifies minimum `Destructibility` in the template parameters |
 | [`support_relocation`](support_relocation.md)                | Specifies minimum `Relocatability` in the template parameters |
@@ -63,12 +63,12 @@ For example, when defining a `Formattable` facade, the following two definitions
 ```cpp
 // (1) Recommended
 struct Formattable : pro::facade_builder
-    ::support<pro::skills::format>
+    ::add_skill<pro::skills::format>
     ::build {};
 
 // (2) Discouraged
 using Formattable = pro::facade_builder
-    ::support<pro::skills::format>
+    ::add_skill<pro::skills::format>
     ::build;
 ```
 
