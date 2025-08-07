@@ -47,7 +47,7 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
 ### Hello World
 
-Let's get started with the following "Hello World" example ([run](https://godbolt.org/z/jr81Poz83)):
+Let's get started with the following "Hello World" example ([run](https://godbolt.org/z/3G363xz71)):
 
 ```cpp
 #include <format>
@@ -98,7 +98,7 @@ Note: If you prefer the library to be consumed as a (C++20) module, refer to [C+
 
 ### Hello World (Stream Version)
 
-In the previous "Hello World" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation ([run](https://godbolt.org/z/q1b14WGff)):
+In the previous "Hello World" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation ([run](https://godbolt.org/z/xcsM3v3cY)):
 
 ```cpp
 #include <iomanip>
@@ -154,7 +154,7 @@ In addition to the operator expressions demonstrated in the previous examples, t
 - [class template `pro::operator_dispatch`](https://microsoft.github.io/proxy/spec/operator_dispatch): Dispatch type for operator expressions.
 - [class `explicit_conversion_dispatch` (aka. `conversion_dispatch`)](https://microsoft.github.io/proxy/spec/explicit_conversion_dispatch) and [class `implicit_conversion_dispatch`](https://microsoft.github.io/proxy/spec/implicit_conversion_dispatch): Dispatch type for conversion expressions.
 
-Note that some facilities are provided as macro, because C++ templates today do not support generating a function with an arbitrary name. Here is another example that makes member function call expressions polymorphic ([run](https://godbolt.org/z/xcEeYrjnY)):
+Note that some facilities are provided as macro, because C++ templates today do not support generating a function with an arbitrary name. Here is another example that makes member function call expressions polymorphic ([run](https://godbolt.org/z/E95nY7PYq)):
 
 ```cpp
 #include <iostream>
