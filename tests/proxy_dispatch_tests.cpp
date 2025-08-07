@@ -40,6 +40,11 @@ private:
   int value_;
 };
 
+struct TestFacadeBase : pro::facade_builder //
+                        ::add_convention<pro::operator_dispatch<"<<", true>,
+                                         std::ostream&(std::ostream& out)> //
+                        ::build {};
+
 PRO_DEF_FREE_AS_MEM_DISPATCH(FreeMemToString, std::to_string, ToString);
 
 } // namespace proxy_dispatch_tests_details
@@ -784,21 +789,17 @@ TEST(ProxyDispatchTests, TestIndirectConversion) {
 }
 
 TEST(ProxyDispatchTests, TestDirectConversion) {
-  struct TestFacadeBase : pro::facade_builder //
-                          ::add_convention<pro::operator_dispatch<"<<", true>,
-                                           std::ostream&(std::ostream & out)> //
-                          ::build {};
   struct TestFacade
       : pro::facade_builder                                           //
-        ::add_facade<TestFacadeBase>                                  //
+        ::add_facade<details::TestFacadeBase>                         //
         ::add_convention<pro::operator_dispatch<"+=">, void(int val)> //
         ::add_direct_convention<pro::conversion_dispatch,
-                                pro::proxy<TestFacadeBase>() &&> //
+                                pro::proxy<details::TestFacadeBase>() &&> //
         ::build {};
   pro::proxy<TestFacade> p1 = std::make_unique<int>(123);
   *p1 += 3;
-  pro::proxy<TestFacadeBase> p2 =
-      static_cast<pro::proxy<TestFacadeBase>>(std::move(p1));
+  pro::proxy<details::TestFacadeBase> p2 =
+      static_cast<pro::proxy<details::TestFacadeBase>>(std::move(p1));
   ASSERT_FALSE(p1.has_value());
   std::ostringstream stream;
   stream << *p2;

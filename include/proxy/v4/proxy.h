@@ -1753,8 +1753,9 @@ private:
   T&& value_;
 };
 
-constexpr std::size_t invalid_size = std::numeric_limits<std::size_t>::max();
-constexpr constraint_level invalid_cl = static_cast<constraint_level>(
+inline constexpr std::size_t invalid_size =
+    std::numeric_limits<std::size_t>::max();
+inline constexpr constraint_level invalid_cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min());
 consteval std::size_t merge_size(std::size_t a, std::size_t b) {
   return a < b ? a : b;
