@@ -43,15 +43,15 @@ using MockFunctionPtr = void (*)();
 
 } // namespace proxy_traits_tests_details
 
-namespace pro::inline v4::details {
+namespace pro {
 
 template <bool kNothrowRelocatable, bool kCopyable, bool kTrivial,
           std::size_t kSize, std::size_t kAlignment>
-struct tr_override_traits<proxy_traits_tests_details::MockPtr<
+struct is_bitwise_trivially_relocatable<proxy_traits_tests_details::MockPtr<
     kNothrowRelocatable, kCopyable, kTrivial, kSize, kAlignment>>
-    : applicable_traits {};
+    : std::true_type {};
 
-} // namespace pro::inline v4::details
+} // namespace pro
 
 namespace proxy_traits_tests_details {
 

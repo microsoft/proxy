@@ -4,7 +4,7 @@
 > Module: `proxy`  
 > Namespace: `pro::inline v4`
 
-The definition of `make_proxy_inplace` makes use of an exposition-only class template *inplace-ptr*. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), `inplace-ptr<T>` contains the storage for an object of type `T`, manages its lifetime, and provides `operator*` for access with the same qualifiers. However, it does not necessarily support the state where the contained object is absent. `inplace-ptr<T>` has the same size and alignment as `T`.
+The definition of `make_proxy_inplace` makes use of an exposition-only class template *inplace-ptr*. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), *inplace-ptr&lt;T&gt;* contains the storage for an object of type `T`, manages its lifetime, and provides `operator*` for access with the same qualifiers. However, it does not necessarily support the state where the contained object is absent. *inplace-ptr&lt;T&gt;* has the same size and alignment as `T`.
 
 ```cpp
 // (1)
@@ -27,11 +27,11 @@ proxy<F> make_proxy_inplace(T&& value)
     requires(std::is_constructible_v<std::decay_t<T>, T>);
 ```
 
-`(1)` Creates a `proxy<F>` object containing a value `p` of type `inplace-ptr<T>`, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
+`(1)` Creates a `proxy<F>` object containing a value `p` of type *inplace-ptr&lt;T&gt;*, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
 
-`(2)` Creates a `proxy<F>` object containing a value `p` of type `inplace-ptr<T>`, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+`(2)` Creates a `proxy<F>` object containing a value `p` of type *inplace-ptr&lt;T&gt;*, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
 
-`(3)` Creates a `proxy<F>` object containing a value `p` of type `inplace-ptr<std::decay_t<T>>`, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
+`(3)` Creates a `proxy<F>` object containing a value `p` of type *inplace-ptr&lt;*`std::decay_t`*&gt;*, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
 
 *Since 3.3.0*: For `(1-3)`, if [`inplace_proxiable_target<std::decay_t<T>, F>`](inplace_proxiable_target.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
