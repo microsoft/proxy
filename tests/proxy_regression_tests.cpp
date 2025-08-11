@@ -21,6 +21,7 @@ template <class T>
 struct Iterator
     : pro::facade_builder                                                    //
       ::add_skill<pro::skills::direct_rtti>                                  //
+      ::support_relocation<pro::constraint_level::nothrow>                   //
       ::restrict_layout<4 * sizeof(void*)>                                   //
       ::add_direct_convention<pro::operator_dispatch<"++">, void() noexcept> //
       ::add_direct_convention<
