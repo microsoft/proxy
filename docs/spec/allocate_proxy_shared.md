@@ -5,7 +5,7 @@
 > Namespace: `pro::inline v4`  
 > Since: 3.3.0
 
-The definition of `allocate_proxy_shared` makes use of exposition-only class templates *strong-compact-ptr* and *weak-compact-ptr*. Their semantics are similar to [`std::shared_ptr`](https://en.cppreference.com/w/cpp/memory/shared_ptr) and [`std::weak_ptr`](https://en.cppreference.com/w/cpp/memory/weak_ptr), but do not provide a polymorphic deleter. Their size and alignment are guaranteed not to be greater than those of a raw pointer type. `strong-compact-ptr<T, Alloc>` is conditionally convertible to `weak-compact-ptr<T, Alloc>` only if necessary. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), `strong-compact-ptr<T, Alloc>` provides `operator*` for accessing the managed object of type `T` with the same qualifiers.
+The definition of `allocate_proxy_shared` makes use of exposition-only class templates *strong-compact-ptr* and *weak-compact-ptr*. Their semantics are similar to [`std::shared_ptr`](https://en.cppreference.com/w/cpp/memory/shared_ptr) and [`std::weak_ptr`](https://en.cppreference.com/w/cpp/memory/weak_ptr), but do not provide a polymorphic deleter. Their size and alignment are guaranteed not to be greater than those of a raw pointer type. *strong-compact-ptr&lt;T, Alloc&gt;* is conditionally convertible to *weak-compact-ptr&lt;T, Alloc&gt;* only if necessary. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), *strong-compact-ptr&lt;T, Alloc&gt;* provides `operator*` for accessing the managed object of type `T` with the same qualifiers.
 
 ```cpp
 // (1)
@@ -21,11 +21,11 @@ template <facade F, class Alloc, class T>
 proxy<F> allocate_proxy_shared(const Alloc& alloc, T&& value);  // freestanding-deleted
 ```
 
-`(1)` Creates a `proxy<F>` object containing a value `p` of type `strong-compact-ptr<T, Alloc>`, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
+`(1)` Creates a `proxy<F>` object containing a value `p` of type *strong-compact-ptr&lt;T, Alloc&gt;*, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
 
-`(2)` Creates a `proxy<F>` object containing a value `p` of type `strong-compact-ptr<T, Alloc>`, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+`(2)` Creates a `proxy<F>` object containing a value `p` of type *strong-compact-ptr&lt;T, Alloc&gt;*, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
 
-`(3)` Creates a `proxy<F>` object containing a value `p` of type `strong-compact-ptr<std::decay_t<T>, Alloc>`, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
+`(3)` Creates a `proxy<F>` object containing a value `p` of type *strong-compact-ptr&lt;*`std::decay_t<T>`*, Alloc&gt;*, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
 
 For `(1-3)`, if [`proxiable_target<std::decay_t<T>, F>`](proxiable_target.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
@@ -39,7 +39,7 @@ Throws any exception thrown by allocation or the constructor of `T`.
 
 ## Notes
 
-The implementation of `strong-compact-ptr` may vary depending on the definition of `F`. Specifically, when `F` does not support weak ownership via [`skills::as_weak`](skills_as_weak.md), `strong-compact-ptr<T, Alloc>` is not convertible to `weak-compact-ptr<T, Alloc>`, which leaves more room for optimization.
+The implementation of *strong-compact-ptr* may vary depending on the definition of `F`. Specifically, when `F` does not support weak ownership via [`skills::as_weak`](skills_as_weak.md), *strong-compact-ptr&lt;T, Alloc&gt;* is not convertible to *strong-compact-ptr&lt;T, Alloc&gt;*, which leaves more room for optimization.
 
 ## Example
 

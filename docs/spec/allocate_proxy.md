@@ -4,7 +4,7 @@
 > Module: `proxy`  
 > Namespace: `pro::inline v4`
 
-The definition of `allocate_proxy` makes use of an exposition-only class template *allocated-ptr*. An object of type `allocated-ptr<T, Alloc>` allocates the storage for another object of type `T` with an allocator of type `Alloc` and manages the lifetime of this contained object. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), `allocated-ptr<T, Alloc>` provides `operator*` for accessing the managed object of type `T` with the same qualifiers, but does not necessarily support the state where the contained object is absent.
+The definition of `allocate_proxy` makes use of an exposition-only class template *allocated-ptr*. An object of type *allocated-ptr&lt;T, Alloc&gt;* allocates the storage for another object of type `T` with an allocator of type `Alloc` and manages the lifetime of this contained object. Similar to [`std::optional`](https://en.cppreference.com/w/cpp/utility/optional), *allocated-ptr&lt;T, Alloc&gt;* provides `operator*` for accessing the managed object of type `T` with the same qualifiers, but does not necessarily support the state where the contained object is absent.
 
 ```cpp
 // (1)
@@ -20,11 +20,11 @@ template <facade F, class Alloc, class T>
 proxy<F> allocate_proxy(const Alloc& alloc, T&& value);  // freestanding-deleted
 ```
 
-`(1)` Creates a `proxy<F>` object containing a value `p` of type `allocated-ptr<T, Alloc>`, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
+`(1)` Creates a `proxy<F>` object containing a value `p` of type *allocated-ptr&lt;T, Alloc&gt;*, where `*p` is direct-non-list-initialized with `std::forward<Args>(args)...`.
 
-`(2)` Creates a `proxy<F>` object containing a value `p` of type `allocated-ptr<T, Alloc>`, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+`(2)` Creates a `proxy<F>` object containing a value `p` of type *allocated-ptr&lt;T, Alloc&gt;*, where `*p` is direct-non-list-initialized with `il, std::forward<Args>(args)...`.
 
-`(3)` Creates a `proxy<F>` object containing a value `p` of type `allocated-ptr<std::decay_t<T>, Alloc>`, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
+`(3)` Creates a `proxy<F>` object containing a value `p` of type *allocated-ptr&lt;*`std::decay_t<T>`*, Alloc&gt;*, where `*p` is direct-non-list-initialized with `std::forward<T>(value)`.
 
 *Since 3.3.0*: For `(1-3)`, if [`proxiable_target<std::decay_t<T>, F>`](proxiable_target.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 
@@ -38,7 +38,7 @@ Throws any exception thrown by allocation or the constructor of `T`.
 
 ## Notes
 
-The implementation of `allocated-ptr` may vary depending on the definition of `F`. Specifically, when `F::max_size` and `F::max_align` are not large enough to hold both a pointer to the allocated memory and a copy of the allocator, `allocated-ptr` shall allocate additional storage for the allocator.
+The implementation of *allocated-ptr* may vary depending on the definition of `F`. Specifically, when `F::max_size` and `F::max_align` are not large enough to hold both a pointer to the allocated memory and a copy of the allocator, *allocated-ptr* shall allocate additional storage for the allocator.
 
 ## Example
 

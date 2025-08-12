@@ -18,6 +18,8 @@ using v4::facade_aware_overload_t;
 using v4::facade_builder;
 using v4::implicit_conversion_dispatch;
 using v4::inplace_proxiable_target;
+using v4::is_bitwise_trivially_relocatable;
+using v4::is_bitwise_trivially_relocatable_v;
 using v4::make_proxy;
 using v4::make_proxy_inplace;
 using v4::make_proxy_shared;

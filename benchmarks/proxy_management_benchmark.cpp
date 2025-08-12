@@ -17,12 +17,12 @@ struct SmallObject3;
 
 } // namespace
 
-namespace pro::inline v4::details {
+namespace pro {
 
 template <>
-struct tr_override_traits<SmallObject3> : applicable_traits {};
+struct is_bitwise_trivially_relocatable<SmallObject3> : std::true_type {};
 
-} // namespace pro::inline v4::details
+} // namespace pro
 
 namespace {
 
