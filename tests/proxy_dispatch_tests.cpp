@@ -100,22 +100,24 @@ TEST(ProxyDispatchTests, TestOpModulo) {
 
 TEST(ProxyDispatchTests, TestOpIncrement) {
   struct TestFacade
-      : pro::facade_builder::add_convention<pro::operator_dispatch<"++">, int(),
-                                            int(int)>::build {};
+      : pro::facade_builder                                              //
+        ::add_convention<pro::operator_dispatch<"++">, void(), int(int)> //
+        ::add_skill<pro::skills::rtti>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(++(*p), 13);
+  ASSERT_EQ(proxy_cast<int>(++*p), 13);
   ASSERT_EQ((*p)++, 13);
   ASSERT_EQ(v, 14);
 }
 
 TEST(ProxyDispatchTests, TestOpDecrement) {
   struct TestFacade
-      : pro::facade_builder::add_convention<pro::operator_dispatch<"--">, int(),
-                                            int(int)>::build {};
+      : pro::facade_builder                                              //
+        ::add_convention<pro::operator_dispatch<"--">, void(), int(int)> //
+        ::add_skill<pro::skills::rtti>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(--(*p), 11);
+  ASSERT_EQ(proxy_cast<int>(--*p), 11);
   ASSERT_EQ((*p)--, 11);
   ASSERT_EQ(v, 10);
 }
