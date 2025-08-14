@@ -2415,7 +2415,23 @@ struct operator_dispatch;
       return proxy_invoke<D, R() oq ne>(static_cast<P pq>(*this));             \
     }                                                                          \
   }
-#define PROD_DEF_LHS_UNARY_OP_ACCESSOR PRO4D_DEF_MEM_ACCESSOR
+#define PROD_DEF_LHS_UNARY_OP_ACCESSOR(oq, pq, ne, ...)                        \
+  template <class P, class D, class R>                                         \
+  struct accessor<P, D, R() oq ne> {                                           \
+    PRO4D_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__)                       \
+    decltype(auto) __VA_ARGS__() oq ne {                                       \
+      proxy_invoke<D, R() oq ne>(static_cast<P pq>(*this));                    \
+      return static_cast<P pq>(*this);                                         \
+    }                                                                          \
+  };                                                                           \
+  template <class P, class D, class R>                                         \
+  struct accessor<P, D, R(int) oq ne> {                                        \
+    PRO4D_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(__VA_ARGS__)                       \
+    R __VA_ARGS__(int) oq ne {                                                 \
+      return proxy_invoke<D, R(int) oq ne>(static_cast<P pq>(*this), 0);       \
+    }                                                                          \
+  }
+
 #define PROD_DEF_LHS_BINARY_OP_ACCESSOR PRO4D_DEF_MEM_ACCESSOR
 #define PROD_DEF_LHS_ALL_OP_ACCESSOR PRO4D_DEF_MEM_ACCESSOR
 #define PROD_LHS_LEFT_OP_DISPATCH_BODY_IMPL(...)                               \
