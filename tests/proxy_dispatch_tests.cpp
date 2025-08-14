@@ -105,7 +105,7 @@ TEST(ProxyDispatchTests, TestOpIncrement) {
         ::add_skill<pro::skills::rtti>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(proxy_cast<int>(++(*p)), 13);
+  ASSERT_EQ(proxy_cast<int>(++*p), 13);
   ASSERT_EQ((*p)++, 13);
   ASSERT_EQ(v, 14);
 }
@@ -117,7 +117,7 @@ TEST(ProxyDispatchTests, TestOpDecrement) {
         ::add_skill<pro::skills::rtti>::build {};
   int v = 12;
   pro::proxy<TestFacade> p = &v;
-  ASSERT_EQ(proxy_cast<int>(--(*p)), 11);
+  ASSERT_EQ(proxy_cast<int>(--*p), 11);
   ASSERT_EQ((*p)--, 11);
   ASSERT_EQ(v, 10);
 }
