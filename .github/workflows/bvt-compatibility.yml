@@ -9,7 +9,7 @@ jobs:
 
     - name: install compilers
       run: |
-        sudo apt install -y gcc-13 g++-13 gcc-14 g++-14 clang-16 clang-17 clang-18 clang-19 libc++-19-dev
+        sudo apt install -y gcc-13 g++-13 gcc-14 g++-14 clang-16 clang-17 clang-18 clang-19 libc++-17-dev
 
     - name: check compiler versions
       run: |
@@ -50,9 +50,8 @@ jobs:
         cmake --build build-clang-17 -j
         ctest --test-dir build-clang-17 -j
 
-    # Note that libc++ in Clang 19 is not compatible with Clang 16. Therefore, we fallback to libstdc++.
     - name: build and run test with clang 16
       run: |
-        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
+        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build-clang-16 -j
         ctest --test-dir build-clang-16 -j
