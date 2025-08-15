@@ -27,6 +27,11 @@
       "Description": "NVIDIA HPC on Ubuntu",
       "InfoPath": "artifacts/drop-nvhpc/env-info.json",
       "BenchmarkingResultsPath": "artifacts/drop-nvhpc/benchmarking-results.json"
+    },
+    {
+      "Description": "Intel oneAPI on Ubuntu",
+      "InfoPath": "artifacts/drop-oneapi/env-info.json",
+      "BenchmarkingResultsPath": "artifacts/drop-oneapi/benchmarking-results.json"
     }
   ],
   "Metrics": [
