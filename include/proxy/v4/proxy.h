@@ -120,7 +120,7 @@ template <class F>
 concept facade = details::basic_facade_traits<F>::applicable;
 
 template <facade F>
-struct proxy_indirect_accessor;
+class proxy_indirect_accessor;
 template <facade F>
 class PRO4D_ENFORCE_EBO proxy;
 
@@ -574,17 +574,7 @@ template <class F, class D, class ONE, class OE, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<F, D, ONE, OE, C>::type;
 
 template <class... As>
-class PRO4D_ENFORCE_EBO composite_accessor_impl : public As... {
-  template <facade>
-  friend class pro::v4::proxy;
-  template <facade>
-  friend struct pro::v4::proxy_indirect_accessor;
-
-  composite_accessor_impl() noexcept = default;
-  composite_accessor_impl(const composite_accessor_impl&) noexcept = default;
-  composite_accessor_impl&
-      operator=(const composite_accessor_impl&) noexcept = default;
-};
+struct PRO4D_ENFORCE_EBO composite_accessor_impl : As... {};
 
 template <class T>
 struct accessor_traits_impl : std::type_identity<void> {};
@@ -909,8 +899,12 @@ concept proxiable = facade<F> && details::facade_traits<F>::applicable &&
                     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <facade F>
-struct proxy_indirect_accessor : details::facade_traits<F>::indirect_accessor {
+class proxy_indirect_accessor
+    : public details::facade_traits<F>::indirect_accessor {
   friend class details::inplace_ptr<proxy_indirect_accessor>;
+  proxy_indirect_accessor() = default;
+  proxy_indirect_accessor(const proxy_indirect_accessor&) = default;
+  proxy_indirect_accessor& operator=(const proxy_indirect_accessor&) = default;
 };
 
 template <class D, class O, facade F, class... Args>
