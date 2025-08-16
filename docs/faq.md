@@ -81,8 +81,8 @@ Upgrading a small component is usually straightforward, but migrating a monorepo
   - If your current version is *earlier* than 3.4.0, migrate to 3.4.0 first.
   - Starting with 3.4.0, each major release is placed in a versioned inline namespace (`pro::v3`, `pro::v4`, …).  When a translation unit sees multiple majors, qualify the namespace explicitly:
     ```cpp
-    pro::v3::foo();   // Proxy 3 API
-    pro::v4::foo();   // Proxy 4 API
+    pro::v3::foo(); // Proxy 3 API
+    pro::v4::foo(); // Proxy 4 API
     ```
     The newest release re-exports its namespace as the inline (default) namespace, so unqualified calls (`pro::foo()`) resolve to the latest version once the migration is complete.
   - The macros also have major-qualified aliases, e.g. [`PRO4_DEF_MEM_DISPATCH`](spec/PRO_DEF_MEM_DISPATCH.md). Use these forms whenever headers from multiple majors are included in the same translation unit.

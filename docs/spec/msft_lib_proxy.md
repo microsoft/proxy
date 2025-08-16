@@ -10,7 +10,7 @@ Starting with 3.0.0, Proxy ships a feature-test macro that encodes the library v
 
 | Version | Value of `__msft_lib_proxy` |
 | ------- | --------------------------- |
-| 4.0.0   | `202506L`                   |
+| 4.0.0   | `202508L`                   |
 | 3.4.0   | `202505L`                   |
 | 3.3.0   | `202503L`                   |
 | 3.2.1   | `202502L`                   |
@@ -26,8 +26,10 @@ Starting with 3.0.0, Proxy ships a feature-test macro that encodes the library v
 #include <proxy/proxy.h>
 
 int main() {
-#if defined(__msft_lib_proxy) && __msft_lib_proxy >= 202408L
-  puts("Compiled with library Proxy 3.0.0 or above.");
+#if __msft_lib_proxy >= 202508L
+  puts("Compiled with library Proxy 4.0.0 or above.");
+#elif __msft_lib_proxy >= 202408L
+  puts("Compiled with library Proxy 3.x.");
 #else
   puts("Cannot determine the version of library Proxy.");
 #endif

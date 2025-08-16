@@ -43,21 +43,15 @@ target_link_libraries(msft_proxy_tests PRIVATE msft_proxy4::proxy gtest_main fmt
 
 if(MSVC)
   target_compile_options(msft_proxy_tests PRIVATE /W4 /WX)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  target_compile_options(msft_proxy_tests PRIVATE -Wall -Wextra -Wpedantic -Wno-c++2b-extensions -Werror)
 else()
-  target_compile_options(msft_proxy_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(msft_proxy_tests PRIVATE -Wall -Wextra -Wpedantic -Werror $<$<CXX_COMPILER_ID:Clang>:-Wno-c++2b-extensions>)
 endif()
 
 gtest_discover_tests(msft_proxy_tests)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_executable(msft_proxy_freestanding_tests freestanding/proxy_freestanding_tests.cpp)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(msft_proxy_freestanding_tests PRIVATE -ffreestanding -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic -Wno-c++2b-extensions -Werror)
-  else()
-    target_compile_options(msft_proxy_freestanding_tests PRIVATE -ffreestanding -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic -Werror)
-  endif()
+  target_compile_options(msft_proxy_freestanding_tests PRIVATE -ffreestanding -fno-exceptions -fno-rtti -Wall -Wextra -Wpedantic -Werror $<$<CXX_COMPILER_ID:Clang>:-Wno-c++2b-extensions>)
   target_link_options(msft_proxy_freestanding_tests PRIVATE -nodefaultlibs -lc)
   target_link_libraries(msft_proxy_freestanding_tests PRIVATE msft_proxy4::proxy)
   add_test(NAME ProxyFreestandingTests COMMAND msft_proxy_freestanding_tests)
