@@ -14,7 +14,7 @@ jobs:
     - name: pack source
       id: run-pack
       run: |
-        version=$(grep -oP 'msft_proxy\s+VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt)
+        version=$(grep -oP 'msft_proxy\d+\s+VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt)
         git tag "$version"
         git push origin "$version"
         tar -czf "proxy-$version.tgz" $(git ls-files 'include/**.h' 'include/**.ixx')
