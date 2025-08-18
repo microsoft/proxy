@@ -28,7 +28,7 @@ jobs:
     uses: ./.github/workflows/bvt-nvhpc.yml
     name: Run BVT with NVHPC
 
-  run-bvt-icx:
+  run-bvt-oneapi:
     uses: ./.github/workflows/bvt-oneapi.yml
     name: Run BVT with Intel oneAPI
 
@@ -39,7 +39,7 @@ jobs:
   report:
     uses: ./.github/workflows/bvt-report.yml
     name: Generate report
-    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc, run-bvt-icx]
+    needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc, run-bvt-oneapi]
 
   mkdocs:
     uses: ./.github/workflows/mkdocs.yml
