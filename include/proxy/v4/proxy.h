@@ -630,6 +630,8 @@ template <class P>
 struct ptr_traits<P> : applicable_traits {};
 template <class F>
 struct ptr_traits<proxy<F>> : inapplicable_traits {};
+template <>
+struct ptr_traits<std::nullptr_t> : inapplicable_traits {};
 
 template <class P, class F, std::size_t ActualSize, std::size_t MaxSize>
 consteval bool diagnose_proxiable_size_too_large() {
@@ -1108,7 +1110,16 @@ public:
     if constexpr (F::relocatability == constraint_level::trivial ||
                   F::copyability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
+#ifdef __INTEL_LLVM_COMPILER
+      // Workaround: Intel oneAPI compiler (as of 2025.2.0) may over-optimize
+      // the swap below, causing unit tests failure
+      std::byte temp[F::max_size];
+      std::ranges::uninitialized_copy(ptr_, temp);
+      std::ranges::uninitialized_copy(rhs.ptr_, ptr_);
+      std::ranges::uninitialized_copy(temp, rhs.ptr_);
+#else
       std::swap(ptr_, rhs.ptr_);
+#endif // __INTEL_LLVM_COMPILER
     } else {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
