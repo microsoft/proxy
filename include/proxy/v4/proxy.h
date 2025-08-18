@@ -235,9 +235,6 @@ struct proxy_helper {
   }
 };
 
-template <class D>
-struct reloc_dispatch_traits : inapplicable_traits {};
-
 template <class P, bool IsDirect, qualifier_type Q>
 struct operand_traits : add_qualifier_traits<P, Q> {};
 template <class P, qualifier_type Q>
@@ -276,11 +273,12 @@ decltype(auto) get_operand(P&& ptr) {
     return *std::forward<P>(ptr);
   }
 }
+struct internal_dispatch {};
 template <class P, class F, bool IsDirect, class D, qualifier_type Q, bool NE,
           class R, class... Args>
 R invoke_dispatch(add_qualifier_t<proxy<F>, Q> self,
                   Args... args) noexcept(NE) {
-  if constexpr (reloc_dispatch_traits<D>::applicable) {
+  if constexpr (std::is_base_of_v<internal_dispatch, D>) {
     static_assert(IsDirect);
     return D{}(std::in_place_type<P>,
                std::forward<add_qualifier_t<proxy<F>, Q>>(self),
@@ -313,7 +311,7 @@ struct overload_traits_impl : applicable_traits {
 
   template <class P, bool IsDirect, class D>
   static constexpr bool applicable_ptr =
-      reloc_dispatch_traits<D>::applicable ||
+      std::is_base_of_v<internal_dispatch, D> ||
       invocable_dispatch<P, IsDirect, D, Q, NE, R, Args...>;
   static constexpr qualifier_type qualifier = Q;
 };
@@ -537,7 +535,7 @@ struct copy_dispatch {
     std::construct_at(std::addressof(rhs), self);
   }
 };
-struct relocate_dispatch {
+struct relocate_dispatch : internal_dispatch {
   template <class P, class F>
   PRO4D_STATIC_CALL(
       void, std::in_place_type_t<P>, proxy<F>&& self,
@@ -554,8 +552,6 @@ struct relocate_dispatch {
     }
   }
 };
-template <>
-struct reloc_dispatch_traits<relocate_dispatch> : applicable_traits {};
 struct destroy_dispatch {
   template <class T>
   PRO4D_STATIC_CALL(void, T& self) noexcept(std::is_nothrow_destructible_v<T>) {
@@ -1749,7 +1745,9 @@ struct cast_dispatch_base {
 };
 #undef PROD_DEF_CAST_ACCESSOR
 
-struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
+struct PRO4D_ENFORCE_EBO upward_conversion_dispatch
+    : cast_dispatch_base<false, true>,
+      internal_dispatch {
   template <class P, class F>
   PRO4D_STATIC_CALL(auto, std::in_place_type_t<P>, proxy<F>&& self) noexcept {
     return converter{
@@ -1772,8 +1770,6 @@ struct upward_conversion_dispatch : cast_dispatch_base<false, true> {
     return proxy_helper::get_ptr<P, F, qualifier_type::const_lv>(self);
   }
 };
-template <>
-struct reloc_dispatch_traits<upward_conversion_dispatch> : applicable_traits {};
 
 inline constexpr std::size_t invalid_size =
     std::numeric_limits<std::size_t>::max();
