@@ -402,4 +402,15 @@ static_assert(pro::facade<FacadeWithSizeOfNonPowerOfTwo>);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::max_size == 6u);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::max_align == 2u);
 
+static_assert(!std::is_default_constructible_v<
+              pro::proxy_indirect_accessor<DefaultFacade>>);
+static_assert(
+    !std::is_copy_constructible_v<pro::proxy_indirect_accessor<DefaultFacade>>);
+static_assert(
+    !std::is_move_constructible_v<pro::proxy_indirect_accessor<DefaultFacade>>);
+static_assert(
+    !std::is_copy_assignable_v<pro::proxy_indirect_accessor<DefaultFacade>>);
+static_assert(
+    !std::is_move_assignable_v<pro::proxy_indirect_accessor<DefaultFacade>>);
+
 } // namespace proxy_traits_tests_details
