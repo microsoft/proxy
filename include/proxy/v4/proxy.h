@@ -1120,7 +1120,7 @@ public:
     if constexpr (F::relocatability == constraint_level::trivial ||
                   F::copyability == constraint_level::trivial) {
       std::swap(meta_, rhs.meta_);
-#ifdef __INTEL_COMPILER
+#ifdef __INTEL_LLVM_COMPILER
       // Workaround: Intel oneAPI compiler (as of 2025.2.0) may over-optimize
       // the swap below, causing unit tests failure
       std::byte temp[F::max_size];
@@ -1129,7 +1129,7 @@ public:
       std::ranges::uninitialized_copy(temp, rhs.ptr_);
 #else
       std::swap(ptr_, rhs.ptr_);
-#endif // __INTEL_COMPILER
+#endif // __INTEL_LLVM_COMPILER
     } else {
       if (meta_.has_value()) {
         if (rhs.meta_.has_value()) {
