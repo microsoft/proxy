@@ -743,8 +743,7 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl {
-  using refl_meta =
-      composite_t<composite_meta<>, typename refl_traits<Rs>::meta...>;
+  using refl_meta = composite_meta<typename refl_traits<Rs>::meta...>;
   using refl_indirect_accessor =
       composite_t<composite_accessor<>, refl_accessor_t<Rs, F, false>...>;
   using refl_direct_accessor =
