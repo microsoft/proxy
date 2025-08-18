@@ -71,6 +71,19 @@ struct reduction_traits {
   using type = typename R<Args..., O, I>::type;
 };
 
+template <class O, class I>
+struct composition_traits : std::type_identity<O> {};
+template <template <class...> class T, class... Os, class I>
+  requires(!std::is_void_v<I>)
+struct composition_traits<T<Os...>, I> : std::type_identity<T<Os..., I>> {};
+template <template <class...> class T, class... Os, class... Is>
+struct composition_traits<T<Os...>, T<Is...>>
+    : std::type_identity<T<Os..., Is...>> {};
+template <class T, class... Us>
+using composite_t =
+    recursive_reduction_t<reduction_traits<composition_traits>::template type,
+                          T, Us...>;
+
 template <class Expr>
 consteval bool is_consteval(Expr) {
   return requires { typename std::bool_constant<(Expr{}(), false)>; };
@@ -391,25 +404,12 @@ struct invocation_meta {
 };
 
 template <class... Ms>
-struct composite_meta_impl : Ms... {
-  constexpr composite_meta_impl() noexcept = default;
+struct composite_meta : Ms... {
+  constexpr composite_meta() noexcept = default;
   template <class P>
-  constexpr explicit composite_meta_impl(std::in_place_type_t<P>) noexcept
+  constexpr explicit composite_meta(std::in_place_type_t<P>) noexcept
       : Ms(std::in_place_type<P>)... {}
 };
-template <class O, class I>
-struct meta_reduction : std::type_identity<O> {};
-template <class... Ms, class I>
-  requires(!std::is_void_v<I>)
-struct meta_reduction<composite_meta_impl<Ms...>, I>
-    : std::type_identity<composite_meta_impl<Ms..., I>> {};
-template <class... Ms1, class... Ms2>
-struct meta_reduction<composite_meta_impl<Ms1...>, composite_meta_impl<Ms2...>>
-    : std::type_identity<composite_meta_impl<Ms1..., Ms2...>> {};
-template <class... Ms>
-using composite_meta =
-    recursive_reduction_t<reduction_traits<meta_reduction>::template type,
-                          composite_meta_impl<>, Ms...>;
 
 template <class T>
 consteval bool is_is_direct_well_formed() {
@@ -439,14 +439,34 @@ template <class C>
 struct basic_conv_traits<C>
     : instantiated_t<basic_conv_traits_impl, typename C::overload_types, C> {};
 
+template <class T>
+struct a11y_traits_impl
+    : std::conditional<std::is_nothrow_default_constructible_v<T> &&
+                           std::is_trivially_copyable_v<T> &&
+                           !std::is_final_v<T>,
+                       T, void> {};
+template <class SFINAE, class T, class... Args>
+struct a11y_traits : std::type_identity<void> {};
+template <class T, class... Args>
+struct a11y_traits<std::void_t<typename T::template accessor<Args...>>, T,
+                   Args...>
+    : a11y_traits_impl<typename T::template accessor<Args...>> {};
+template <class T, class... Args>
+using accessor_t = typename a11y_traits<void, T, Args...>::type;
+
 template <class C, class F, class... Os>
 struct conv_traits_impl : inapplicable_traits {};
 template <class C, class F, class... Os>
   requires(overload_traits<substituted_overload_t<Os, F>>::applicable && ...)
 struct conv_traits_impl<C, F, Os...> : applicable_traits {
-  using meta = composite_meta_impl<
-      invocation_meta<F, C::is_direct, typename C::dispatch_type,
-                      substituted_overload_t<Os, F>>...>;
+  using meta =
+      composite_t<composite_meta<>,
+                  invocation_meta<F, C::is_direct, typename C::dispatch_type,
+                                  substituted_overload_t<Os, F>>...>;
+  template <class T>
+  using accessor =
+      accessor_t<typename C::dispatch_type, T, typename C::dispatch_type,
+                 substituted_overload_t<Os, F>...>;
 
   template <class P>
   static consteval bool diagnose_proxiable() {
@@ -570,58 +590,44 @@ template <class F, class D, class ONE, class OE, constraint_level C>
 using lifetime_meta_t = typename lifetime_meta_traits<F, D, ONE, OE, C>::type;
 
 template <class... As>
-struct PRO4D_ENFORCE_EBO composite_accessor_impl : As... {};
+struct PRO4D_ENFORCE_EBO composite_accessor : As... {};
 
-template <class T>
-struct accessor_traits_impl : std::type_identity<void> {};
-template <class T>
-  requires(std::is_nothrow_default_constructible_v<T> &&
-           std::is_trivially_copyable_v<T> && !std::is_final_v<T>)
-struct accessor_traits_impl<T> : std::type_identity<T> {};
-template <class SFINAE, class T, class F>
-struct accessor_traits : std::type_identity<void> {};
-template <class T, class F>
-struct accessor_traits<std::void_t<typename T::template accessor<F>>, T, F>
-    : accessor_traits_impl<typename T::template accessor<F>> {};
-template <class T, class F>
-using accessor_t = typename accessor_traits<void, T, F>::type;
+template <class C, class F, bool IsDirect>
+struct conv_accessor_traits : std::type_identity<void> {};
+template <class C, class F>
+  requires(!C::is_direct)
+struct conv_accessor_traits<C, F, false>
+    : std::type_identity<typename conv_traits<C, F>::template accessor<
+          proxy_indirect_accessor<F>>> {};
+template <class C, class F>
+  requires(C::is_direct)
+struct conv_accessor_traits<C, F, true>
+    : std::type_identity<
+          typename conv_traits<C, F>::template accessor<proxy<F>>> {};
+template <class C, class F, bool IsDirect>
+using conv_accessor_t = typename conv_accessor_traits<C, F, IsDirect>::type;
 
-template <class IsDirect, class F, class O, class I>
-struct composite_accessor_reduction : std::type_identity<O> {};
-template <class IsDirect, class F, class... As, class I>
-  requires(IsDirect::value == I::is_direct && !std::is_void_v<accessor_t<I, F>>)
-struct composite_accessor_reduction<IsDirect, F, composite_accessor_impl<As...>,
-                                    I>
-    : std::type_identity<composite_accessor_impl<As..., accessor_t<I, F>>> {};
-template <bool IsDirect, class F, class... Ts>
-using composite_accessor = recursive_reduction_t<
-    reduction_traits<composite_accessor_reduction, std::bool_constant<IsDirect>,
-                     F>::template type,
-    composite_accessor_impl<>, Ts...>;
-
-template <class A1, class A2>
-struct composite_accessor_merge_traits;
-template <class... A1, class... A2>
-struct composite_accessor_merge_traits<composite_accessor_impl<A1...>,
-                                       composite_accessor_impl<A2...>>
-    : std::type_identity<composite_accessor_impl<A1..., A2...>> {};
-template <class A1, class A2>
-using merged_composite_accessor =
-    typename composite_accessor_merge_traits<A1, A2>::type;
+template <class R, class F, bool IsDirect>
+struct refl_accessor_traits : std::type_identity<void> {};
+template <class R, class F>
+  requires(!R::is_direct)
+struct refl_accessor_traits<R, F, false>
+    : std::type_identity<
+          accessor_t<typename R::reflector_type, proxy_indirect_accessor<F>,
+                     typename R::reflector_type>> {};
+template <class R, class F>
+  requires(R::is_direct)
+struct refl_accessor_traits<R, F, true>
+    : std::type_identity<accessor_t<typename R::reflector_type, proxy<F>,
+                                    typename R::reflector_type>> {};
+template <class R, class F, bool IsDirect>
+using refl_accessor_t = typename refl_accessor_traits<R, F, IsDirect>::type;
 
 struct tr_blocker {
   tr_blocker() = default;
   tr_blocker(const tr_blocker&) noexcept {}
   tr_blocker& operator=(const tr_blocker&) noexcept { return *this; }
 };
-template <class A, bool TR>
-struct conditional_tr_accessor_traits : std::type_identity<A> {};
-template <class... As>
-struct conditional_tr_accessor_traits<composite_accessor_impl<As...>, false>
-    : std::type_identity<composite_accessor_impl<tr_blocker, As...>> {};
-template <class A, bool TR>
-using conditional_tr_accessor_t =
-    typename conditional_tr_accessor_traits<A, TR>::type;
 
 template <class P>
 struct ptr_traits : inapplicable_traits {};
@@ -716,9 +722,12 @@ struct facade_conv_traits_impl : inapplicable_traits {};
 template <class F, class... Cs>
   requires(conv_traits<Cs, F>::applicable && ...)
 struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
-  using conv_meta = composite_meta<typename conv_traits<Cs, F>::meta...>;
-  using conv_indirect_accessor = composite_accessor<false, F, Cs...>;
-  using conv_direct_accessor = composite_accessor<true, F, Cs...>;
+  using conv_meta =
+      composite_t<composite_meta<>, typename conv_traits<Cs, F>::meta...>;
+  using conv_indirect_accessor =
+      composite_t<composite_accessor<>, conv_accessor_t<Cs, F, false>...>;
+  using conv_direct_accessor =
+      composite_t<composite_accessor<>, conv_accessor_t<Cs, F, true>...>;
 
   template <class P>
   static consteval bool diagnose_proxiable_conv() {
@@ -736,9 +745,12 @@ struct facade_conv_traits_impl<F, Cs...> : applicable_traits {
 };
 template <class F, class... Rs>
 struct facade_refl_traits_impl {
-  using refl_meta = composite_meta<typename refl_traits<Rs>::meta...>;
-  using refl_indirect_accessor = composite_accessor<false, F, Rs...>;
-  using refl_direct_accessor = composite_accessor<true, F, Rs...>;
+  using refl_meta =
+      composite_t<composite_meta<>, typename refl_traits<Rs>::meta...>;
+  using refl_indirect_accessor =
+      composite_t<composite_accessor<>, refl_accessor_t<Rs, F, false>...>;
+  using refl_direct_accessor =
+      composite_t<composite_accessor<>, refl_accessor_t<Rs, F, true>...>;
 
   template <class P>
   static consteval bool diagnose_proxiable_refl() {
@@ -759,7 +771,8 @@ template <class F>
 struct facade_traits<F>
     : instantiated_t<facade_conv_traits_impl, typename F::convention_types, F>,
       instantiated_t<facade_refl_traits_impl, typename F::reflection_types, F> {
-  using meta = composite_meta<
+  using meta = composite_t<
+      composite_meta<>,
       lifetime_meta_t<F, copy_dispatch, void(proxy<F>&) const noexcept,
                       void(proxy<F>&) const, F::copyability>,
       lifetime_meta_t<F, relocate_dispatch, void(proxy<F>&) && noexcept,
@@ -768,12 +781,13 @@ struct facade_traits<F>
                       F::destructibility>,
       typename facade_traits::conv_meta, typename facade_traits::refl_meta>;
   using indirect_accessor =
-      merged_composite_accessor<typename facade_traits::conv_indirect_accessor,
-                                typename facade_traits::refl_indirect_accessor>;
-  using direct_accessor = conditional_tr_accessor_t<
-      merged_composite_accessor<typename facade_traits::conv_direct_accessor,
-                                typename facade_traits::refl_direct_accessor>,
-      F::relocatability == constraint_level::trivial>;
+      composite_t<typename facade_traits::conv_indirect_accessor,
+                  typename facade_traits::refl_indirect_accessor>;
+  using direct_accessor = composite_t<
+      typename facade_traits::conv_direct_accessor,
+      typename facade_traits::refl_direct_accessor,
+      std::conditional_t<F::relocatability == constraint_level::trivial, void,
+                         tr_blocker>>;
 
   template <class P>
   static consteval void diagnose_proxiable() {
@@ -835,9 +849,9 @@ template <class M>
 struct meta_ptr_traits_impl : std::type_identity<meta_ptr_indirect_impl<M>> {};
 template <class F, bool IsDirect, class D, class O, class... Ms>
 struct meta_ptr_traits_impl<
-    composite_meta_impl<invocation_meta<F, IsDirect, D, O>, Ms...>>
+    composite_meta<invocation_meta<F, IsDirect, D, O>, Ms...>>
     : std::type_identity<meta_ptr_direct_impl<
-          composite_meta_impl<invocation_meta<F, IsDirect, D, O>, Ms...>,
+          composite_meta<invocation_meta<F, IsDirect, D, O>, Ms...>,
           invocation_meta<F, IsDirect, D, O>>> {};
 template <class M>
 struct meta_ptr_traits : std::type_identity<meta_ptr_indirect_impl<M>> {};
@@ -1799,32 +1813,16 @@ consteval std::size_t max_align_of(std::size_t value) {
   return value < alignof(std::max_align_t) ? value : alignof(std::max_align_t);
 }
 
-template <class SFINAE, class T, class... Args>
-struct accessor_instantiation_traits : std::type_identity<void> {};
-template <class T, class... Args>
-struct accessor_instantiation_traits<
-    std::void_t<typename T::template accessor<Args...>>, T, Args...>
-    : std::type_identity<typename T::template accessor<Args...>> {};
-template <class T, class F, bool IsDirect, class... Args>
-using instantiated_accessor_t = typename accessor_instantiation_traits<
-    void, T, std::conditional_t<IsDirect, proxy<F>, proxy_indirect_accessor<F>>,
-    T, Args...>::type;
-
 template <bool IsDirect, class D, class... Os>
 struct conv_impl {
   static constexpr bool is_direct = IsDirect;
   using dispatch_type = D;
   using overload_types = std::tuple<Os...>;
-  template <class F>
-  using accessor =
-      instantiated_accessor_t<D, F, IsDirect, substituted_overload_t<Os, F>...>;
 };
 template <bool IsDirect, class R>
 struct refl_impl {
   static constexpr bool is_direct = IsDirect;
   using reflector_type = R;
-  template <class F>
-  using accessor = instantiated_accessor_t<R, F, IsDirect>;
 };
 template <class Cs, class Rs, std::size_t MaxSize, std::size_t MaxAlign,
           constraint_level Copyability, constraint_level Relocatability,
