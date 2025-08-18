@@ -72,17 +72,16 @@ struct reduction_traits {
 };
 
 template <class O, class I>
-struct composition_traits : std::type_identity<O> {};
+struct composition_reduction : std::type_identity<O> {};
 template <template <class...> class T, class... Os, class I>
   requires(!std::is_void_v<I>)
-struct composition_traits<T<Os...>, I> : std::type_identity<T<Os..., I>> {};
+struct composition_reduction<T<Os...>, I> : std::type_identity<T<Os..., I>> {};
 template <template <class...> class T, class... Os, class... Is>
-struct composition_traits<T<Os...>, T<Is...>>
+struct composition_reduction<T<Os...>, T<Is...>>
     : std::type_identity<T<Os..., Is...>> {};
 template <class T, class... Us>
-using composite_t =
-    recursive_reduction_t<reduction_traits<composition_traits>::template type,
-                          T, Us...>;
+using composite_t = recursive_reduction_t<
+    reduction_traits<composition_reduction>::template type, T, Us...>;
 
 template <class Expr>
 consteval bool is_consteval(Expr) {
@@ -460,9 +459,8 @@ template <class C, class F, class... Os>
   requires(overload_traits<substituted_overload_t<Os, F>>::applicable && ...)
 struct conv_traits_impl<C, F, Os...> : applicable_traits {
   using meta =
-      composite_t<composite_meta<>,
-                  invocation_meta<F, C::is_direct, typename C::dispatch_type,
-                                  substituted_overload_t<Os, F>>...>;
+      composite_meta<invocation_meta<F, C::is_direct, typename C::dispatch_type,
+                                     substituted_overload_t<Os, F>>...>;
   template <class T>
   using accessor =
       accessor_t<typename C::dispatch_type, T, typename C::dispatch_type,
