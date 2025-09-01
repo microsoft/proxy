@@ -1931,52 +1931,34 @@ using observer_upward_conversion_conv = recursive_reduction_t<
     reduction_traits<observer_upward_conversion_conv_reduction>::template type,
     conv_impl<true, upward_conversion_dispatch>, Os...>;
 
-template <class D, class F, class... Os>
-using observer_indirect_conv =
-    conv_impl<false, D, substituted_overload_t<Os, F>...>;
+template <class D, class... Os>
+using observer_indirect_conv = conv_impl<false, D, Os...>;
 
-template <class C, class F>
-struct observer_conv_traits : inapplicable_traits {};
-template <class C, class F>
-  requires(C::is_direct && std::is_same_v<typename C::dispatch_type,
-                                          upward_conversion_dispatch>)
-struct observer_conv_traits<C, F>
-    : applicable_traits,
-      std::type_identity<instantiated_t<observer_upward_conversion_conv,
+template <class C>
+struct observer_conv_traits : std::type_identity<void> {};
+template <class C>
+  requires(
+      C::is_direct &&
+      std::is_same_v<typename C::dispatch_type, upward_conversion_dispatch>)
+struct observer_conv_traits<C>
+    : std::type_identity<instantiated_t<observer_upward_conversion_conv,
                                         typename C::overload_types>> {};
-template <class C, class F>
+template <class C>
   requires(!C::is_direct)
-struct observer_conv_traits<C, F>
-    : applicable_traits,
-      std::type_identity<
-          instantiated_t<observer_indirect_conv, typename C::overload_types,
-                         typename C::dispatch_type, F>> {};
-
-template <class F, class O, class I>
-struct observer_conv_reduction : std::type_identity<O> {};
-template <class F, class... Cs, class I>
-  requires(observer_conv_traits<I, F>::applicable)
-struct observer_conv_reduction<F, std::tuple<Cs...>, I>
+struct observer_conv_traits<C>
     : std::type_identity<
-          std::tuple<Cs..., typename observer_conv_traits<I, F>::type>> {};
-template <class F, class... Cs>
+          instantiated_t<observer_indirect_conv, typename C::overload_types,
+                         typename C::dispatch_type>> {};
+template <class... Cs>
 struct observer_facade_conv_impl {
-  using convention_types = recursive_reduction_t<
-      reduction_traits<observer_conv_reduction, F>::template type, std::tuple<>,
-      Cs...>;
+  using convention_types =
+      composite_t<std::tuple<>, typename observer_conv_traits<Cs>::type...>;
 };
 
-template <class O, class I>
-struct observer_refl_reduction : std::type_identity<O> {};
-template <class... Rs, class R>
-  requires(!R::is_direct)
-struct observer_refl_reduction<std::tuple<Rs...>, R>
-    : std::type_identity<std::tuple<Rs..., R>> {};
 template <class... Rs>
 struct observer_facade_refl_impl {
-  using reflection_types = recursive_reduction_t<
-      reduction_traits<observer_refl_reduction>::template type, std::tuple<>,
-      Rs...>;
+  using reflection_types =
+      composite_t<std::tuple<>, std::conditional_t<Rs::is_direct, void, Rs>...>;
 };
 
 template <class P>
@@ -2040,7 +2022,7 @@ struct weak_facade_impl {
 template <facade F>
 struct observer_facade
     : details::instantiated_t<details::observer_facade_conv_impl,
-                              typename F::convention_types, F>,
+                              typename F::convention_types>,
       details::instantiated_t<details::observer_facade_refl_impl,
                               typename F::reflection_types> {
   static constexpr std::size_t max_size = sizeof(void*);
