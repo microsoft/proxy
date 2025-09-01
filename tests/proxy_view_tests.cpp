@@ -38,6 +38,38 @@ static_assert(
     SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
 static_assert(sizeof(pro::proxy_view<TestFacade>) == 3 * sizeof(void*));
 
+template <class F>
+using AreEqualOverload = bool(const pro::proxy_indirect_accessor<F>& rhs,
+                              double eps) const;
+
+template <class T, pro::facade F>
+bool AreEqualImpl(const T& lhs, const pro::proxy_indirect_accessor<F>& rhs,
+                  double eps) {
+  return lhs.AreEqual(proxy_cast<const T&>(rhs), eps);
+}
+
+PRO_DEF_FREE_AS_MEM_DISPATCH(MemAreEqual, AreEqualImpl, AreEqual);
+
+struct EqualableQuantity
+    : pro::facade_builder            //
+      ::add_skill<pro::skills::rtti> // for proxy_cast
+      ::add_convention<MemAreEqual,
+                       pro::facade_aware_overload_t<AreEqualOverload>> //
+      ::build {};
+
+class Point_2 {
+public:
+  Point_2(double x, double y) : x_(x), y_(y) {}
+  Point_2(const Point_2&) = default;
+  Point_2& operator=(const Point_2&) = default;
+  bool AreEqual(const Point_2& rhs, double eps) const {
+    return std::abs(x_ - rhs.x_) < eps && std::abs(y_ - rhs.y_) < eps;
+  }
+
+private:
+  double x_, y_;
+};
+
 } // namespace proxy_view_tests_details
 
 namespace details = proxy_view_tests_details;
@@ -131,4 +163,19 @@ TEST(ProxyViewTests, TestUpwardConversion_FromValue) {
   ASSERT_EQ(ToString(*p1), "123");
   ASSERT_EQ(ToString(*p2), "123");
   ASSERT_EQ(ToString(*p3), "123");
+}
+
+TEST(ProxyViewTests, TestFacadeAware) {
+  details::Point_2 v1{1, 1};
+  details::Point_2 v2{1, 0};
+  details::Point_2 v3{1.0000001, 1.0000001};
+  pro::proxy_view<details::EqualableQuantity> p1 =
+      pro::make_proxy_view<details::EqualableQuantity>(v1);
+  pro::proxy_view<details::EqualableQuantity> p2 =
+      pro::make_proxy_view<details::EqualableQuantity>(v2);
+  pro::proxy_view<details::EqualableQuantity> p3 =
+      pro::make_proxy_view<details::EqualableQuantity>(v3);
+  ASSERT_TRUE(p1->AreEqual(*p1, 1e-6));
+  ASSERT_FALSE(p1->AreEqual(*p2, 1e-6));
+  ASSERT_TRUE(p1->AreEqual(*p3, 1e-6));
 }
