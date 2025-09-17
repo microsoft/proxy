@@ -2135,7 +2135,7 @@ struct view_conversion_dispatch : cast_dispatch_base<false, true> {
   }
 };
 template <class F>
-using view_conversion_overload = proxy_view<F>() noexcept;
+using view_conversion_overload = proxy_view<F>() & noexcept;
 
 struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
   template <class P>
