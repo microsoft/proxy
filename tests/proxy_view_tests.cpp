@@ -38,6 +38,11 @@ static_assert(
     SupportsToString<decltype(*std::declval<pro::proxy_view<TestFacade>>())>);
 static_assert(sizeof(pro::proxy_view<TestFacade>) == 3 * sizeof(void*));
 
+static_assert(std::is_nothrow_convertible_v<pro::proxy<TestFacade>&,
+                                            pro::proxy_view<TestFacade>>);
+static_assert(!std::is_convertible_v<pro::proxy<TestFacade>,
+                                     pro::proxy_view<TestFacade>>);
+
 template <class F>
 using AreEqualOverload = bool(const pro::proxy_indirect_accessor<F>& rhs,
                               double eps) const;
