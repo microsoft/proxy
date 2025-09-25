@@ -37,6 +37,20 @@
     return __VA_ARGS__;                                                        \
   }
 
+#define PRO4D_DEF_OVERLOAD_SPECIALIZATIONS(macro, ...)                         \
+  macro(, &, , __VA_ARGS__);                                                   \
+  macro(, &, noexcept, __VA_ARGS__);                                           \
+  macro(&, &, , __VA_ARGS__);                                                  \
+  macro(&, &, noexcept, __VA_ARGS__);                                          \
+  macro(&&, &&, , __VA_ARGS__);                                                \
+  macro(&&, &&, noexcept, __VA_ARGS__);                                        \
+  macro(const, const&, , __VA_ARGS__);                                         \
+  macro(const, const&, noexcept, __VA_ARGS__);                                 \
+  macro(const&, const&, , __VA_ARGS__);                                        \
+  macro(const&, const&, noexcept, __VA_ARGS__);                                \
+  macro(const&&, const&&, , __VA_ARGS__);                                      \
+  macro(const&&, const&&, noexcept, __VA_ARGS__);
+
 #define PRO4D_DEF_AGGREGATE_MEM_ACCESSOR_BODY(...)                             \
   using accessor<ProP, ProD, ProOs>::__VA_ARGS__...;
 #define PRO4D_DEF_AGGREGATE_FREE_ACCESSOR_BODY(...)
@@ -51,18 +65,7 @@
   struct accessor<ProP, ProD, ProOs...> : accessor<ProP, ProD, ProOs>... {     \
     PRO4D_DEF_AGGREGATE_##type##_ACCESSOR_BODY(__VA_ARGS__)                    \
   };                                                                           \
-  macro(, &, , __VA_ARGS__);                                                   \
-  macro(, &, noexcept, __VA_ARGS__);                                           \
-  macro(&, &, , __VA_ARGS__);                                                  \
-  macro(&, &, noexcept, __VA_ARGS__);                                          \
-  macro(&&, &&, , __VA_ARGS__);                                                \
-  macro(&&, &&, noexcept, __VA_ARGS__);                                        \
-  macro(const, const&, , __VA_ARGS__);                                         \
-  macro(const, const&, noexcept, __VA_ARGS__);                                 \
-  macro(const&, const&, , __VA_ARGS__);                                        \
-  macro(const&, const&, noexcept, __VA_ARGS__);                                \
-  macro(const&&, const&&, , __VA_ARGS__);                                      \
-  macro(const&&, const&&, noexcept, __VA_ARGS__);
+  PRO4D_DEF_OVERLOAD_SPECIALIZATIONS(macro, __VA_ARGS__)
 
 #define PRO4D_GEN_DEBUG_SYMBOL_FOR_MEM_ACCESSOR(...)                           \
   PRO4D_DEBUG(accessor() noexcept { ::std::ignore = &accessor::__VA_ARGS__; })
