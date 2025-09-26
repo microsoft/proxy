@@ -7,6 +7,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: free disk space
+      uses: jlumbroso/free-disk-space@v1.3.1
+
     - name: install NVHPC 25.7
       run: |
         curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
