@@ -405,9 +405,9 @@ consteval bool diagnose_proxiable_required_convention_not_implemented() {
 
 template <class F, bool IsDirect, class D, class O>
 struct invocation_meta {
-  constexpr invocation_meta() = default;
+  invocation_meta() = default;
   template <class P>
-  constexpr explicit invocation_meta(std::in_place_type_t<P>) noexcept
+  constexpr explicit invocation_meta(std::in_place_type_t<P>)
       : dispatcher(overload_traits<O>::template dispatcher<P, F, IsDirect, D>) {
   }
 
@@ -415,10 +415,10 @@ struct invocation_meta {
 };
 
 template <class... Ms>
-struct composite_meta : Ms... {
-  constexpr composite_meta() noexcept = default;
+struct PRO4D_ENFORCE_EBO composite_meta : Ms... {
+  composite_meta() = default;
   template <class P>
-  constexpr explicit composite_meta(std::in_place_type_t<P>) noexcept
+  constexpr explicit composite_meta(std::in_place_type_t<P>)
       : Ms(std::in_place_type<P>)... {}
 };
 
@@ -500,6 +500,7 @@ struct conv_traits
 
 template <bool IsDirect, class R>
 struct refl_meta {
+  refl_meta() = default;
   template <class P>
     requires(IsDirect)
   constexpr explicit refl_meta(std::in_place_type_t<P>)
@@ -511,6 +512,7 @@ struct refl_meta {
             std::in_place_type<typename std::pointer_traits<P>::element_type>) {
   }
 
+  [[PROD_NO_UNIQUE_ADDRESS_ATTRIBUTE]]
   R reflector;
 };
 
@@ -829,9 +831,9 @@ using ptr_prototype = void* [2];
 
 template <class M>
 struct meta_ptr_indirect_impl {
-  constexpr meta_ptr_indirect_impl() = default;
+  meta_ptr_indirect_impl() = default;
   template <class P>
-  constexpr explicit meta_ptr_indirect_impl(std::in_place_type_t<P>) noexcept
+  explicit meta_ptr_indirect_impl(std::in_place_type_t<P>)
       : ptr_(&storage<P>) {}
   bool has_value() const noexcept { return ptr_ != nullptr; }
   void reset() noexcept { ptr_ = nullptr; }
@@ -2250,10 +2252,10 @@ struct proxy_cast_dispatch {
 #undef PROD_DEF_PROXY_CAST_ACCESSOR
 
 struct proxy_typeid_reflector {
+  proxy_typeid_reflector() = default;
   template <class T>
   constexpr explicit proxy_typeid_reflector(std::in_place_type_t<T>)
       : info(&typeid(T)) {}
-  constexpr proxy_typeid_reflector(const proxy_typeid_reflector&) = default;
 
   template <class Self, class R>
   struct accessor {

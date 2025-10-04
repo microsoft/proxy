@@ -10,6 +10,7 @@ Starting with 3.0.0, Proxy ships a feature-test macro that encodes the library v
 
 | Version | Value of `__msft_lib_proxy` |
 | ------- | --------------------------- |
+| 4.0.1   | `202510L`                   |
 | 4.0.0   | `202508L`                   |
 | 3.4.0   | `202505L`                   |
 | 3.3.0   | `202503L`                   |
