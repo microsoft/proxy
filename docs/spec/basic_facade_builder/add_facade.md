@@ -1,7 +1,7 @@
 # `basic_facade_builder::add_facade`
 
 ```cpp
-template <facade F, bool WithUpwardConversion = false>
+template <facade F, bool WithSubstitution = false>
 using add_facade = basic_facade_builder</* see below */>;
 ```
 
@@ -14,11 +14,11 @@ The alias template `add_facade` of `basic_facade_builder<Cs, Rs, MaxSize, MaxAli
 - sets `Copyability` to `std::max(Copyability, F::copyability)`, and
 - sets `Relocatability` to `std::max(Relocatability, F::relocatability)`, and
 - sets `Destructibility` to `std::max(Destructibility, F::destructibility)`, and
-- optionally, adds a convention for implicit upward conversion into `Cs` when `WithUpwardConversion` is `true`.
+- optionally, merges a direct convention of [`substitution_dispatch`](../substitution_dispatch/README.md) into `Cs` when `WithSubstitution` is `true`.
 
 ## Notes
 
-Adding a facade type that contains duplicated convention or reflection types already defined in `Cs` or `Rs` is well-defined and does not have side effects on [`build`](build.md) at either compile-time or runtime. By default, `WithUpwardConversion` is `false`, which guarantees minimal binary size in code generation. However, upward conversion is helpful when an API requires backward compatibility. Users can opt-in to this feature by specifying `true` as the second parameter of `add_facade`, at the cost of potentially a slightly larger binary size.
+Adding a facade type that contains duplicated convention or reflection types already defined in `Cs` or `Rs` is well-defined and does not have side effects on [`build`](build.md) at either compile-time or runtime. By default, `WithSubstitution` is `false`, which guarantees minimal binary size in code generation. However, substitution is helpful when an API requires backward compatibility. Users can opt-in to this feature by specifying `true` as the second parameter of `add_facade`, at the cost of potentially a slightly larger binary size.
 
 ## Example
 
@@ -68,7 +68,7 @@ int main() {
   auto p2 = p1; // Performs a deep copy
   p2->emplace(456, "trivial");
 
-  // Performs an upward conversion from an rvalue reference
+  // Performs a substitution from an rvalue reference
   pro::proxy<StringDictionary> p3 = std::move(p2);
   std::cout << p1->size() << "\n";  // Prints "1"
   std::cout << p1->at(123) << "\n"; // Prints "lalala"

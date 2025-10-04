@@ -34,6 +34,7 @@ using v4::proxy_indirect_accessor;
 using v4::proxy_invoke;
 using v4::proxy_reflect;
 using v4::proxy_view;
+using v4::substitution_dispatch;
 using v4::weak_dispatch;
 using v4::weak_facade;
 using v4::weak_proxy;

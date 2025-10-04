@@ -136,13 +136,12 @@ TEST(ProxyViewTests, TestOverloadShadowing) {
   ASSERT_EQ((std::as_const(*p2))(), 1);
 }
 
-TEST(ProxyViewTests, TestUpwardConversion_FromNull) {
+TEST(ProxyViewTests, TestSubstitution_FromNull) {
   struct TestFacade1 : pro::facade_builder::build {};
-  struct TestFacade2
-      : pro::facade_builder               //
-        ::add_facade<TestFacade1, true>   // Supports upward conversion
-        ::add_skill<pro::skills::as_view> //
-        ::build {};
+  struct TestFacade2 : pro::facade_builder             //
+                       ::add_facade<TestFacade1, true> // Supports substitution
+                       ::add_skill<pro::skills::as_view> //
+                       ::build {};
   pro::proxy<TestFacade2> p1;
   pro::proxy_view<TestFacade2> p2 = p1;
   pro::proxy_view<TestFacade1> p3 = p2;
@@ -151,17 +150,16 @@ TEST(ProxyViewTests, TestUpwardConversion_FromNull) {
   ASSERT_FALSE(p3.has_value());
 }
 
-TEST(ProxyViewTests, TestUpwardConversion_FromValue) {
+TEST(ProxyViewTests, TestSubstitution_FromValue) {
   struct TestFacade1
       : pro::facade_builder                                              //
         ::add_convention<utils::spec::FreeToString, std::string() const> //
         ::build {};
-  struct TestFacade2
-      : pro::facade_builder                               //
-        ::support_copy<pro::constraint_level::nontrivial> //
-        ::add_facade<TestFacade1, true>   // Supports upward conversion
-        ::add_skill<pro::skills::as_view> //
-        ::build {};
+  struct TestFacade2 : pro::facade_builder                               //
+                       ::support_copy<pro::constraint_level::nontrivial> //
+                       ::add_facade<TestFacade1, true> // Supports substitution
+                       ::add_skill<pro::skills::as_view> //
+                       ::build {};
   pro::proxy<TestFacade2> p1 = pro::make_proxy<TestFacade2>(123);
   pro::proxy_view<TestFacade2> p2 = p1;
   pro::proxy_view<TestFacade1> p3 = p2;

@@ -15,7 +15,7 @@ struct accessor<P, D, Os...> : accessor<P, D, Os>... {
 };
 
 // (3)
-template <class P, class D>
+template <class P, class D, class T>
 struct accessor<P, D, T() cv ref noex> {
   operator T() cv ref noex;
 };

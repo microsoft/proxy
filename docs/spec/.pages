@@ -18,6 +18,7 @@ nav:
     - proxy_indirect_accessor: proxy_indirect_accessor.md
     - proxy_view<br />observer_facade: proxy_view.md
     - proxy: proxy
+    - substitution_dispatch: substitution_dispatch
     - weak_dispatch: weak_dispatch
     - weak_proxy<br />weak_facade: weak_proxy.md
   - Alias Templates:

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(msft_proxy4 VERSION 4.0.0 LANGUAGES CXX)
+project(msft_proxy4 VERSION 4.0.1 LANGUAGES CXX)
 add_library(msft_proxy4 INTERFACE)
 set_target_properties(msft_proxy4 PROPERTIES EXPORT_NAME proxy)
 add_library(msft_proxy4::proxy ALIAS msft_proxy4)
