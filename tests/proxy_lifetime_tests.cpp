@@ -30,7 +30,7 @@ struct TestRttiFacade : pro::facade_builder                           //
                         ::add_facade<TestFacade, true>                //
                         ::build {};
 
-// Additional static asserts for upward conversion
+// Additional static asserts for substitution
 static_assert(!std::is_convertible_v<pro::proxy<TestTrivialFacade>,
                                      pro::proxy<utils::spec::Stringable>>);
 static_assert(
@@ -1185,7 +1185,7 @@ TEST(ProxyLifetimeTests, Test_DirectConvension_Rvalue_Exception) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromValue) {
+TEST(ProxyLifetimeTests, Test_CopySubstitution_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -1209,14 +1209,14 @@ TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromValue) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyLifetimeTests, Test_UpwardCopyConvension_FromNull) {
+TEST(ProxyLifetimeTests, Test_CopySubstitution_FromNull) {
   pro::proxy<details::TestRttiFacade> p1;
   pro::proxy<details::TestFacade> p2 = p1;
   ASSERT_FALSE(p1.has_value());
   ASSERT_FALSE(p2.has_value());
 }
 
-TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromValue) {
+TEST(ProxyLifetimeTests, Test_MoveSubstitution_FromValue) {
   utils::LifetimeTracker tracker;
   std::vector<utils::LifetimeOperation> expected_ops;
   {
@@ -1237,7 +1237,7 @@ TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromValue) {
   ASSERT_TRUE(tracker.GetOperations() == expected_ops);
 }
 
-TEST(ProxyLifetimeTests, Test_UpwardMoveConvension_FromNull) {
+TEST(ProxyLifetimeTests, Test_MoveSubstitution_FromNull) {
   pro::proxy<details::TestRttiFacade> p1;
   pro::proxy<details::TestFacade> p2 = std::move(p1);
   ASSERT_FALSE(p1.has_value());

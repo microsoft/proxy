@@ -47,7 +47,7 @@ Please refer to the [Proxy's Frequently Asked Questions](https://microsoft.githu
 
 ### Hello World
 
-Let's get started with the following "Hello World" example ([run](https://godbolt.org/z/3G363xz71)):
+Let's get started with the following "Hello World" example ([run](https://godbolt.org/z/f7W36f3se)):
 
 ```cpp
 #include <format>
@@ -61,7 +61,7 @@ struct Formattable : pro::facade_builder
     ::build {};
 
 int main() {
-  std::string str = "Hello World";
+  static std::string str = "Hello World";
   pro::proxy<Formattable> p1 = &str;
   std::cout << std::format("*p1 = {}\n", *p1);  // Prints "*p1 = Hello World"
 
@@ -98,7 +98,7 @@ Note: If you prefer the library to be consumed as a (C++20) module, refer to [C+
 
 ### Hello World (Stream Version)
 
-In the previous "Hello World" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation ([run](https://godbolt.org/z/xcsM3v3cY)):
+In the previous "Hello World" example, we demonstrated how `proxy` could manage different types of objects and be formatted with `std::format`. While `std::format` is not the only option to print objects in C++, can we simply make `proxy` work with `std::cout`? The answer is "yes". The previous example is equivalent to the following implementation ([run](https://godbolt.org/z/447aMbrbj)):
 
 ```cpp
 #include <iomanip>
@@ -112,7 +112,7 @@ struct Streamable : pro::facade_builder
     ::build {};
 
 int main() {
-  std::string str = "Hello World";
+  static std::string str = "Hello World";
   pro::proxy<Streamable> p1 = &str;
   std::cout << "*p1 = " << *p1 << "\n";  // Prints "p1 = Hello World"
 
@@ -254,6 +254,7 @@ ctest --test-dir build -j
 
 ## Related Resources
 
+- August, 2025: [Announcing Proxy 4: The Next Leap in C++ Polymorphism](https://devblogs.microsoft.com/cppblog/announcing-proxy-4-the-next-leap-in-c-polymorphism/)
 - May, 2025: [Published ISO C++ proposal P3086R34 Proxy: A Pointer-Semantics-Based Polymorphism Library](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3086r4.pdf)
 - January, 2025: [Published ISO C++ proposal P3584R0: Enrich Facade Creation Facilities for the Pointer-Semantics-Based Polymorphism Library - Proxy](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3584r0.pdf)
 - November, 2024: [Analyzing the Performance of the “Proxy” Library](https://devblogs.microsoft.com/cppblog/analyzing-the-performance-of-the-proxy-library/)

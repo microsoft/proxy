@@ -1,4 +1,4 @@
-# Class template `explicit_conversion_dispatch::accessor`
+# Class template `substitution_dispatch::accessor`
 
 ```cpp
 // (1)
@@ -15,9 +15,9 @@ struct accessor<P, D, Os...> : accessor<P, D, Os>... {
 };
 
 // (3)
-template <class P, class D, class T>
-struct accessor<P, D, T() cv ref noex> {
-  explicit operator T() cv ref noex;
+template <class P, class D, facade F>
+struct accessor<P, D, proxy<F>() cv ref noex> {
+  operator proxy<F>() cv ref noex;
 };
 ```
 
@@ -25,4 +25,4 @@ struct accessor<P, D, T() cv ref noex> {
 
 `(2)` When `sizeof...(Os)` is greater than `1`, and `accessor<P, D, Os>...` are default-constructible, inherits all `accessor<P, D, Os>...` types and `using` their `operator return-type-of<Os>`. `return-type-of<O>` denotes the *return type* of the overload type `O`.
 
-`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `T() cv ref noex`, provides an explicit  `operator T()` with the same *cv ref noex* specifiers. `accessor::operator T()` is equivalent to `return proxy_invoke<D, T() cv ref noex>(static_cast<P cv <ref ? ref : &>>(*this))`.
+`(3)` When `sizeof...(Os)` is `1` and the only type `O` in `Os` is `proxy<F>() cv ref noex`, provides an implicit  `operator proxy<F>()` with the same *cv ref noex* specifiers. `accessor::operator proxy<F>()` is equivalent to `return proxy_invoke<proxy<F>() cv ref noex>(static_cast<P cv <ref ? ref : &>>(*this))` when `static_cast<const P&>(*this).has_value()` is `true`, or `return nullptr` otherwise.
