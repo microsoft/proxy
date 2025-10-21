@@ -680,6 +680,12 @@ consteval bool diagnose_proxiable_insufficient_destructibility() {
   return verdict;
 }
 
+consteval bool is_layout_well_formed(std::size_t size, std::size_t align) {
+  return size > 0u && std::has_single_bit(align) && size % align == 0u;
+}
+consteval bool is_cl_well_formed(constraint_level cl) {
+  return cl >= constraint_level::none && cl <= constraint_level::trivial;
+}
 template <class F>
 consteval bool is_facade_constraints_well_formed() {
   if constexpr (requires {
@@ -693,8 +699,10 @@ consteval bool is_facade_constraints_well_formed() {
                     return std::tuple{F::max_size, F::max_align, F::copyability,
                                       F::relocatability, F::destructibility};
                   })) {
-      return std::has_single_bit(F::max_align) &&
-             F::max_size % F::max_align == 0u;
+      return is_layout_well_formed(F::max_size, F::max_align) &&
+             is_cl_well_formed(F::copyability) &&
+             is_cl_well_formed(F::relocatability) &&
+             is_cl_well_formed(F::destructibility);
     }
   }
   return false;
@@ -2044,22 +2052,25 @@ struct basic_facade_builder {
       details::merge_constraint(Destructibility, F::destructibility)>;
   template <std::size_t PtrSize,
             std::size_t PtrAlign = details::max_align_of(PtrSize)>
-    requires(std::has_single_bit(PtrAlign) && PtrSize % PtrAlign == 0u)
+    requires(details::is_layout_well_formed(PtrSize, PtrAlign))
   using restrict_layout =
       basic_facade_builder<Cs, Rs, details::merge_size(MaxSize, PtrSize),
                            details::merge_size(MaxAlign, PtrAlign), Copyability,
                            Relocatability, Destructibility>;
   template <constraint_level CL>
+    requires(details::is_cl_well_formed(CL))
   using support_copy =
       basic_facade_builder<Cs, Rs, MaxSize, MaxAlign,
                            details::merge_constraint(Copyability, CL),
                            Relocatability, Destructibility>;
   template <constraint_level CL>
+    requires(details::is_cl_well_formed(CL))
   using support_relocation =
       basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability,
                            details::merge_constraint(Relocatability, CL),
                            Destructibility>;
   template <constraint_level CL>
+    requires(details::is_cl_well_formed(CL))
   using support_destruction =
       basic_facade_builder<Cs, Rs, MaxSize, MaxAlign, Copyability,
                            Relocatability,

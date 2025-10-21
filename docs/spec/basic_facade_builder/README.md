@@ -12,7 +12,7 @@ constexpr constraint_level default-cl = static_cast<constraint_level>(
     std::numeric_limits<std::underlying_type_t<constraint_level>>::min()); // exposition only
 ```
 
-Given a [facade](../facade.md ) type `F`, any meaningful value of `F::max_size` and `F::max_align` is less than *default-size*; any meaningful value of `F::copyability`, `F::relocatability`, and `F::destructibility` is greater than *default-cl*.
+Given a [facade](../facade.md) type `F`, any meaningful value of `F::max_size` and `F::max_align` is less than *default-size*; any meaningful value of `F::copyability`, `F::relocatability`, and `F::destructibility` is greater than *default-cl*.
 
 ```cpp
 template <class Cs, class Rs, std::size_t MaxSize, std::size_t MaxAlign,
@@ -54,7 +54,7 @@ using facade_builder =
 
 ## Notes
 
-The design of `basic_facade_builder` utilizes template metaprogramming techniques. We recommend the following 2 guidelines when using `basic_facade_builder` to define a facade type.
+The design of `basic_facade_builder` utilizes template metaprogramming techniques. We recommend the following guidelines when using `basic_facade_builder` to define a facade type.
 
 - **Define a type for each facade.**
 
