@@ -325,28 +325,61 @@ struct BadFacade_BadConstraints_UnexpectedType {
 };
 static_assert(!pro::facade<BadFacade_BadConstraints_UnexpectedType>);
 
-struct BadFacade_BadConstraints_BadAlignment {
-  using convention_types = std::tuple<>;
-  using reflection_types = std::tuple<>;
-  static constexpr std::size_t max_size = 6u;
-  static constexpr std::size_t max_align = 6u; // Should be a power of 2
-  static constexpr auto copyability = pro::constraint_level::none;
-  static constexpr auto relocatability = pro::constraint_level::nothrow;
-  static constexpr auto destructibility = pro::constraint_level::nothrow;
-};
-static_assert(!pro::facade<BadFacade_BadConstraints_BadAlignment>);
+// Well-formed facade_impl specialization
+static_assert(
+    pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 8, 4, pro::constraint_level::none,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
 
-struct BadFacade_BadConstraints_BadSize {
-  using convention_types = std::tuple<>;
-  using reflection_types = std::tuple<>;
-  static constexpr std::size_t max_size =
-      6u; // Should be a multiple of max_alignment
-  static constexpr std::size_t max_align = 4u;
-  static constexpr auto copyability = pro::constraint_level::none;
-  static constexpr auto relocatability = pro::constraint_level::nothrow;
-  static constexpr auto destructibility = pro::constraint_level::nothrow;
-};
-static_assert(!pro::facade<BadFacade_BadConstraints_BadSize>);
+// Bad size (max_size should be positive)
+static_assert(
+    !pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 0, 4, pro::constraint_level::none,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
+
+// Bad size (max_size should be a multiple of max_align)
+static_assert(
+    !pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 10, 4, pro::constraint_level::none,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
+
+// Bad alignment (max_align should be a power of 2)
+static_assert(
+    !pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 6, 6, pro::constraint_level::none,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
+
+// Bad copyability (less than constraint_level::none)
+static_assert(
+    !pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 8, 4, (pro::constraint_level)-1,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
+
+// Bad copyability (greater than constraint_level::trivial)
+static_assert(
+    !pro::facade<pro::details::facade_impl<
+        std::tuple<>, std::tuple<>, 8, 4, (pro::constraint_level)100,
+        pro::constraint_level::trivial, pro::constraint_level::nothrow>>);
+
+// Bad relocatability (less than constraint_level::none)
+static_assert(!pro::facade<pro::details::facade_impl<
+                  std::tuple<>, std::tuple<>, 8, 4, pro::constraint_level::none,
+                  (pro::constraint_level)-1, pro::constraint_level::nothrow>>);
+
+// Bad relocatability (greater than constraint_level::trivial)
+static_assert(!pro::facade<pro::details::facade_impl<
+                  std::tuple<>, std::tuple<>, 8, 4, pro::constraint_level::none,
+                  (pro::constraint_level)100, pro::constraint_level::nothrow>>);
+
+// Bad destructibility (less than constraint_level::none)
+static_assert(!pro::facade<pro::details::facade_impl<
+                  std::tuple<>, std::tuple<>, 8, 4, pro::constraint_level::none,
+                  pro::constraint_level::trivial, (pro::constraint_level)-1>>);
+
+// Bad destructibility (greater than constraint_level::trivial)
+static_assert(!pro::facade<pro::details::facade_impl<
+                  std::tuple<>, std::tuple<>, 8, 4, pro::constraint_level::none,
+                  pro::constraint_level::trivial, (pro::constraint_level)100>>);
 
 struct BadFacade_BadConstraints_NotConstant {
   using convention_types = std::tuple<>;
@@ -401,6 +434,43 @@ struct FacadeWithSizeOfNonPowerOfTwo : pro::facade_builder   //
 static_assert(pro::facade<FacadeWithSizeOfNonPowerOfTwo>);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::max_size == 6u);
 static_assert(FacadeWithSizeOfNonPowerOfTwo::max_align == 2u);
+
+template <std::size_t Size, std::size_t Align>
+concept IsFacadeBuilderWellFormedWithGivenLayout =
+    requires { typename pro::facade_builder::restrict_layout<Size, Align>; };
+static_assert(IsFacadeBuilderWellFormedWithGivenLayout<6u, 1u>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenLayout<6u, 3u>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenLayout<1u, 2u>);
+
+template <pro::constraint_level CL>
+concept IsFacadeBuilderWellFormedWithGivenCopyability =
+    requires { typename pro::facade_builder::support_copy<CL>; };
+static_assert(
+    IsFacadeBuilderWellFormedWithGivenCopyability<pro::constraint_level::none>);
+static_assert(
+    !IsFacadeBuilderWellFormedWithGivenCopyability<(pro::constraint_level)-1>);
+static_assert(
+    !IsFacadeBuilderWellFormedWithGivenCopyability<(pro::constraint_level)100>);
+
+template <pro::constraint_level CL>
+concept IsFacadeBuilderWellFormedWithGivenRelocatability =
+    requires { typename pro::facade_builder::support_relocation<CL>; };
+static_assert(IsFacadeBuilderWellFormedWithGivenRelocatability<
+              pro::constraint_level::none>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenRelocatability<
+              (pro::constraint_level)-1>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenRelocatability<
+              (pro::constraint_level)100>);
+
+template <pro::constraint_level CL>
+concept IsFacadeBuilderWellFormedWithGivenDestructibility =
+    requires { typename pro::facade_builder::support_destruction<CL>; };
+static_assert(IsFacadeBuilderWellFormedWithGivenDestructibility<
+              pro::constraint_level::none>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenDestructibility<
+              (pro::constraint_level)-1>);
+static_assert(!IsFacadeBuilderWellFormedWithGivenDestructibility<
+              (pro::constraint_level)100>);
 
 static_assert(!std::is_default_constructible_v<
               pro::proxy_indirect_accessor<DefaultFacade>>);
