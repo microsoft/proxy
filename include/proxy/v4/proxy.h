@@ -46,12 +46,6 @@
 #define PROD_UNREACHABLE() std::abort()
 #endif // __cpp_lib_unreachable >= 202202L
 
-#if __cpp_trivial_relocatability >= 202502L
-#define PROD_TR_IF_ELIGIBLE trivially_relocatable_if_eligible
-#else
-#define PROD_TR_IF_ELIGIBLE
-#endif // __cpp_trivial_relocatability >= 202502L
-
 namespace pro::inline v4 {
 
 // =============================================================================
@@ -630,12 +624,6 @@ struct refl_accessor_traits<R, F, true>
 template <class R, class F, bool IsDirect>
 using refl_accessor_t = typename refl_accessor_traits<R, F, IsDirect>::type;
 
-struct tr_blocker {
-  tr_blocker() = default;
-  tr_blocker(const tr_blocker&) noexcept {}
-  tr_blocker& operator=(const tr_blocker&) noexcept { return *this; }
-};
-
 template <class P>
 struct ptr_traits : inapplicable_traits {};
 template <class P>
@@ -797,11 +785,9 @@ struct facade_traits<F>
   using indirect_accessor =
       composite_t<typename facade_traits::conv_indirect_accessor,
                   typename facade_traits::refl_indirect_accessor>;
-  using direct_accessor = composite_t<
-      typename facade_traits::conv_direct_accessor,
-      typename facade_traits::refl_direct_accessor,
-      std::conditional_t<F::relocatability == constraint_level::trivial, void,
-                         tr_blocker>>;
+  using direct_accessor =
+      composite_t<typename facade_traits::conv_direct_accessor,
+                  typename facade_traits::refl_direct_accessor>;
 
   template <class P>
   static consteval void diagnose_proxiable() {
@@ -934,9 +920,8 @@ class proxy_indirect_accessor
 };
 
 template <facade F>
-class proxy PROD_TR_IF_ELIGIBLE
-    : public details::facade_traits<F>::direct_accessor,
-      public details::inplace_ptr<proxy_indirect_accessor<F>> {
+class proxy : public details::facade_traits<F>::direct_accessor,
+              public details::inplace_ptr<proxy_indirect_accessor<F>> {
   friend struct details::proxy_helper;
   static_assert(details::facade_traits<F>::applicable);
 
@@ -1559,9 +1544,8 @@ protected:
 };
 
 template <class T, class Alloc>
-class PRO4D_ENFORCE_EBO allocated_ptr PROD_TR_IF_ELIGIBLE
-    : private alloc_aware<Alloc>,
-      public indirect_ptr<inplace_ptr<T>> {
+class PRO4D_ENFORCE_EBO allocated_ptr : private alloc_aware<Alloc>,
+                                        public indirect_ptr<inplace_ptr<T>> {
 public:
   template <class... Args>
   allocated_ptr(const Alloc& alloc, Args&&... args)
@@ -1588,8 +1572,7 @@ struct PRO4D_ENFORCE_EBO compact_ptr_storage : alloc_aware<Alloc>,
         inplace_ptr<T>(std::in_place, std::forward<Args>(args)...) {}
 };
 template <class T, class Alloc>
-class compact_ptr PROD_TR_IF_ELIGIBLE
-    : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
+class compact_ptr : public indirect_ptr<compact_ptr_storage<T, Alloc>> {
   using Storage = compact_ptr_storage<T, Alloc>;
 
 public:
@@ -1621,7 +1604,7 @@ struct PRO4D_ENFORCE_EBO shared_compact_ptr_storage
         inplace_ptr<T>(std::in_place, std::forward<Args>(args)...) {}
 };
 template <class T, class Alloc>
-class shared_compact_ptr PROD_TR_IF_ELIGIBLE
+class shared_compact_ptr
     : public indirect_ptr<shared_compact_ptr_storage<T, Alloc>> {
   using Storage = shared_compact_ptr_storage<T, Alloc>;
 
@@ -1660,7 +1643,7 @@ struct strong_weak_compact_ptr_storage : strong_weak_compact_ptr_storage_base,
 template <class T, class Alloc>
 class weak_compact_ptr;
 template <class T, class Alloc>
-class strong_compact_ptr PROD_TR_IF_ELIGIBLE
+class strong_compact_ptr
     : public indirect_ptr<strong_weak_compact_ptr_storage<T, Alloc>> {
   using Storage = strong_weak_compact_ptr_storage<T, Alloc>;
   friend class weak_compact_ptr<T, Alloc>;
@@ -1701,7 +1684,7 @@ public:
   const T&& operator*() const&& noexcept { return std::move(*operator->()); }
 };
 template <class T, class Alloc>
-class weak_compact_ptr PROD_TR_IF_ELIGIBLE {
+class weak_compact_ptr {
 public:
   weak_compact_ptr(const strong_compact_ptr<T, Alloc>& rhs) noexcept
       : ptr_(rhs.ptr_) {
@@ -2653,7 +2636,6 @@ private:
 } // namespace std
 #endif // __STDC_HOSTED__ && __has_include(<format>)
 
-#undef PROD_TR_IF_ELIGIBLE
 #undef PROD_UNREACHABLE
 #undef PROD_NO_UNIQUE_ADDRESS_ATTRIBUTE
 

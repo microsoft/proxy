@@ -16,7 +16,7 @@ constexpr bool is_bitwise_trivially_relocatable_v =
 
 The class template `is_bitwise_trivially_relocatable<T>` is a type trait whose `value` is `true` when objects of (complete) type `T` can be *bitwise trivially relocated*: a new object of type `T` can be created at an arbitrary suitably aligned storage location by performing a raw byte-wise copy (as if by `std::memcpy`) of `sizeof(T)` bytes from the original object's storage, and the original object can then be considered destroyed (its lifetime ends) without invoking its destructor. Otherwise the `value` is `false`.
 
-Semantics follow the model described in [P3780R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3780r0.html), not the `std::trivially_relocatable` facility from [P2786R13](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2786r13.html) (C++26). The library keeps this separate trait for portability and because its internal optimizations rely on the "memcpy relocation" guarantee.
+Semantics follow the model described in [P3780R0](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3780r0.html). The library keeps this separate trait for portability and because its internal optimizations rely on the "memcpy relocation" guarantee.
 
 ## Definition
 
@@ -44,12 +44,6 @@ In addition to the primary template, the implementation provides (positive) spec
 These specializations reflect empirical knowledge of the representations of common "fancy pointer" types: relocating them with a raw byte copy preserves their invariants, and skipping destructor invocation of the source object has no observable effect beyond finalization already accounted for in the target representation.
 
 ## Notes
-
-### Relationship to `std::trivially_relocatable`
-
-C++26 `std::trivially_relocatable` may encompass additional nuances (it can be satisfied by types whose relocation uses compiler transformations beyond an as-if byte copy). A type for which this trait is `true` is always a good candidate to be `std::trivially_relocatable`, but the converse is not required by this library.
-
-### Customization Guidelines
 
 You may provide additional specializations of `is_bitwise_trivially_relocatable<T>` (in namespace `pro`) to opt in types you own. A correct specialization must ensure the type does not depend on its *address* remaining stable (self-pointers, intrusive container hooks, pointer provenance, etc.).
 
