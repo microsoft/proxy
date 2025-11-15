@@ -1643,45 +1643,42 @@ struct strong_weak_compact_ptr_storage : strong_weak_compact_ptr_storage_base,
 template <class T, class Alloc>
 class weak_compact_ptr;
 template <class T, class Alloc>
-class strong_compact_ptr
-    : public indirect_ptr<strong_weak_compact_ptr_storage<T, Alloc>> {
+class strong_compact_ptr {
   using Storage = strong_weak_compact_ptr_storage<T, Alloc>;
   friend class weak_compact_ptr<T, Alloc>;
 
 public:
   using weak_type = weak_compact_ptr<T, Alloc>;
 
-  explicit strong_compact_ptr(Storage* ptr) noexcept
-      : indirect_ptr<Storage>(ptr) {}
+  explicit strong_compact_ptr(Storage* ptr) noexcept : ptr_(ptr) {}
   template <class... Args>
   strong_compact_ptr(const Alloc& alloc, Args&&... args)
-      : indirect_ptr<Storage>(
-            allocate<Storage>(alloc, alloc, std::forward<Args>(args)...)) {}
-  strong_compact_ptr(const strong_compact_ptr& rhs) noexcept
-      : indirect_ptr<Storage>(rhs.ptr_) {
-    this->ptr_->strong_count.fetch_add(1, std::memory_order::relaxed);
+      : ptr_(allocate<Storage>(alloc, alloc, std::forward<Args>(args)...)) {}
+  strong_compact_ptr(const strong_compact_ptr& rhs) noexcept : ptr_(rhs.ptr_) {
+    ptr_->strong_count.fetch_add(1, std::memory_order::relaxed);
   }
   strong_compact_ptr(strong_compact_ptr&& rhs) = delete;
   ~strong_compact_ptr() noexcept(std::is_nothrow_destructible_v<T>) {
-    if (this->ptr_->strong_count.fetch_sub(1, std::memory_order::acq_rel) ==
-        1) {
+    if (ptr_->strong_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
       std::destroy_at(operator->());
-      if (this->ptr_->weak_count.fetch_sub(1u, std::memory_order::release) ==
-          1) {
-        deallocate(this->ptr_->alloc, this->ptr_);
+      if (ptr_->weak_count.fetch_sub(1u, std::memory_order::release) == 1) {
+        deallocate(ptr_->alloc, ptr_);
       }
     }
   }
   T* operator->() noexcept {
-    return std::launder(reinterpret_cast<T*>(&this->ptr_->value));
+    return std::launder(reinterpret_cast<T*>(&ptr_->value));
   }
   const T* operator->() const noexcept {
-    return std::launder(reinterpret_cast<const T*>(&this->ptr_->value));
+    return std::launder(reinterpret_cast<const T*>(&ptr_->value));
   }
   T& operator*() & noexcept { return *operator->(); }
   const T& operator*() const& noexcept { return *operator->(); }
   T&& operator*() && noexcept { return std::move(*operator->()); }
   const T&& operator*() const&& noexcept { return std::move(*operator->()); }
+
+private:
+  strong_weak_compact_ptr_storage<T, Alloc>* ptr_;
 };
 template <class T, class Alloc>
 class weak_compact_ptr {
