@@ -23,8 +23,8 @@ The `emplace` function templates change the contained value to an object of type
 
 First, the current contained value (if any) is destroyed as if by calling [reset()](reset.md). Then:
 
-- `(1)` Sets the contained value to an object of type `P` and direct-non-list-initialized with `std::forward<Args>(args)...`.
-- `(2)` Sets the contained value to an object of type `P` and direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+- `(1)` Sets the contained value to an object of type `P`, direct-non-list-initialized with `std::forward<Args>(args)...`. Participates in overload resolution only if `P` is a pointer-like type eligible for `proxy` (see [*ProFacade* requirements](../ProFacade.md)).
+- `(2)` Sets the contained value to an object of type `P`, direct-non-list-initialized with `il, std::forward<Args>(args)...`. Participates in overload resolution only if `P` is a pointer-like type eligible for `proxy`.
 
 *Since 3.3.0*: For `(1-2)`, if [`proxiable<P, F>`](../proxiable.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 

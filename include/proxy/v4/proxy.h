@@ -627,12 +627,13 @@ using refl_accessor_t = typename refl_accessor_traits<R, F, IsDirect>::type;
 template <class P>
 struct ptr_traits : inapplicable_traits {};
 template <class P>
-  requires(requires { typename std::pointer_traits<P>::element_type; })
+  requires((
+               requires { *std::declval<P&>(); } ||
+               requires { typename P::element_type; }) &&
+           requires { typename std::pointer_traits<P>::element_type; })
 struct ptr_traits<P> : applicable_traits {};
 template <class F>
 struct ptr_traits<proxy<F>> : inapplicable_traits {};
-template <>
-struct ptr_traits<std::nullptr_t> : inapplicable_traits {};
 
 template <class P, class F, std::size_t ActualSize, std::size_t MaxSize>
 consteval bool diagnose_proxiable_size_too_large() {
@@ -908,6 +909,7 @@ add_qualifier_t<proxy<F>, Q>
 
 template <class P, class F>
 concept proxiable = facade<F> && details::facade_traits<F>::applicable &&
+                    details::ptr_traits<P>::applicable &&
                     details::facade_traits<F>::template applicable_ptr<P>;
 
 template <facade F>
@@ -1686,6 +1688,8 @@ public:
 template <class T, class Alloc>
 class weak_compact_ptr {
 public:
+  using element_type = T;
+
   weak_compact_ptr(const strong_compact_ptr<T, Alloc>& rhs) noexcept
       : ptr_(rhs.ptr_) {
     ptr_->weak_count.fetch_add(1, std::memory_order::relaxed);
