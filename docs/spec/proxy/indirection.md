@@ -1,23 +1,15 @@
 # `proxy::operator->`<br />`proxy::operator*`
 
-The definitions of `proxy::operator->` and `proxy::operator*` make use of the following exposition-only constant:
-
-```cpp
-static constexpr bool has-indirection = see below;  // exposition only
-```
-
-As per [`facade<F>`](../facade.md), `typename F::convention_types` shall be a [tuple-like](https://en.cppreference.com/w/cpp/utility/tuple/tuple-like) type containing any number of distinct types `Cs`. Let `Cs2` be the types in `Cs` where each type `C` meets the [*ProAccessible* requirements](../ProAccessible.md) of `F` and `C::is_direct` is `false`. *has-indirection* is `true` if `Cs2` contains at least one type; otherwise, it is `false`. *indirect-accessor* is a non-copyable type that inherits from every type in `Cs2`.
-
 ```cpp
 // (1)
-proxy_indirect_accessor<F>* operator->() noexcept requires(has-indirection);
-const proxy_indirect_accessor<F>* operator->() const noexcept requires(has-indirection);
+proxy_indirect_accessor<F>* operator->() noexcept;
+const proxy_indirect_accessor<F>* operator->() const noexcept;
 
 // (2)
-proxy_indirect_accessor<F>& operator*() & noexcept requires(has-indirection);
-const proxy_indirect_accessor<F>& operator*() const& noexcept requires(has-indirection);
-proxy_indirect_accessor<F>&& operator*() && noexcept requires(has-indirection);
-const proxy_indirect_accessor<F>&& operator*() const&& noexcept requires(has-indirection);
+proxy_indirect_accessor<F>& operator*() & noexcept;
+const proxy_indirect_accessor<F>& operator*() const& noexcept;
+proxy_indirect_accessor<F>&& operator*() && noexcept;
+const proxy_indirect_accessor<F>&& operator*() const&& noexcept;
 ```
 
 These operators access the accessors of the indirect conventions, as if dereferencing the contained value.
