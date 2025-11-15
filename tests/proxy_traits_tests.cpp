@@ -483,4 +483,18 @@ static_assert(
 static_assert(
     !std::is_move_assignable_v<pro::proxy_indirect_accessor<DefaultFacade>>);
 
+// proxy shall not be constructible from an arbitrary class template
+// instantiation. See https://github.com/microsoft/proxy/issues/366
+template <class T>
+struct ProxyWrapperTemplate {
+  explicit ProxyWrapperTemplate(pro::proxy<DefaultFacade> p)
+      : p_(std::move(p)) {}
+
+  pro::proxy<DefaultFacade> p_;
+};
+static_assert(!pro::proxiable<int, DefaultFacade>);
+static_assert(!std::is_constructible_v<pro::proxy<DefaultFacade>,
+                                       ProxyWrapperTemplate<void>>);
+static_assert(std::is_move_constructible_v<ProxyWrapperTemplate<void>>);
+
 } // namespace proxy_traits_tests_details
