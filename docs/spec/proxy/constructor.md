@@ -44,9 +44,9 @@ Creates a new `proxy`.
 - `(1)` Default constructor and the constructor taking `nullptr` construct a `proxy` that does not contain a value.
 - `(2)` Copy constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. As per the `requires` clause, the copy constructor is trivial when `F::copyability == constraint_level::trivial`.
 - `(3)` Move constructor constructs a `proxy` whose contained value is that of `rhs` if `rhs` contains a value, or otherwise, constructs a `proxy` that does not contain a value. `rhs` is in a valid but unspecified state after move construction. As per the `requires` clause, the move constructor does not participate in overload resolution when `F::copyability == constraint_level::trivial`, so that a move construction falls back to the trivial copy constructor.
-- `(4)` Let `VP` be `std::decay_t<P>`. Constructor taking a value of pointer constructs a `proxy` whose contained value is of type `VP` and direct-non-list-initialized with `std::forward<P>(ptr)`. This overload participates in overload resolution only if `std::decay_t<P>` is not a specialization of `proxy` nor a specialization of `std::in_place_type_t`.
-- `(5)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `std::forward<Args>(args)...`.
-- `(6)` Constructs a `proxy` whose contained value is of type `P` and direct-non-list-initialized with `il, std::forward<Args>(args)...`.
+- `(4)` Let `VP` be `std::decay_t<P>`. Constructs a `proxy` whose contained value is of type `VP`, direct-non-list-initialized with `std::forward<P>(ptr)`. Participates in overload resolution only if `VP` is a pointer-like type eligible for `proxy` (see [*ProFacade* requirements](../ProFacade.md)).
+- `(5)` Constructs a `proxy` whose contained value is of type `P`, direct-non-list-initialized with `std::forward<Args>(args)...`. Participates in overload resolution only if `P` is a pointer-like type eligible for `proxy`.
+- `(6)` Constructs a `proxy` whose contained value is of type `P`, direct-non-list-initialized with `il, std::forward<Args>(args)...`. Participates in overload resolution only if `P` is a pointer-like type eligible for `proxy`.
 
 *Since 3.3.0*: For `(4-6)`, if [`proxiable<std::decay_t<P>, F>`](../proxiable.md) is `false`, the program is ill-formed and diagnostic messages are generated.
 

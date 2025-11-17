@@ -12,6 +12,15 @@ A type `F` meets the *ProFacade* requirements of a type `P` if `F` meets the [*P
 | `F::relocatability`            | A [core constant expression](https://en.cppreference.com/w/cpp/language/constant_expression) of type [`constraint_level`](constraint_level.md) that defines the required relocatability of `P`. |
 | `F::destructibility`           | A [core constant expression](https://en.cppreference.com/w/cpp/language/constant_expression) of type [`constraint_level`](constraint_level.md) that defines the required destructibility of `P`. |
 
+*Since 4.0.2*: `P` shall be a pointer-like type eligible for `proxy`. A type `P` is eligible if `P` is not a specialization of `proxy` and the following condition is satisfied:
+
+```cpp
+(requires { *std::declval<P&>(); } || requires { typename P::element_type; }) &&
+requires { typename std::pointer_traits<P>::element_type; }
+```
+
+In other words, `P` either supports dereferencing or provides an `element_type`, and `std::pointer_traits<P>` yields a valid `element_type`.
+
 ## Notes
 
 Relocatability is defined as *move-construct an object and then destroy the original instance*. Specifically, the value of `F::relocatability` maps to the following requirements on `P`:
