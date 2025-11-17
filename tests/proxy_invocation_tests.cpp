@@ -161,6 +161,9 @@ std::string Dump(T&& value) noexcept {
 
 PRO_DEF_FREE_DISPATCH(FreeDump, Dump);
 
+PRO_DEF_FREE_DISPATCH(FreeInvoke, std::invoke, Invoke);
+PRO_DEF_FREE_AS_MEM_DISPATCH(MemInvoke, std::invoke, Invoke);
+
 } // namespace proxy_invocation_tests_details
 
 namespace details = proxy_invocation_tests_details;
@@ -247,7 +250,7 @@ TEST(ProxyInvocationTests, TestRecursiveDefinition) {
   ASSERT_EQ(sum, 21);
 }
 
-TEST(ProxyInvocationTests, TestOverloadResolution) {
+TEST(ProxyInvocationTests, TestOverloadResolution_Member) {
   struct OverloadedCallable
       : pro::facade_builder //
         ::add_convention<pro::operator_dispatch<"()">, void(int), void(double),
@@ -270,6 +273,54 @@ TEST(ProxyInvocationTests, TestOverloadResolution) {
   (*p)("lalala", 0);
   ASSERT_EQ(side_effect, (details::GetTypeIndices<std::string, int>()));
   ASSERT_FALSE((std::is_invocable_v<decltype(*p), std::vector<int>>));
+}
+
+TEST(ProxyInvocationTests, TestOverloadResolution_Free) {
+  struct OverloadedCallable
+      : pro::facade_builder //
+        ::add_convention<details::FreeInvoke, void(int), void(double),
+                         void(const char*), void(char*),
+                         void(std::string, int)> //
+        ::build {};
+  std::vector<std::type_index> side_effect;
+  auto p = pro::make_proxy<OverloadedCallable>([&](auto&&... args) {
+    side_effect = details::GetTypeIndices<std::decay_t<decltype(args)>...>();
+  });
+  Invoke(*p, 123);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<int>());
+  Invoke(*p, 1.23);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<double>());
+  char foo[2];
+  Invoke(*p, foo);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<char*>());
+  Invoke(*p, "lalala");
+  ASSERT_EQ(side_effect, details::GetTypeIndices<const char*>());
+  Invoke(*p, "lalala", 0);
+  ASSERT_EQ(side_effect, (details::GetTypeIndices<std::string, int>()));
+}
+
+TEST(ProxyInvocationTests, TestOverloadResolution_FreeAsMem) {
+  struct OverloadedInvocable
+      : pro::facade_builder //
+        ::add_convention<details::MemInvoke, void(int), void(double),
+                         void(const char*), void(char*),
+                         void(std::string, int)> //
+        ::build {};
+  std::vector<std::type_index> side_effect;
+  auto p = pro::make_proxy<OverloadedInvocable>([&](auto&&... args) {
+    side_effect = details::GetTypeIndices<std::decay_t<decltype(args)>...>();
+  });
+  p->Invoke(123);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<int>());
+  p->Invoke(1.23);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<double>());
+  char foo[2];
+  p->Invoke(foo);
+  ASSERT_EQ(side_effect, details::GetTypeIndices<char*>());
+  p->Invoke("lalala");
+  ASSERT_EQ(side_effect, details::GetTypeIndices<const char*>());
+  p->Invoke("lalala", 0);
+  ASSERT_EQ(side_effect, (details::GetTypeIndices<std::string, int>()));
 }
 
 TEST(ProxyInvocationTests, TestNoexcept) {
