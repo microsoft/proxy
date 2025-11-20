@@ -34,106 +34,154 @@
       "BenchmarkingResultsPath": "artifacts/drop-oneapi/benchmarking-results.json"
     }
   ],
-  "Metrics": [
+  "MetricGroups": [
     {
-      "Name": "Indirect invocation on small objects via `proxy` vs. virtual functions",
-      "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxy",
-      "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
+      "Name": "Core Metrics",
+      "Description": "These benchmarks define the library's primary success criteria. They should generally reflect positive outcomes and remain stable as the library evolves, with regressions carefully monitored and addressed.",
+      "Metrics": [
+        {
+          "Name": "Indirect invocation on small objects via `proxy` vs. `std::unique_ptr` + virtual functions",
+          "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
+        },
+        {
+          "Name": "Indirect invocation on small objects via `proxy_view` vs. raw pointer + virtual functions",
+          "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxyView",
+          "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction_RawPtr"
+        },
+        {
+          "Name": "Indirect invocation on small objects via `proxy` (shared ownership) vs. `std::shared_ptr` + virtual functions",
+          "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxy_Shared",
+          "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction_Shared"
+        },
+        {
+          "Name": "Indirect invocation on large objects via `proxy` vs. `std::unique_ptr` + virtual functions",
+          "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
+        },
+        {
+          "Name": "Indirect invocation on large objects via `proxy_view` vs. raw pointer + virtual functions",
+          "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxyView",
+          "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction_RawPtr"
+        },
+        {
+          "Name": "Indirect invocation on large objects via `proxy` (shared ownership) vs. `std::shared_ptr` + virtual functions",
+          "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy_Shared",
+          "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction_Shared"
+        },
+        {
+          "Name": "Creation for small objects with `proxy` vs. `std::unique_ptr`",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithUniquePtr"
+        },
+        {
+          "Name": "Creation for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (with memory pool)",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithSharedPtr_Pooled"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (with memory pool) vs. `std::unique_ptr`",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy_Pooled",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithUniquePtr"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy_SharedPooled",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithSharedPtr_Pooled"
+        }
+      ]
     },
     {
-      "Name": "Indirect invocation on small objects via `proxy_view` vs. virtual functions",
-      "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxyView",
-      "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction"
+      "Name": "Comparative Metrics",
+      "Description": "These benchmarks provide perspective by comparison with other well-known implementations. They are not required to consistently show positive results, but instead highlight relative strengths, trade-offs, and areas of differentiation.",
+      "Metrics": [
+        {
+          "Name": "Creation for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (without memory pool)",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithSharedPtr"
+        },
+        {
+          "Name": "Creation for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy_Shared",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithSharedPtr"
+        },
+        {
+          "Name": "Creation for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy_SharedPooled",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithSharedPtr_Pooled"
+        },
+        {
+          "Name": "Creation for small objects with `proxy` vs. `std::any`",
+          "TargetBenchmarkName": "BM_SmallObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectCreationWithAny"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (without memory pool) vs. `std::unique_ptr`",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithUniquePtr"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both without memory pool)",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithSharedPtr"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both with memory pool)",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy_Pooled",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithSharedPtr_Pooled"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy_Shared",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithSharedPtr"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (without memory pool) vs. `std::any`",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithAny"
+        },
+        {
+          "Name": "Creation for large objects with `proxy` (with memory pool) vs. `std::any`",
+          "TargetBenchmarkName": "BM_LargeObjectCreationWithProxy_Pooled",
+          "BaselineBenchmarkName": "BM_LargeObjectCreationWithAny"
+        }
+      ]
     },
     {
-      "Name": "Indirect invocation on small objects via `proxy` vs. virtual functions (shared ownership)",
-      "TargetBenchmarkName": "BM_SmallObjectInvocationViaProxy_Shared",
-      "BaselineBenchmarkName": "BM_SmallObjectInvocationViaVirtualFunction_Shared"
-    },
-    {
-      "Name": "Indirect invocation on large objects via `proxy` vs. virtual functions",
-      "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy",
-      "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
-    },
-    {
-      "Name": "Indirect invocation on large objects via `proxy_view` vs. virtual functions",
-      "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxyView",
-      "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction"
-    },
-    {
-      "Name": "Indirect invocation on large objects via `proxy` vs. virtual functions (shared ownership)",
-      "TargetBenchmarkName": "BM_LargeObjectInvocationViaProxy_Shared",
-      "BaselineBenchmarkName": "BM_LargeObjectInvocationViaVirtualFunction_Shared"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::unique_ptr`",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithUniquePtr"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (without memory pool)",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (with memory pool)",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr_Pooled"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy_Shared",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy_SharedPooled",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithSharedPtr_Pooled"
-    },
-    {
-      "Name": "Basic lifetime management for small objects with `proxy` vs. `std::any`",
-      "TargetBenchmarkName": "BM_SmallObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_SmallObjectManagementWithAny"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (without memory pool) vs. `std::unique_ptr`",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithUniquePtr"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (with memory pool) vs. `std::unique_ptr`",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithUniquePtr"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both without memory pool)",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (exclusive ownership) vs. `std::shared_ptr` (both with memory pool)",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr_Pooled"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both without memory pool)",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Shared",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (shared ownership) vs. `std::shared_ptr` (both with memory pool)",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_SharedPooled",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithSharedPtr_Pooled"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (without memory pool) vs. `std::any`",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithAny"
-    },
-    {
-      "Name": "Basic lifetime management for large objects with `proxy` (with memory pool) vs. `std::any`",
-      "TargetBenchmarkName": "BM_LargeObjectManagementWithProxy_Pooled",
-      "BaselineBenchmarkName": "BM_LargeObjectManagementWithAny"
+      "Name": "Observational Metrics",
+      "Description": "These benchmarks are included for completeness and transparency. While they may not represent target outcomes, they offer valuable context for users to understand the broader characteristics of the library.",
+      "Metrics": [
+        {
+          "Name": "Relocation on small objects via `proxy` (trivially-relocatable by default) vs. `proxy` (nothrow-relocatable)",
+          "TargetBenchmarkName": "BM_SmallObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectRelocationViaProxy_NothrowRelocatable"
+        },
+        {
+          "Name": "Relocation on small objects via `proxy` vs. `std::unique_ptr`",
+          "TargetBenchmarkName": "BM_SmallObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectRelocationViaUniquePtr"
+        },
+        {
+          "Name": "Relocation on small objects via `proxy` vs. `std::any`",
+          "TargetBenchmarkName": "BM_SmallObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_SmallObjectRelocationViaAny"
+        },
+        {
+          "Name": "Relocation on large objects via `proxy` (trivially-relocatable by default) vs. `proxy` (nothrow-relocatable)",
+          "TargetBenchmarkName": "BM_LargeObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectRelocationViaProxy_NothrowRelocatable"
+        },
+        {
+          "Name": "Relocation on large objects via `proxy` vs. `std::unique_ptr`",
+          "TargetBenchmarkName": "BM_LargeObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectRelocationViaUniquePtr"
+        },
+        {
+          "Name": "Relocation on large objects via `proxy` vs. `std::any`",
+          "TargetBenchmarkName": "BM_LargeObjectRelocationViaProxy",
+          "BaselineBenchmarkName": "BM_LargeObjectRelocationViaAny"
+        }
+      ]
     }
   ]
 }
