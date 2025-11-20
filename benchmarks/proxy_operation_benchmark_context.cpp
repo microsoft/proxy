@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-#include "proxy_invocation_benchmark_context.h"
+#include "proxy_operation_benchmark_context.h"
 
 namespace {
 
@@ -77,15 +77,23 @@ auto GenerateTestData(const F& generator) {
 } // namespace
 
 std::vector<pro::proxy<InvocationTestFacade>>
-    GenerateSmallObjectInvocationProxyTestData() {
+    GenerateSmallObjectProxyTestData() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return pro::make_proxy<InvocationTestFacade,
                                NonIntrusiveSmallImpl<TypeSeries>>(seed);
       });
 }
+std::vector<pro::proxy<NothrowRelocatableInvocationTestFacade>>
+    GenerateSmallObjectProxyTestData_NothrowRelocatable() {
+  return GenerateTestData(
+      []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+        return pro::make_proxy<NothrowRelocatableInvocationTestFacade,
+                               NonIntrusiveSmallImpl<TypeSeries>>(seed);
+      });
+}
 std::vector<pro::proxy<InvocationTestFacade>>
-    GenerateSmallObjectInvocationProxyTestData_Shared() {
+    GenerateSmallObjectProxyTestData_Shared() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return pro::make_proxy_shared<InvocationTestFacade,
@@ -93,7 +101,7 @@ std::vector<pro::proxy<InvocationTestFacade>>
       });
 }
 std::vector<std::unique_ptr<InvocationTestBase>>
-    GenerateSmallObjectInvocationVirtualFunctionTestData() {
+    GenerateSmallObjectVirtualFunctionTestData() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return std::unique_ptr<InvocationTestBase>{
@@ -101,23 +109,38 @@ std::vector<std::unique_ptr<InvocationTestBase>>
       });
 }
 std::vector<std::shared_ptr<InvocationTestBase>>
-    GenerateSmallObjectInvocationVirtualFunctionTestData_Shared() {
+    GenerateSmallObjectVirtualFunctionTestData_Shared() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return std::shared_ptr<InvocationTestBase>{
             std::make_shared<IntrusiveSmallImpl<TypeSeries>>(seed)};
       });
 }
+std::vector<std::any> GenerateSmallObjectAnyTestData() {
+  return GenerateTestData(
+      []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+        return std::make_any<NonIntrusiveSmallImpl<TypeSeries>>(seed);
+      });
+}
+
 std::vector<pro::proxy<InvocationTestFacade>>
-    GenerateLargeObjectInvocationProxyTestData() {
+    GenerateLargeObjectProxyTestData() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return pro::make_proxy<InvocationTestFacade,
                                NonIntrusiveLargeImpl<TypeSeries>>(seed);
       });
 }
+std::vector<pro::proxy<NothrowRelocatableInvocationTestFacade>>
+    GenerateLargeObjectProxyTestData_NothrowRelocatable() {
+  return GenerateTestData(
+      []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+        return pro::make_proxy<NothrowRelocatableInvocationTestFacade,
+                               NonIntrusiveLargeImpl<TypeSeries>>(seed);
+      });
+}
 std::vector<pro::proxy<InvocationTestFacade>>
-    GenerateLargeObjectInvocationProxyTestData_Shared() {
+    GenerateLargeObjectProxyTestData_Shared() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return pro::make_proxy_shared<InvocationTestFacade,
@@ -125,7 +148,7 @@ std::vector<pro::proxy<InvocationTestFacade>>
       });
 }
 std::vector<std::unique_ptr<InvocationTestBase>>
-    GenerateLargeObjectInvocationVirtualFunctionTestData() {
+    GenerateLargeObjectVirtualFunctionTestData() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return std::unique_ptr<InvocationTestBase>{
@@ -133,10 +156,16 @@ std::vector<std::unique_ptr<InvocationTestBase>>
       });
 }
 std::vector<std::shared_ptr<InvocationTestBase>>
-    GenerateLargeObjectInvocationVirtualFunctionTestData_Shared() {
+    GenerateLargeObjectVirtualFunctionTestData_Shared() {
   return GenerateTestData(
       []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
         return std::shared_ptr<InvocationTestBase>{
             std::make_shared<IntrusiveLargeImpl<TypeSeries>>(seed)};
+      });
+}
+std::vector<std::any> GenerateLargeObjectAnyTestData() {
+  return GenerateTestData(
+      []<int TypeSeries>(IntConstant<TypeSeries>, int seed) {
+        return std::make_any<NonIntrusiveLargeImpl<TypeSeries>>(seed);
       });
 }
