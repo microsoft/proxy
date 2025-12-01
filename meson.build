@@ -12,6 +12,9 @@ project(
 )
 
 cxx = meson.get_compiler('cpp')
+if cxx.get_argument_syntax() == 'msvc'
+  add_project_arguments('/bigobj', language: 'cpp')
+endif
 
 inc = include_directories('include')
 
