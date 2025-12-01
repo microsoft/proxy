@@ -34,7 +34,11 @@ msft_proxy4_dep = declare_dependency(
 modules = get_option('modules')
 modules_interface_spec = {
   'gcc': {
-    'flags': ['-fmodules', '-fdeps-format=p1689r5'],
+    'flags': [
+      '-fmodules',
+      '-fdeps-format=p1689r5',
+      '-DWINPTHREAD_COND_DECL=WINPTHREADS_ALWAYS_INLINE',
+    ],
     'check_only': ['-M'],
   },
   'msvc': {
