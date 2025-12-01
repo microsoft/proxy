@@ -1,0 +1,35 @@
+option(
+  'tests',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build tests',
+)
+option(
+  'tests_freestanding',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build freestanding tests',
+)
+option(
+  'benchmarks',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build benchmarks',
+)
+option(
+  'examples',
+  type: 'feature',
+  value: 'auto',
+  description: 'Extract and build examples from docs',
+)
+option(
+  'modules',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build with C++ modules support',
+)
+option(
+  'docdir',
+  type: 'string',
+  description: 'Documentation directory',
+)

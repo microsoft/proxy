@@ -1,3 +1,7 @@
 # Ignore build directories
 build/
 Testing/
+
+# Meson subprojects
+/subprojects/*
+!/subprojects/*.wrap
