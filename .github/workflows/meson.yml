@@ -1,0 +1,165 @@
+on:
+  push:
+    branches: [ main, release/** ]
+  pull_request:
+    branches: [ main, release/** ]
+  workflow_dispatch:
+
+jobs:
+  meson:
+    runs-on: ${{ matrix.platform }}
+    name: meson on ${{ matrix.platform }} (${{ matrix.mode.name }} ${{ matrix.flavor }})
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor:
+          - debug
+          - release
+        mode:
+          - name: default
+            args: -Dtests=enabled -Dbenchmarks=enabled 
+            extra_envs: {}
+
+          # Alternative compiler setups
+          - name: gcc
+            args: -Dtests=enabled -Dbenchmarks=enabled 
+            extra_envs:
+              CC: gcc
+              CXX: g++
+          - name: clang
+            args: -Dtests=enabled -Dbenchmarks=enabled 
+            extra_envs:
+              CC: clang
+              CXX: clang++
+
+          - name: sanitize
+            args: >-
+              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+            extra_envs: {}
+
+          # This is for MSVC, which only supports AddressSanitizer.
+          # https://learn.microsoft.com/en-us/cpp/sanitizers/
+          - name: sanitize+asanonly
+            args: -Dtests=enabled -Dbenchmarks=enabled -Db_sanitize=address
+            extra_envs:
+              ASAN_OPTIONS: report_globals=0:halt_on_error=1:abort_on_error=1:print_summary=1
+
+          - name: clang+sanitize
+            args: >-
+              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+            extra_envs:
+              CC: clang
+              CXX: clang++
+
+          # default clang on GitHub hosted runners is from MSYS2.
+          # Use Visual Studio supplied clang-cl instead.
+          - name: clang-cl
+            args: >-
+              -Dtests=enabled -Dbenchmarks=enabled
+            extra_envs:
+              CC: clang-cl
+              CXX: clang-cl
+          - name: clang-cl+sanitize
+            args: >-
+              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+            extra_envs:
+              CC: clang-cl
+              CXX: clang-cl
+        platform:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+        exclude:
+          # clang-cl only makes sense on windows.
+          - platform: ubuntu-latest
+            mode:
+              name: clang-cl
+          - platform: macos-latest
+            mode:
+              name: clang-cl
+          - platform: ubuntu-latest
+            mode:
+              name: clang-cl+sanitize
+          - platform: macos-latest
+            mode:
+              name: clang-cl+sanitize
+
+          # Use clang-cl instead of MSYS2 clang.
+          #
+          # we already tested clang+sanitize on linux,
+          # if this doesn't work, it should be an issue for MSYS2 team to consider.
+          - platform: windows-latest
+            mode:
+              name: clang
+          - platform: windows-latest
+            mode:
+              name: clang+sanitize
+
+          # MSVC-only sanitizers
+          - platform: ubuntu-latest
+            mode:
+              name: sanitize+asanonly
+          - platform: macos-latest
+            mode:
+              name: sanitize+asanonly
+          - platform: windows-latest
+            mode:
+              name: sanitize
+
+          # clang is the default on macos
+          # also gcc is an alias to clang
+          - platform: macos-latest
+            mode:
+              name: clang
+          - platform: macos-latest
+            mode:
+              name: gcc
+
+          # gcc is the default on linux
+          - platform: ubuntu-latest
+            mode:
+              name: gcc
+
+          # only run sanitizer tests on linux
+          #
+          # gcc/clang's codegen shouldn't massively change across platforms,
+          # and linux supports most of the sanitizers.
+          - platform: macos-latest
+            mode:
+              name: clang+sanitize
+          - platform: macos-latest
+            mode:
+              name: sanitize
+
+    steps:
+      - name: Setup meson
+        run: |
+          pipx install meson ninja
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Activate MSVC and Configure
+        if: ${{ matrix.platform == 'windows-latest' }}
+        env: ${{ matrix.mode.extra_envs }}
+        run: |
+          meson setup build-${{ matrix.flavor }} --buildtype=${{ matrix.flavor }} ${{ matrix.mode.args }} --vsenv
+      - name: Configuring
+        if: ${{ matrix.platform != 'windows-latest' }}
+        env: ${{ matrix.mode.extra_envs }}
+        run: |
+          meson setup build-${{ matrix.flavor }} --buildtype=${{ matrix.flavor }} ${{ matrix.mode.args }}
+      - name: Building
+        run: |
+          meson compile -C build-${{ matrix.flavor }}
+          meson compile -C build-${{ matrix.flavor }} msft_proxy_tests msft_proxy_benchmarks examples
+
+      - name: Running tests
+        env: ${{ matrix.mode.extra_envs }}
+        run: |
+          meson test -C build-${{ matrix.flavor }} --timeout-multiplier 5 --print-errorlogs
+          meson test --benchmark -C build-${{ matrix.flavor }} --timeout-multiplier 5 --print-errorlogs
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.mode.name }}-${{ matrix.flavor }}-logs
+          path: build-${{ matrix.flavor }}/meson-logs
