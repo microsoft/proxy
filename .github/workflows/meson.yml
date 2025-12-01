@@ -46,7 +46,7 @@ jobs:
 
           - name: clang+sanitize
             args: >-
-              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+              -Dtests=enabled -Dbenchmarks=enabled -Db_lundef=false "-Db_sanitize=address,undefined"
             extra_envs:
               CC: clang
               CXX: clang++
