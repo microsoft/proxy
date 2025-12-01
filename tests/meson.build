@@ -315,7 +315,7 @@ if cxx.has_multi_arguments(
     implicit_include_directories: false,
     dependencies: [msft_proxy4_dep, libc_dep],
     cpp_args: freestanding_cflags,
-    link_args: freestanding_ldflags,
+    link_args: get_option('b_sanitize') == '' ? freestanding_ldflags : [],
     build_by_default: false,
   )
   test(
