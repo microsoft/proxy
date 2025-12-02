@@ -82,6 +82,15 @@ jobs:
             mode:
               name: clang-cl+sanitize
 
+          # FIXME: clang-cl is currently broken:
+          # https://github.com/llvm/llvm-project/issues/143245
+          - platform: windows-2025
+            mode:
+              name: clang-cl
+          - platform: windows-2025
+            mode:
+              name: clang-cl+sanitize
+
           # Use clang-cl instead of MSYS2 clang.
           #
           # we already tested clang+sanitize on linux,
@@ -115,6 +124,11 @@ jobs:
 
           # gcc is the default on linux
           - platform: ubuntu-24.04
+            mode:
+              name: gcc
+
+          # MinGW is not officially tested
+          - platform: windows-2025
             mode:
               name: gcc
 
