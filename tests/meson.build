@@ -19,8 +19,20 @@ tests_exe = executable(
   build_by_default: false,
 )
 
-# to generate this, run:
-# builddir/tests/msft_proxy_tests --gtest_list_tests --gtest_output=json:/dev/stderr 2>| jq '.testsuites | map({key: .name, value: .testsuite | map(.name)}) | from_entries'
+autogen_tests = custom_target(
+  command: [
+    autogen_tests_exe,
+    custom_target(
+      command: [tests_exe, '--gtest_list_tests', '--gtest_output=json:@OUTPUT@'],
+      output: 'tests.json',
+    ),
+    meson.current_source_dir() / 'meson.build',
+  ],
+  output: 'autogen.stamp',
+  build_by_default: true,
+)
+
+#pragma autogen push
 tests = {
   'ProxyCreationTests': [
     'TestMakeProxyInplace_FromValue',
@@ -286,7 +298,7 @@ tests = {
     'TestFacadeAware',
   ],
 }
-
+#pragma autogen pop
 
 foreach suite : tests.keys()
   foreach name : tests[suite]
@@ -296,6 +308,7 @@ foreach suite : tests.keys()
       args: [f'--gtest_filter=@suite@.@name@'],
       protocol: 'gtest',
       suite: suite,
+      depends: autogen_tests,
     )
   endforeach
 endforeach
@@ -308,7 +321,10 @@ if cxx.has_multi_arguments(
   freestanding_cflags + freestanding_ldflags,
   required: freestanding,
 )
-  libc_dep = cxx.find_library('c', required: freestanding)
+  libc_dep = cxx.find_library(
+    'c',
+    required: freestanding,
+  )
   freestanding_tests_exe = executable(
     'msft_proxy_freestanding_tests',
     files('freestanding/proxy_freestanding_tests.cpp'),
@@ -325,4 +341,7 @@ if cxx.has_multi_arguments(
   )
 endif
 
-subdir('modules', if_found: msft_proxy4_mod)
+subdir(
+  'modules',
+  if_found: msft_proxy4_mod,
+)

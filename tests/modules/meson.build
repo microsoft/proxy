@@ -6,9 +6,39 @@ tests_modules_exe = executable(
   dependencies: [msft_proxy4_mod, gtest_dep],
   build_by_default: false,
 )
-test(
-  'TestBasic',
-  tests_modules_exe,
-  suite: 'ProxyModuleSupportTests',
-  protocol: 'gtest',
+
+autogen_modules_tests = custom_target(
+  command: [
+    autogen_tests_exe,
+    custom_target(
+      command: [
+        tests_modules_exe,
+        '--gtest_list_tests',
+        '--gtest_output=json:@OUTPUT@',
+      ],
+      output: 'tests.json',
+    ),
+    meson.current_source_dir() / 'meson.build',
+  ],
+  output: 'autogen.stamp',
+  build_by_default: true,
 )
+
+#pragma autogen push
+tests = {
+  'ProxyModuleSupportTests': ['TestBasic'],
+}
+#pragma autogen pop
+
+foreach suite : tests.keys()
+  foreach name : tests[suite]
+    test(
+      name,
+      tests_modules_exe,
+      args: [f'--gtest_filter=@suite@.@name@'],
+      protocol: 'gtest',
+      suite: suite,
+      depends: autogen_modules_tests,
+    )
+  endforeach
+endforeach

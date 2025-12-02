@@ -122,6 +122,8 @@ endif
 meson.override_dependency(meson.project_name(), msft_proxy4_dep)
 meson.override_dependency(meson.project_name() + '_module', msft_proxy4_mod)
 
+subdir('tools')
+
 tests = get_option('tests')
 gtest_dep = dependency(
   'gtest_main',
