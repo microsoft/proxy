@@ -10,11 +10,23 @@ benchmarks_exe = executable(
   build_by_default: false,
 )
 
-# manually written, list all benchmarks with:
-# builddir/benchmarks/msft_proxy_benchmarks --benchmark_list_tests
+autogen_benchmarks = custom_target(
+  command: [
+    autogen_benchmarks_exe,
+    custom_target(
+      command: [benchmarks_exe, '--benchmark_list_tests'],
+      capture: true,
+      output: 'tests.txt',
+    ),
+    meson.current_source_dir() / 'meson.build',
+  ],
+  output: 'autogen.stamp',
+  build_by_default: true,
+)
+
+#pragma autogen push
 benchmarks = {
   'ObjectCreation': [
-    'BM_SmallObjectCreationWithProxy',
     'BM_SmallObjectCreationWithProxy_Shared',
     'BM_SmallObjectCreationWithProxy_SharedPooled',
     'BM_SmallObjectCreationWithUniquePtr',
@@ -31,7 +43,6 @@ benchmarks = {
     'BM_LargeObjectCreationWithAny',
   ],
   'ObjectInvocation': [
-    'BM_SmallObjectInvocationViaProxy',
     'BM_SmallObjectInvocationViaProxy_Shared',
     'BM_SmallObjectInvocationViaProxyView',
     'BM_SmallObjectInvocationViaVirtualFunction',
@@ -44,8 +55,7 @@ benchmarks = {
     'BM_LargeObjectInvocationViaVirtualFunction_Shared',
     'BM_LargeObjectInvocationViaVirtualFunction_RawPtr',
   ],
-  'ObjectOperation': [
-    'BM_SmallObjectRelocationViaProxy',
+  'ObjectRelocation': [
     'BM_SmallObjectRelocationViaProxy_NothrowRelocatable',
     'BM_SmallObjectRelocationViaUniquePtr',
     'BM_SmallObjectRelocationViaAny',
@@ -55,6 +65,7 @@ benchmarks = {
     'BM_LargeObjectRelocationViaAny',
   ],
 }
+#pragma autogen pop
 
 foreach suite : benchmarks.keys()
   foreach name : benchmarks[suite]
@@ -63,6 +74,7 @@ foreach suite : benchmarks.keys()
       benchmarks_exe,
       args: [f'--benchmark_filter=^@name@$'],
       suite: suite,
+      depends: autogen_benchmarks,
     )
   endforeach
 endforeach
