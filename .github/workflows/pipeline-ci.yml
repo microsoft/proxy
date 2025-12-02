@@ -41,6 +41,10 @@ jobs:
     name: Generate report
     needs: [run-bvt-gcc, run-bvt-clang, run-bvt-msvc, run-bvt-appleclang, run-bvt-nvhpc, run-bvt-oneapi]
 
+  run-meson:
+    uses: ./.github/workflows/meson.yml
+    name: Run builds with meson
+
   mkdocs:
     uses: ./.github/workflows/mkdocs.yml
     name: Build mkdocs
