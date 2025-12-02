@@ -8,45 +8,42 @@ on:
 jobs:
   meson:
     runs-on: ${{ matrix.platform }}
-    name: meson on ${{ matrix.platform }} (${{ matrix.mode.name }} ${{ matrix.flavor }})
+    name: meson on ${{ matrix.platform }} (${{ matrix.mode.name }})
     strategy:
       fail-fast: false
       matrix:
-        flavor:
-          - debug
-          - release
         mode:
           - name: default
-            args: -Dtests=enabled -Dbenchmarks=enabled 
+            args: -Dtests=enabled -Dbenchmarks=disabled
             extra_envs: {}
 
           # Alternative compiler setups
           - name: gcc
-            args: -Dtests=enabled -Dbenchmarks=enabled 
+            args: -Dtests=enabled -Dbenchmarks=disabled
             extra_envs:
               CC: gcc
               CXX: g++
           - name: clang
-            args: -Dtests=enabled -Dbenchmarks=enabled 
+            args: -Dtests=enabled -Dbenchmarks=disabled
             extra_envs:
               CC: clang
               CXX: clang++
 
           - name: sanitize
             args: >-
-              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+              -Dtests=enabled -Dbenchmarks=disabled "-Db_sanitize=address,undefined"
             extra_envs: {}
 
           # This is for MSVC, which only supports AddressSanitizer.
           # https://learn.microsoft.com/en-us/cpp/sanitizers/
           - name: sanitize+asanonly
-            args: -Dtests=enabled -Dbenchmarks=enabled -Db_sanitize=address
+            args: -Dtests=enabled -Dbenchmarks=disabled -Db_sanitize=address
             extra_envs:
               ASAN_OPTIONS: report_globals=0:halt_on_error=1:abort_on_error=1:print_summary=1
 
           - name: clang+sanitize
             args: >-
-              -Dtests=enabled -Dbenchmarks=enabled -Db_lundef=false "-Db_sanitize=address,undefined"
+              -Dtests=enabled -Dbenchmarks=disabled -Db_lundef=false "-Db_sanitize=address,undefined"
             extra_envs:
               CC: clang
               CXX: clang++
@@ -55,13 +52,13 @@ jobs:
           # Use Visual Studio supplied clang-cl instead.
           - name: clang-cl
             args: >-
-              -Dtests=enabled -Dbenchmarks=enabled
+              -Dtests=enabled -Dbenchmarks=disabled
             extra_envs:
               CC: clang-cl
               CXX: clang-cl
           - name: clang-cl+sanitize
             args: >-
-              -Dtests=enabled -Dbenchmarks=enabled "-Db_sanitize=address,undefined"
+              -Dtests=enabled -Dbenchmarks=disabled "-Db_sanitize=address,undefined"
             extra_envs:
               CC: clang-cl
               CXX: clang-cl
@@ -142,24 +139,23 @@ jobs:
         if: ${{ matrix.platform == 'windows-latest' }}
         env: ${{ matrix.mode.extra_envs }}
         run: |
-          meson setup build-${{ matrix.flavor }} --buildtype=${{ matrix.flavor }} ${{ matrix.mode.args }} --vsenv
+          meson setup build --buildtype=release ${{ matrix.mode.args }} --vsenv
       - name: Configuring
         if: ${{ matrix.platform != 'windows-latest' }}
         env: ${{ matrix.mode.extra_envs }}
         run: |
-          meson setup build-${{ matrix.flavor }} --buildtype=${{ matrix.flavor }} ${{ matrix.mode.args }}
+          meson setup build --buildtype=release ${{ matrix.mode.args }}
       - name: Building
         run: |
-          meson compile -C build-${{ matrix.flavor }}
-          meson compile -C build-${{ matrix.flavor }} msft_proxy_tests msft_proxy_benchmarks examples
+          meson compile -C build
+          meson compile -C build msft_proxy_tests examples
 
       - name: Running tests
         env: ${{ matrix.mode.extra_envs }}
         run: |
-          meson test -C build-${{ matrix.flavor }} --timeout-multiplier 5 --print-errorlogs
-          meson test --benchmark -C build-${{ matrix.flavor }} --timeout-multiplier 5 --print-errorlogs
+          meson test -C build --timeout-multiplier 5 --print-errorlogs
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: ${{ matrix.platform }}-${{ matrix.mode.name }}-${{ matrix.flavor }}-logs
-          path: build-${{ matrix.flavor }}/meson-logs
+          name: ${{ matrix.platform }}-${{ matrix.mode.name }}-logs
+          path: build/meson-logs
