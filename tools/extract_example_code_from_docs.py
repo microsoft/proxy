@@ -2,12 +2,13 @@
 # pyright: strict
 
 import re
+import typing as T
 from pathlib import Path
 
 EXAMPLE_PATTERN = re.compile(r"## Example\r?\n\r?\n```cpp\r?\n(.*?)\r?\n```", re.DOTALL)
 
 
-def extract_cpp_code(md_path: Path, cpp_path: Path) -> None:
+def extract_cpp_code(md_path: Path) -> T.Optional[str]:
     with open(md_path, "r", encoding="utf-8") as f:
         content = f.read()
 
@@ -26,9 +27,7 @@ def extract_cpp_code(md_path: Path, cpp_path: Path) -> None:
 
 """.lstrip()
 
-    with open(cpp_path, "w", encoding="utf-8") as out:
-        _ = out.write(header)
-        _ = out.write(cpp_code)
+    return header + cpp_code
 
 
 def main() -> None:
@@ -56,7 +55,11 @@ def main() -> None:
                 rel_path = md_path.relative_to(input_dir)
                 rel_base = "_".join([*rel_path.parent.parts, rel_path.stem])
                 cpp_path = output_dir / f"example_{rel_base}.cpp"
-                extract_cpp_code(md_path, cpp_path)
+                cpp_code = extract_cpp_code(md_path)
+                if cpp_code is None:
+                    continue
+                with open(cpp_path, "w", encoding="utf-8") as f:
+                    _ = f.write(cpp_code)
 
 
 if __name__ == "__main__":
