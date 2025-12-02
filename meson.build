@@ -12,8 +12,32 @@ project(
 )
 
 cxx = meson.get_compiler('cpp')
+if cxx.compute_int('__has_cpp_attribute(msvc::no_unique_address)') != 0 and not cxx.compiles(
+  '''
+  struct A {};
+
+  struct B {
+    [[msvc::no_unique_address]] A val;
+  };
+
+  struct C : B {
+    char x;
+  };
+
+  static_assert(sizeof(C) == 1);
+  ''',
+  name: 'msvc::no_unique_address behaves correctly',
+)
+  error(
+    'unsupported compiler:',
+    'https://github.com/llvm/llvm-project/issues/143245',
+  )
+endif
 if cxx.get_argument_syntax() == 'msvc'
-  add_project_arguments('/bigobj', language: 'cpp')
+  add_project_arguments(
+    '/bigobj',
+    language: 'cpp',
+  )
 endif
 
 inc = include_directories('include')
