@@ -67,18 +67,6 @@ docs = [
 ]
 #pragma autogen pop
 
-docdir = get_option('docdir')
-if docdir == ''
-  docdir = get_option('datadir') / 'doc' / meson.project_name()
-endif
-install_data(
-  docs,
-  follow_symlinks: true,
-  install_dir: docdir,
-  preserve_path: true,
-  install_tag: 'docs',
-)
-
 examples = []
 
 foreach doc : docs
