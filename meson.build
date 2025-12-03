@@ -124,7 +124,7 @@ meson.override_dependency(meson.project_name() + '_module', msft_proxy4_mod)
 
 subdir('tools')
 
-tests = get_option('tests')
+tests = get_option('tests').disable_auto_if(meson.is_subproject())
 gtest_dep = dependency(
   'gtest_main',
   main: true,
