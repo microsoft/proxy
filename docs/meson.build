@@ -1,5 +1,3 @@
-fs = import('fs')
-
 maybe_fmt_dep = dependency(
   'fmt',
   version: fmt_spec,
@@ -84,73 +82,31 @@ install_data(
 examples = []
 
 foreach doc : docs
-  code = ''
   deps = [msft_proxy4_dep]
-
-  state = 0
-  lines = fs.read(doc).splitlines()
-  foreach line : lines
-    if state == 0
-      if line.contains('## Example')
-        if code != ''
-          error(
-            'File',
-            doc,
-            'contains more than one "## Example" C++ code block.',
-          )
-        endif
-        state = 1
-      endif
-    elif state == 1
-      if line == ''
-        state = 2
-      else
-        state = 0
-      endif
-    elif state == 2
-      if line == '```cpp'
-        state = 3
-      else
-        state = 0
-      endif
-    elif state == 3
-      if line != '```'
-        if line.contains('<proxy/proxy_fmt.h>')
-          deps += maybe_fmt_dep
-        endif
-        code += line + '\n'
-      else
-        code = code.substring(0, -1)
-        state = 0
-      endif
-    endif
-  endforeach
-  if code != ''
-    cfg = {
-      'MD_PATH': 'docs' / doc,
-      'CODE': code,
-    }
-    name = doc.replace('/', '_').substring(0, -3)
-    example_exe = executable(
-      f'example_@name@',
-      configure_file(
-        configuration: cfg,
-        input: 'example.cpp.in',
-        output: f'example_@name@.cpp',
-      ),
-      extra_files: doc,
-      implicit_include_directories: false,
-      dependencies: deps,
-      build_by_default: false,
-    )
-    examples += example_exe
-    test(
-      name,
-      example_exe,
-      suite: 'ProxyExamples',
-      depends: autogen_glob,
-    )
+  if doc.contains('fmt')
+    deps += maybe_fmt_dep
   endif
+
+  name = doc.replace('/', '_').substring(0, -3)
+  example_exe = executable(
+    f'example_@name@',
+    custom_target(
+      command: [extract_doctest_exe, '@INPUT@', '@OUTPUT@'],
+      input: doc,
+      output: f'@name@.cpp',
+    ),
+    extra_files: doc,
+    implicit_include_directories: false,
+    dependencies: deps,
+    build_by_default: false,
+  )
+  examples += example_exe
+  test(
+    name,
+    example_exe,
+    suite: 'ProxyExamples',
+    depends: autogen_glob,
+  )
 endforeach
 
 alias_target('examples', examples)

@@ -26,7 +26,11 @@ for i, line in enumerate(build):
 if begin == -1 or end == -1:
     raise ValueError
 
-docs = [str(path.relative_to(directory).as_posix()) for path in directory.glob("**/*.md") if extract_cpp_code(path) is not None]
+docs = [
+    str(path.relative_to(directory).as_posix())
+    for path in directory.glob("**/*.md")
+    if extract_cpp_code(path) is not None
+]
 
 config = mformat.get_meson_format([mesonfile])
 formatter = mformat.Formatter(config, False, False)
