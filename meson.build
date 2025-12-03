@@ -141,7 +141,7 @@ subdir(
   if_found: [gtest_dep, fmt_dep],
 )
 
-benchmarks = get_option('benchmarks')
+benchmarks = get_option('benchmarks').disable_auto_if(meson.is_subproject())
 benchmark_dep = dependency(
   'benchmark_main',
   required: benchmarks,
