@@ -122,23 +122,21 @@ endif
 meson.override_dependency(meson.project_name(), msft_proxy4_dep)
 meson.override_dependency(meson.project_name() + '_module', msft_proxy4_mod)
 
-subdir('tools')
-
 tests = get_option('tests').disable_auto_if(meson.is_subproject())
 gtest_dep = dependency(
   'gtest_main',
   main: true,
   required: tests,
 )
-fmt_spec = ['>=6.1.0']
 fmt_dep = dependency(
   'fmt',
-  version: fmt_spec,
-  required: tests,
+  version: '>=6.1.0',
+  required: false,
+  disabler: true,
 )
 subdir(
   'tests',
-  if_found: [gtest_dep, fmt_dep],
+  if_found: gtest_dep,
 )
 
 benchmarks = get_option('benchmarks').disable_auto_if(meson.is_subproject())
