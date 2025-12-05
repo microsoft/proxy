@@ -150,17 +150,17 @@ jobs:
         env: ${{ matrix.mode.extra_envs }}
         run: |
           meson setup build --buildtype=release ${{ matrix.mode.args }} --vsenv
-      - name: Configuring
+      - name: Configure
         if: ${{ matrix.platform != 'windows-2025' }}
         env: ${{ matrix.mode.extra_envs }}
         run: |
           meson setup build --buildtype=release ${{ matrix.mode.args }}
-      - name: Building
+      - name: Build
         run: |
           meson compile -C build
           meson compile -C build msft_proxy_tests examples
 
-      - name: Running tests
+      - name: Run tests
         env: ${{ matrix.mode.extra_envs }}
         run: |
           meson test -C build --timeout-multiplier 5 --print-errorlogs
