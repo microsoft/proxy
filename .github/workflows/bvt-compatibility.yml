@@ -4,63 +4,58 @@ on:
 jobs:
   bvt-compatibility:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - {compiler: gcc, version: 13, modules: false}
+          - {compiler: gcc, version: 14, modules: true}
+          - {compiler: clang, version: 16, modules: false}
+          - {compiler: clang, version: 17, modules: false}
+          - {compiler: clang, version: 18, modules: false}
+          - {compiler: clang, version: 19, modules: false}
+          - {compiler: clang, version: 20, modules: true}
+        buildsystem: [cmake, meson]
+
     steps:
     - uses: actions/checkout@v4
 
-    - name: install compilers
-      run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 20
-        sudo apt install -y gcc-13 g++-13 gcc-14 g++-14 clang-16 clang-17 clang-18 clang-19 libc++-17-dev
+    - name: install meson
+      if: ${{ matrix.buildsystem == 'meson' }}
+      run: pipx install meson
 
-    - name: check compiler versions
+    - name: install gcc
+      if: ${{ matrix.compiler.compiler == 'gcc' }}
       run: |
-        g++-13 --version
-        g++-14 --version
-        clang++-16 --version
-        clang++-17 --version
-        clang++-18 --version
-        clang++-19 --version
-        clang++-20 --version
+        sudo apt install -y 'g++-${{ matrix.compiler.version }}'
+        cat <<'EOF' >> "$GITHUB_ENV"
+        CC=gcc-${{ matrix.compiler.version }}
+        CXX=g++-${{ matrix.compiler.version }}
+        EOF
 
-    - name: build and run test with gcc 14
+    - name: install clang
+      if: ${{ matrix.compiler.compiler == 'clang' }}
       run: |
-        cmake -B build-gcc-14 -GNinja -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
-        cmake --build build-gcc-14 -j
-        ctest --test-dir build-gcc-14 -j
+        sudo apt install -y 'clang-${{ matrix.compiler.version }}' 'clang-tools-${{ matrix.compiler.version }}' 'libc++-${{ matrix.compiler.version }}-dev' 'libc++abi-${{ matrix.compiler.version }}-dev'
+        cat <<'EOF' >> "$GITHUB_ENV"
+        CC=clang-${{ matrix.compiler.version }}
+        CXX=clang++-${{ matrix.compiler.version }}
+        CXXFLAGS=-stdlib=libc++
+        EOF
 
-    - name: build and run test with gcc 13
+    - name: check compiler version
       run: |
-        cmake -B build-gcc-13 -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build-gcc-13 -j
-        ctest --test-dir build-gcc-13 -j
+        "$CXX" --version
 
-    - name: build and run test with clang 20
+    - name: build and run test with cmake
+      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
-        cmake -B build-clang-20 -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
-        cmake --build build-clang-20 -j
-        ctest --test-dir build-clang-20 -j
-    - name: build and run test with clang 19
-      run: |
-        cmake -B build-clang-19 -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build-clang-19 -j
-        ctest --test-dir build-clang-19 -j
+        cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release '-DPROXY_BUILD_MODULES=${{ matrix.compiler.modules }}'
+        cmake --build build -j
+        ctest --test-dir build -j
 
-    - name: build and run test with clang 18
+    - name: build and run test with meson
+      if: ${{ matrix.buildsystem == 'meson' }}
       run: |
-        cmake -B build-clang-18 -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build-clang-18 -j
-        ctest --test-dir build-clang-18 -j
-
-    - name: build and run test with clang 17
-      run: |
-        cmake -B build-clang-17 -DCMAKE_C_COMPILER=clang-17 -DCMAKE_CXX_COMPILER=clang++-17 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build-clang-17 -j
-        ctest --test-dir build-clang-17 -j
-
-    - name: build and run test with clang 16
-      run: |
-        cmake -B build-clang-16 -DCMAKE_C_COMPILER=clang-16 -DCMAKE_CXX_COMPILER=clang++-16 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build-clang-16 -j
-        ctest --test-dir build-clang-16 -j
+        meson setup build --buildtype=release -Dmodules=${{ matrix.compiler.modules && 'auto' || 'disabled' }}
+        meson test -C build

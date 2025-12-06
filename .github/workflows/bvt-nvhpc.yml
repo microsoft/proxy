@@ -4,11 +4,21 @@ on:
 jobs:
   bvt-nvhpc:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        buildsystem: [cmake, meson]
+
     steps:
     - uses: actions/checkout@v4
 
     - name: free disk space
       uses: jlumbroso/free-disk-space@v1.3.1
+
+    - name: install meson
+      if: ${{ matrix.buildsystem == 'meson' }}
+      # FIXME: install from upstream once https://github.com/mesonbuild/meson/pull/15353 is released
+      run: pipx install git+https://github.com/mesonbuild/meson@02b85a846629090a0c7f18e860bab0a10ea4349b
 
     - name: install NVHPC 25.11
       run: |
@@ -16,22 +26,33 @@ jobs:
         echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
         sudo apt-get update -y
         sudo apt-get install -y nvhpc-25-11
+        cat<<'EOF' >> "$GITHUB_ENV"
+        CC=/opt/nvidia/hpc_sdk/Linux_x86_64/25.11/compilers/bin/nvc
+        CXX=/opt/nvidia/hpc_sdk/Linux_x86_64/25.11/compilers/bin/nvc++
+        EOF
 
-    - name: build and run test with NVHPC 25.11
+    - name: build and run test with NVHPC 25.11 on cmake
+      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
-        PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.11/compilers/bin:$PATH; export PATH
-        cmake -B build -GNinja -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
+        cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh nvc++ build/drop/env-info.json
+        ./tools/dump_build_env.sh "$CXX" build/drop/env-info.json
+
+    - name: build and run test with NVHPC 25.11 on meson
+      if: ${{ matrix.buildsystem == 'meson' }}
+      run: |
+        meson setup builddir --buildtype=release -Dtests=enabled
+        meson test -C builddir
 
     - name: run benchmarks
-      run: |
-        build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      if: ${{ matrix.buildsystem == 'cmake' }}
+      run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
 
     - name: archive benchmarking results
+      if: ${{ matrix.buildsystem == 'cmake' }}
       uses: actions/upload-artifact@v4
       with:
         name: drop-nvhpc
