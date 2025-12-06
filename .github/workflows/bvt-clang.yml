@@ -11,24 +11,24 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 20
-        sudo apt install -y libc++-20-dev clang-format-20
+        sudo ./llvm.sh 21
+        sudo apt install -y libc++-21-dev clang-format-21
 
     - name: check compiler version
       run: |
-        clang++-20 --version
+        clang++-21 --version
 
-    - name: build and run test with clang 20
+    - name: build and run test with clang 21
       run: |
-        cmake -B build -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        cmake -B build -GNinja -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
         mapfile -t FILES < <(find include tests benchmarks build/examples_from_docs tools -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
         echo "Running clang-format on ${#FILES[@]} files: ${FILES[*]}"
-        clang-format-20 --dry-run --Werror "${FILES[@]}"
+        clang-format-21 --dry-run --Werror "${FILES[@]}"
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh clang++-20 build/drop/env-info.json
+        ./tools/dump_build_env.sh clang++-21 build/drop/env-info.json
 
     - name: run benchmarks
       run: |

@@ -1,12 +1,5 @@
 project(msft_proxy_docs)
 
-FetchContent_Declare(
-  fmt
-  URL https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz
-  URL_HASH SHA256=ac366b7b4c2e9f0dde63a59b3feb5ee59b67974b14ee5dc9ea8ad78aa2c1ee1e
-)
-FetchContent_MakeAvailable(fmt)
-
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 file(GLOB_RECURSE DOC_FILES "*.md")

@@ -10,16 +10,16 @@ jobs:
     - name: free disk space
       uses: jlumbroso/free-disk-space@v1.3.1
 
-    - name: install NVHPC 25.7
+    - name: install NVHPC 25.11
       run: |
         curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
         echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
         sudo apt-get update -y
-        sudo apt-get install -y nvhpc-25-7
+        sudo apt-get install -y nvhpc-25-11
 
-    - name: build and run test with NVHPC 25.7
+    - name: build and run test with NVHPC 25.11
       run: |
-        PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.7/compilers/bin:$PATH; export PATH
+        PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/25.11/compilers/bin:$PATH; export PATH
         cmake -B build -GNinja -DCMAKE_C_COMPILER=nvc -DCMAKE_CXX_COMPILER=nvc++ -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build -j
         ctest --test-dir build -j

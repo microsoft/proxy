@@ -2456,7 +2456,7 @@ struct operator_dispatch;
 #define PROD_DEF_RHS_ASSIGNMENT_OP_ACCESSOR(oq, pq, ne, ...)                   \
   template <class P, class D, class R, class Arg>                              \
   struct accessor<P, D, R(Arg&) oq ne> {                                       \
-    friend Arg& operator __VA_ARGS__(Arg & arg, P pq self) ne {                \
+    friend Arg& operator __VA_ARGS__(Arg& arg, P pq self) ne {                 \
       proxy_invoke<D, R(Arg&) oq ne>(static_cast<P pq>(self), arg);            \
       return arg;                                                              \
     }                                                                          \

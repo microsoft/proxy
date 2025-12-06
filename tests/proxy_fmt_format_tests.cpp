@@ -3,19 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#if defined(__NVCOMPILER)
-#pragma diagnostic push
-#pragma diag_suppress inline_gnu_noinline_conflict
-#pragma diagnostic push
-#pragma diag_suppress code_is_unreachable
-#endif // defined(__NVCOMPILER)
 #include <fmt/format.h>
 #include <fmt/xchar.h>
-#if defined(__NVCOMPILER)
-#pragma diagnostic pop
-#pragma diagnostic pop
-#endif // defined(__NVCOMPILER)
-
 #include <proxy/proxy.h>
 #include <proxy/proxy_fmt.h>
 
