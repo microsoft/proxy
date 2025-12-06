@@ -4,11 +4,6 @@ on:
 jobs:
   bvt-nvhpc:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        buildsystem: [cmake, meson]
-
     steps:
     - uses: actions/checkout@v4
 
@@ -16,7 +11,6 @@ jobs:
       uses: jlumbroso/free-disk-space@v1.3.1
 
     - name: install meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       # FIXME: install from upstream once https://github.com/mesonbuild/meson/pull/15353 is released
       run: pipx install git+https://github.com/mesonbuild/meson@02b85a846629090a0c7f18e860bab0a10ea4349b
 
@@ -32,7 +26,6 @@ jobs:
         EOF
 
     - name: build and run test with NVHPC 25.11 on cmake
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
         cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build -j
@@ -42,17 +35,14 @@ jobs:
         ./tools/dump_build_env.sh "$CXX" build/drop/env-info.json
 
     - name: build and run test with NVHPC 25.11 on meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       run: |
         meson setup builddir --buildtype=release -Dtests=enabled
         meson test -C builddir
 
     - name: run benchmarks
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
 
     - name: archive benchmarking results
-      if: ${{ matrix.buildsystem == 'cmake' }}
       uses: actions/upload-artifact@v4
       with:
         name: drop-nvhpc

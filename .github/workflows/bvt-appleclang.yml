@@ -4,16 +4,10 @@ on:
 jobs:
   bvt-appleclang:
     runs-on: macos-15
-    strategy:
-      fail-fast: false
-      matrix:
-        buildsystem: [cmake, meson]
-
     steps:
     - uses: actions/checkout@v4
 
     - name: install meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       run: pipx install meson
 
     - name: check compiler versions
@@ -22,7 +16,6 @@ jobs:
         xcodebuild -version
 
     - name: build and run test with AppleClang on cmake
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
         cmake -B build -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
         cmake --build build -j
@@ -31,17 +24,14 @@ jobs:
         bash ./tools/dump_build_env.sh c++ build/drop/env-info.json
 
     - name: build and run test with AppleClang on meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       run: |
         meson setup builddir --buildtype=release -Dtests=enabled
         meson test -C builddir
 
     - name: run benchmarks
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
 
     - name: archive benchmarking results
-      if: ${{ matrix.buildsystem == 'cmake' }}
       uses: actions/upload-artifact@v4
       with:
         name: drop-appleclang

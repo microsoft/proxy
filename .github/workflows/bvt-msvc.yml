@@ -4,24 +4,16 @@ on:
 jobs:
   bvt-msvc:
     runs-on: windows-2025
-    strategy:
-      fail-fast: false
-      matrix:
-        buildsystem: [cmake, meson]
-
     steps:
     - uses: actions/checkout@v4
 
     - name: install meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       run: pipx install meson
 
     - name: add cl.exe to PATH
-      if: ${{ matrix.buildsystem == 'cmake' }}
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: build and run test with MSVC on cmake
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
         cmake -B build -DCMAKE_CXX_STANDARD=23 -DPROXY_BUILD_MODULES=TRUE `
           && cmake --build build --config Release -j `
@@ -30,17 +22,14 @@ jobs:
           && .\tools\dump_build_env_msvc.ps1 -OutputPath build\drop\env-info.json
 
     - name: build and run test with MSVC on meson
-      if: ${{ matrix.buildsystem == 'meson' }}
       run: |
         meson setup builddir --buildtype=release -Dtests=enabled --vsenv
         meson test -C builddir
 
     - name: run benchmarks
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: build\benchmarks\Release\msft_proxy_benchmarks.exe --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build\drop\benchmarking-results.json
 
     - name: archive benchmarking results
-      if: ${{ matrix.buildsystem == 'cmake' }}
       uses: actions/upload-artifact@v4
       with:
         name: drop-msvc
