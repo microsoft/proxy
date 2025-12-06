@@ -9,6 +9,9 @@ jobs:
 
     - name: install compilers
       run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 20
         sudo apt install -y gcc-13 g++-13 gcc-14 g++-14 clang-16 clang-17 clang-18 clang-19 libc++-17-dev
 
     - name: check compiler versions
@@ -19,6 +22,7 @@ jobs:
         clang++-17 --version
         clang++-18 --version
         clang++-19 --version
+        clang++-20 --version
 
     - name: build and run test with gcc 14
       run: |
@@ -32,6 +36,11 @@ jobs:
         cmake --build build-gcc-13 -j
         ctest --test-dir build-gcc-13 -j
 
+    - name: build and run test with clang 20
+      run: |
+        cmake -B build-clang-20 -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        cmake --build build-clang-20 -j
+        ctest --test-dir build-clang-20 -j
     - name: build and run test with clang 19
       run: |
         cmake -B build-clang-19 -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE

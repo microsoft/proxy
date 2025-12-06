@@ -4,25 +4,27 @@ on:
 jobs:
   bvt-gcc:
     runs-on: ubuntu-24.04
+    container: gcc:15
     steps:
     - uses: actions/checkout@v4
 
-    - name: install gcc
+    - name: install dependencies
       run: |
-        sudo apt install -y gcc-14 g++-14
+        apt-get update
+        apt-get install -y cmake ninja-build
 
     - name: check compiler version
       run: |
-        g++-14 --version
+        g++ --version
 
-    - name: build and run test with gcc 14
+    - name: build and run test with gcc 15
       run: |
-        cmake -B build -GNinja -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        cmake -B build -GNinja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh g++-14 build/drop/env-info.json
+        ./tools/dump_build_env.sh g++ build/drop/env-info.json
 
     - name: run benchmarks
       run: |

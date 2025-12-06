@@ -11,31 +11,25 @@
 #error Please ensure that proxy.h is included before proxy_fmt.h.
 #endif // __msft_lib_proxy4
 
-#if FMT_VERSION >= 60100
-static_assert(fmt::is_char<wchar_t>::value,
-              "The {fmt} library must have wchar_t support enabled. "
-              "Include fmt/xchar.h before including proxy_fmt.h.");
-#else
+#if FMT_VERSION < 60100
 #error Please ensure that the appropriate {fmt} headers (version 6.1.0 or \
 later) are included before proxy_fmt.h.
-#endif // FMT_VERSION >= 60100
+#endif // FMT_VERSION < 60100
 
 namespace pro::inline v4 {
 
 namespace details {
 
 template <class CharT>
-struct fmt_format_overload_traits;
-template <>
-struct fmt_format_overload_traits<char>
-    : std::type_identity<fmt::format_context::iterator(
-          std::string_view spec, fmt::format_context& fc) const> {};
-template <>
-struct fmt_format_overload_traits<wchar_t>
-    : std::type_identity<fmt::wformat_context::iterator(
-          std::wstring_view spec, fmt::wformat_context& fc) const> {};
+#if FMT_VERSION >= 110000
+using fmt_buffered_context = fmt::buffered_context<CharT>;
+#else
+using fmt_buffered_context = fmt::buffer_context<CharT>;
+#endif // FMT_VERSION
+
 template <class CharT>
-using fmt_format_overload_t = typename fmt_format_overload_traits<CharT>::type;
+using fmt_format_overload_t = fmt_buffered_context<CharT>::iterator(
+    std::basic_string_view<CharT> spec, fmt_buffered_context<CharT>& fc) const;
 
 struct fmt_format_dispatch {
   template <class T, class CharT, class FormatContext>
