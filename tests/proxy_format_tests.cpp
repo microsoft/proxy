@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <proxy/proxy.h>
 
+#ifdef _PRO4D_HAS_FORMAT
 namespace proxy_format_tests_details {
 
 struct NonFormattable : pro::facade_builder::build {};
@@ -29,17 +30,26 @@ static_assert(
 } // namespace proxy_format_tests_details
 
 namespace details = proxy_format_tests_details;
+#endif // _PRO4D_HAS_FORMAT
 
 TEST(ProxyFormatTests, TestFormat) {
+#ifdef _PRO4D_HAS_FORMAT
   int v = 123;
   pro::proxy<details::Formattable> p = &v;
   ASSERT_EQ(std::format("{}", *p), "123");
   ASSERT_EQ(std::format("{:*<6}", *p), "123***");
+#else
+  GTEST_SKIP() << "std::format not available";
+#endif // _PRO4D_HAS_FORMAT
 }
 
 TEST(ProxyFormatTests, TestWformat) {
+#ifdef _PRO4D_HAS_FORMAT
   int v = 123;
   pro::proxy<details::Formattable> p = &v;
   ASSERT_EQ(std::format(L"{}", *p), L"123");
   ASSERT_EQ(std::format(L"{:*<6}", *p), L"123***");
+#else
+  GTEST_SKIP() << "std::format not available";
+#endif // _PRO4D_HAS_FORMAT
 }

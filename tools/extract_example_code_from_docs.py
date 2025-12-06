@@ -27,6 +27,19 @@ def extract_cpp_code(md_path: Path) -> T.Optional[str]:
 
 """.lstrip()
 
+    if "pro::skills::format" in cpp_code:
+        cpp_code = f"""
+#include <proxy/proxy.h>
+#ifdef _PRO4D_HAS_FORMAT
+{cpp_code}
+#else
+int main() {{
+  // std::format not available
+  return 77;
+}}
+#endif
+""".strip()
+
     return header + cpp_code
 
 
