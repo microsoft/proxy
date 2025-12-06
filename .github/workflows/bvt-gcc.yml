@@ -8,27 +8,31 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: install dependencies
+    - name: install cmake and meson
       run: |
         apt-get update
-        apt-get install -y cmake ninja-build
+        apt-get install -y cmake meson ninja-build
 
     - name: check compiler version
       run: |
-        g++ --version
+        c++ --version
 
-    - name: build and run test with gcc 15
+    - name: build and run test with gcc 15 on cmake
       run: |
-        cmake -B build -GNinja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        cmake -B build -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
         cmake --build build -j
         ctest --test-dir build -j
         mkdir build/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh g++ build/drop/env-info.json
+        ./tools/dump_build_env.sh c++ build/drop/env-info.json
+
+    - name: build and run test with gcc 15 on meson
+      run: |
+        meson setup builddir --buildtype=release -Dtests=enabled
+        meson test -C builddir
 
     - name: run benchmarks
-      run: |
-        build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4

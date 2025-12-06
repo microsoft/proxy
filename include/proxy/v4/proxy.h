@@ -23,6 +23,9 @@
 #if __has_include(<format>)
 #include <format>
 #endif // __has_include(<format>)
+#if __cpp_lib_format || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000)
+#define _PRO4D_HAS_FORMAT
+#endif // __cpp_lib_format || _LIBCPP_VERSION >= 170000
 #endif // __STDC_HOSTED__
 
 #if __cpp_rtti >= 199711L
@@ -2125,7 +2128,7 @@ struct weak_conversion_dispatch : cast_dispatch_base<false, true> {
 template <class F>
 using weak_conversion_overload = weak_proxy<F>() const noexcept;
 
-#if __STDC_HOSTED__ && __has_include(<format>)
+#ifdef _PRO4D_HAS_FORMAT
 template <class CharT>
 struct format_overload_traits;
 template <>
@@ -2166,7 +2169,7 @@ struct format_dispatch {
     return impl.format(self, fc);
   }
 };
-#endif // __STDC_HOSTED__ && __has_include(<format>)
+#endif // _PRO4D_HAS_FORMAT
 
 #if __cpp_rtti >= 199711L
 struct proxy_cast_context {
@@ -2273,7 +2276,7 @@ struct proxy_typeid_reflector {
 
 namespace skills {
 
-#if __STDC_HOSTED__ && __has_include(<format>)
+#ifdef _PRO4D_HAS_FORMAT
 template <class FB>
 using format =
     typename FB::template add_convention<details::format_dispatch,
@@ -2283,7 +2286,7 @@ template <class FB>
 using wformat =
     typename FB::template add_convention<details::format_dispatch,
                                          details::format_overload_t<wchar_t>>;
-#endif // __STDC_HOSTED__ && __has_include(<format>)
+#endif // _PRO4D_HAS_FORMAT
 
 #if __cpp_rtti >= 199711L
 template <class FB>
@@ -2604,7 +2607,7 @@ struct weak_dispatch : D {
 // == Adapters (std::formatter)                                               ==
 // =============================================================================
 
-#if __STDC_HOSTED__ && __has_include(<format>)
+#ifdef _PRO4D_HAS_FORMAT
 namespace std {
 
 template <pro::v4::facade F, class CharT>
@@ -2635,7 +2638,7 @@ private:
 };
 
 } // namespace std
-#endif // __STDC_HOSTED__ && __has_include(<format>)
+#endif // _PRO4D_HAS_FORMAT
 
 #undef PROD_UNREACHABLE
 #undef PROD_NO_UNIQUE_ADDRESS_ATTRIBUTE

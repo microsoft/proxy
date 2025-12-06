@@ -17,7 +17,8 @@ public:
         is_copy_constructible_(std::is_copy_constructible_v<T>),
         is_nothrow_move_constructible_(std::is_nothrow_move_constructible_v<T>),
         is_nothrow_destructible_(std::is_nothrow_destructible_v<T>),
-        is_trivial_(std::is_trivial_v<T>) {}
+        is_trivial_(std::is_trivially_default_constructible_v<T> &&
+                    std::is_trivially_copyable_v<T>) {}
 
   template <class Self, class R>
   struct accessor {

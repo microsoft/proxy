@@ -1,3 +1,10 @@
 # Ignore build directories
 build/
 Testing/
+
+# Python bytecode cache
+__pycache__/
+
+# Meson subprojects
+/subprojects/*
+!/subprojects/*.wrap
