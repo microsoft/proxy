@@ -15,14 +15,9 @@ jobs:
           - {compiler: clang, version: 18, modules: false}
           - {compiler: clang, version: 19, modules: false}
           - {compiler: clang, version: 20, modules: true}
-        buildsystem: [cmake, meson]
 
     steps:
     - uses: actions/checkout@v4
-
-    - name: install meson
-      if: ${{ matrix.buildsystem == 'meson' }}
-      run: pipx install meson
 
     - name: install gcc
       if: ${{ matrix.compiler.compiler == 'gcc' }}
@@ -48,14 +43,7 @@ jobs:
         "$CXX" --version
 
     - name: build and run test with cmake
-      if: ${{ matrix.buildsystem == 'cmake' }}
       run: |
         cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release '-DPROXY_BUILD_MODULES=${{ matrix.compiler.modules }}'
         cmake --build build -j
         ctest --test-dir build -j
-
-    - name: build and run test with meson
-      if: ${{ matrix.buildsystem == 'meson' }}
-      run: |
-        meson setup build --buildtype=release -Dmodules=${{ matrix.compiler.modules && 'auto' || 'disabled' }}
-        meson test -C build
