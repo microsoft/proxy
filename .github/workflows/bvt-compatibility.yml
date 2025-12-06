@@ -41,7 +41,6 @@ jobs:
         cmake -B build-clang-20 -GNinja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
         cmake --build build-clang-20 -j
         ctest --test-dir build-clang-20 -j
-  
     - name: build and run test with clang 19
       run: |
         cmake -B build-clang-19 -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
