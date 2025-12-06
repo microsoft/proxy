@@ -58,8 +58,7 @@ msft_proxy4_dep = declare_dependency(
   sources: hdrs + hdrs_v4,
   include_directories: inc,
 )
-modules = get_option('modules')
-modules_interface_spec = {
+modules_interface_specs = {
   'gcc': {
     'flags': ['-fmodules', '-fdeps-format=p1689r5'] + (cxx.has_header_symbol(
       'pthread.h',
@@ -72,13 +71,16 @@ modules_interface_spec = {
   'msvc': {
     'flags': ['/interface'],
   },
-}[cxx.get_argument_syntax()]
-if cxx.has_multi_arguments(
-  modules_interface_spec.get('flags'),
-  modules_interface_spec.get('check_only', []),
+}
+modules = get_option('modules').disable_if(
+  not modules_interface_specs.has_key(cxx.get_argument_syntax()),
+)
+if modules.allowed() and cxx.has_multi_arguments(
+  modules_interface_specs[cxx.get_argument_syntax()].get('flags'),
+  modules_interface_specs[cxx.get_argument_syntax()].get('check_only', []),
   required: modules,
 )
-  modules_interface_cflags = modules_interface_spec['flags']
+  modules_interface_cflags = modules_interface_specs[cxx.get_argument_syntax()]['flags']
   msft_proxy4_mod = declare_dependency(
     include_directories: inc,
     dependencies: msft_proxy4_dep,
