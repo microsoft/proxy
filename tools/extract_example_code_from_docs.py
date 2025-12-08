@@ -2,13 +2,13 @@
 # pyright: strict
 
 import re
-import typing as T
+from typing import Optional
 from pathlib import Path
 
 EXAMPLE_PATTERN = re.compile(r"## Example\r?\n\r?\n```cpp\r?\n(.*?)\r?\n```", re.DOTALL)
 
 
-def extract_cpp_code(md_path: Path) -> T.Optional[str]:
+def extract_cpp_code(md_path: Path) -> Optional[str]:
     with open(md_path, "r", encoding="utf-8") as f:
         content = f.read()
 
