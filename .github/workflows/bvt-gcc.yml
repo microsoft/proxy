@@ -28,7 +28,7 @@ jobs:
 
     - name: build and run test with gcc 15 on meson
       run: |
-        meson setup build-meson --buildtype=release -Dtests=enabled
+        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled
         meson test -C build-meson
 
     - name: run benchmarks

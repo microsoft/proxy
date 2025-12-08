@@ -5,12 +5,6 @@ option(
   description: 'Build tests',
 )
 option(
-  'tests_freestanding',
-  type: 'feature',
-  value: 'auto',
-  description: 'Build freestanding tests',
-)
-option(
   'benchmarks',
   type: 'feature',
   value: 'auto',

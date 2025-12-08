@@ -9,6 +9,5 @@ benchmark(
     ),
     implicit_include_directories: false,
     dependencies: [msft_proxy4_dep, benchmark_dep],
-    build_by_default: false,
   ),
 )

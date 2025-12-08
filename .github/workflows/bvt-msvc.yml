@@ -23,7 +23,7 @@ jobs:
 
     - name: build and run test with MSVC on meson
       run: |
-        meson setup build-meson --buildtype=release -Dtests=enabled --vsenv
+        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled --vsenv
         meson test -C build-meson
 
     - name: run benchmarks
