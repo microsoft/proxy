@@ -41,10 +41,10 @@ using v4::weak_proxy;
 
 namespace skills {
 
-#ifdef _PRO4D_HAS_FORMAT
+#ifdef PRO4D_HAS_FORMAT
 using skills::format;
 using skills::wformat;
-#endif // _PRO4D_HAS_FORMAT
+#endif // PRO4D_HAS_FORMAT
 
 #if __cpp_rtti >= 199711L
 using skills::direct_rtti;
@@ -60,10 +60,10 @@ using skills::slim;
 
 } // namespace pro::inline v4
 
-#ifdef _PRO4D_HAS_FORMAT
+#ifdef PRO4D_HAS_FORMAT
 export namespace std {
 
 using std::formatter;
 
 } // namespace std
-#endif // _PRO4D_HAS_FORMAT
+#endif // PRO4D_HAS_FORMAT

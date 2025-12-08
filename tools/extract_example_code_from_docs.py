@@ -30,7 +30,7 @@ def extract_cpp_code(md_path: Path) -> T.Optional[str]:
     if "pro::skills::format" in cpp_code:
         cpp_code = f"""
 #include <proxy/proxy.h>
-#ifdef _PRO4D_HAS_FORMAT
+#ifdef PRO4D_HAS_FORMAT
 {cpp_code}
 #else
 int main() {{
