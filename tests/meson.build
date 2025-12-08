@@ -66,8 +66,3 @@ if cxx.has_multi_arguments(
     )
   endif
 endif
-
-subdir(
-  'modules',
-  if_found: msft_proxy4_mod,
-)

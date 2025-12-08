@@ -22,9 +22,3 @@ option(
   value: 'auto',
   description: 'Extract and build examples from docs',
 )
-option(
-  'modules',
-  type: 'feature',
-  value: 'auto',
-  description: 'Build with C++ modules support',
-)

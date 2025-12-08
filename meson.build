@@ -58,45 +58,6 @@ msft_proxy4_dep = declare_dependency(
   sources: hdrs + hdrs_v4,
   include_directories: inc,
 )
-modules_interface_specs = {
-  'gcc': {
-    'flags': ['-fmodules', '-fdeps-format=p1689r5'] + (cxx.has_header_symbol(
-      'pthread.h',
-      '__WINPTHREADS_VERSION',
-    ) ? [
-      '-DWINPTHREAD_COND_DECL=WINPTHREADS_ALWAYS_INLINE',
-    ] : []),
-    'check_only': ['-M'],
-  },
-  'msvc': {
-    'flags': ['/interface'],
-  },
-}
-modules = get_option('modules').disable_if(
-  not modules_interface_specs.has_key(cxx.get_argument_syntax()),
-)
-if modules.allowed() and cxx.has_multi_arguments(
-  modules_interface_specs[cxx.get_argument_syntax()].get('flags'),
-  modules_interface_specs[cxx.get_argument_syntax()].get('check_only', []),
-  required: modules,
-)
-  modules_interface_cflags = modules_interface_specs[cxx.get_argument_syntax()]['flags']
-  msft_proxy4_mod = declare_dependency(
-    include_directories: inc,
-    dependencies: msft_proxy4_dep,
-    link_with: static_library(
-      'msft_proxy4_module',
-      hdrs_mod,
-      include_directories: inc,
-      cpp_args: modules_interface_cflags,
-      implicit_include_directories: false,
-      build_by_default: true,
-    ),
-  )
-else
-  modules_interface_cflags = []
-  msft_proxy4_mod = disabler()
-endif
 
 install_headers(
   hdrs,
@@ -123,7 +84,6 @@ if pkgconfig.found()
 endif
 
 meson.override_dependency(meson.project_name(), msft_proxy4_dep)
-meson.override_dependency(meson.project_name() + '_module', msft_proxy4_mod)
 
 tests = get_option('tests').disable_auto_if(meson.is_subproject())
 gtest_dep = dependency(
