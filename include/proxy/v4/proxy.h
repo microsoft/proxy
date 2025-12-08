@@ -23,7 +23,8 @@
 #if __has_include(<format>)
 #include <format>
 #endif // __has_include(<format>)
-#if __cpp_lib_format >= 201907L || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000)
+#if __cpp_lib_format >= 201907L ||                                             \
+    (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 170000)
 #define PRO4D_HAS_FORMAT
 #endif // __cpp_lib_format || _LIBCPP_VERSION >= 170000
 #endif // __STDC_HOSTED__
