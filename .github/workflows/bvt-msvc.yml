@@ -15,22 +15,22 @@ jobs:
 
     - name: build and run test with MSVC on cmake
       run: |
-        cmake -B build -DCMAKE_CXX_STANDARD=23 -DPROXY_BUILD_MODULES=TRUE `
-          && cmake --build build --config Release -j `
-          && ctest --test-dir build -j `
-          && mkdir build\drop > $null `
-          && .\tools\dump_build_env_msvc.ps1 -OutputPath build\drop\env-info.json
+        cmake -B build-cmake -DCMAKE_CXX_STANDARD=23 -DPROXY_BUILD_MODULES=TRUE `
+          && cmake --build build-cmake --config Release -j `
+          && ctest --test-dir build-cmake -j `
+          && mkdir build-cmake\drop > $null `
+          && .\tools\dump_build_env_msvc.ps1 -OutputPath build-cmake\drop\env-info.json
 
     - name: build and run test with MSVC on meson
       run: |
-        meson setup builddir --buildtype=release -Dtests=enabled --vsenv
-        meson test -C builddir
+        meson setup build-meson --buildtype=release -Dtests=enabled --vsenv
+        meson test -C build-meson
 
     - name: run benchmarks
-      run: build\benchmarks\Release\msft_proxy_benchmarks.exe --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build\drop\benchmarking-results.json
+      run: build-cmake\benchmarks\Release\msft_proxy_benchmarks.exe --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake\drop\benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
         name: drop-msvc
-        path: build/drop/
+        path: build-cmake/drop/

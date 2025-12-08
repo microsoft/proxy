@@ -8,19 +8,19 @@ jobs:
       fail-fast: false
       matrix:
         compiler:
-          - {compiler: gcc, version: 13, modules: false}
-          - {compiler: gcc, version: 14, modules: true}
-          - {compiler: clang, version: 16, modules: false}
-          - {compiler: clang, version: 17, modules: false}
-          - {compiler: clang, version: 18, modules: false}
-          - {compiler: clang, version: 19, modules: false}
-          - {compiler: clang, version: 20, modules: true}
+          - {family: gcc, version: 13, modules: false}
+          - {family: gcc, version: 14, modules: true}
+          - {family: clang, version: 16, modules: false}
+          - {family: clang, version: 17, modules: false}
+          - {family: clang, version: 18, modules: false}
+          - {family: clang, version: 19, modules: false}
+          - {family: clang, version: 20, modules: true}
 
     steps:
     - uses: actions/checkout@v4
 
     - name: install gcc
-      if: ${{ matrix.compiler.compiler == 'gcc' }}
+      if: ${{ matrix.compiler.family == 'gcc' }}
       run: |
         sudo apt install -y 'g++-${{ matrix.compiler.version }}'
         cat <<'EOF' >> "$GITHUB_ENV"
@@ -29,7 +29,7 @@ jobs:
         EOF
 
     - name: install clang
-      if: ${{ matrix.compiler.compiler == 'clang' }}
+      if: ${{ matrix.compiler.family == 'clang' }}
       run: |
         sudo apt install -y 'clang-${{ matrix.compiler.version }}' 'clang-tools-${{ matrix.compiler.version }}' 'libc++-${{ matrix.compiler.version }}-dev' 'libc++abi-${{ matrix.compiler.version }}-dev'
         cat <<'EOF' >> "$GITHUB_ENV"

@@ -24,27 +24,27 @@ jobs:
       run: |
         "$CXX" --version
 
-    - name: build and run test with clang 20 on cmake
+    - name: build and run test with clang 21 on cmake
       run: |
-        cmake -B build -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
-        mapfile -t FILES < <(find include tests benchmarks build/examples_from_docs tools -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
+        cmake -B build-cmake -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        mapfile -t FILES < <(find include tests benchmarks build-cmake/examples_from_docs tools -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
         echo "Running clang-format on ${#FILES[@]} files: ${FILES[*]}"
         clang-format-21 --dry-run --Werror "${FILES[@]}"
-        cmake --build build -j
-        ctest --test-dir build -j
-        mkdir build/drop
-        bash ./tools/dump_build_env.sh "$CXX" build/drop/env-info.json
+        cmake --build build-cmake -j
+        ctest --test-dir build-cmake -j
+        mkdir build-cmake/drop
+        bash ./tools/dump_build_env.sh "$CXX" build-cmake/drop/env-info.json
 
-    - name: build and run test with clang 20 on meson
+    - name: build and run test with clang 21 on meson
       run: |
-        meson setup builddir --buildtype=release -Dtests=enabled
-        meson test -C builddir
+        meson setup build-meson --buildtype=release -Dtests=enabled
+        meson test -C build-meson
 
     - name: run benchmarks
-      run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      run: build-cmake/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
         name: drop-clang
-        path: build/drop/
+        path: build-cmake/drop/

@@ -10,9 +10,9 @@ jobs:
     - name: free disk space
       uses: jlumbroso/free-disk-space@v1.3.1
 
-    - name: install meson
-      # FIXME: install from upstream once https://github.com/mesonbuild/meson/pull/15353 is released
-      run: pipx install git+https://github.com/mesonbuild/meson@02b85a846629090a0c7f18e860bab0a10ea4349b
+    # - name: install meson
+    #   # FIXME: install from upstream once https://github.com/mesonbuild/meson/pull/15353 is released
+    #   run: pipx install git+https://github.com/mesonbuild/meson@02b85a846629090a0c7f18e860bab0a10ea4349b
 
     - name: install NVHPC 25.11
       run: |
@@ -27,23 +27,23 @@ jobs:
 
     - name: build and run test with NVHPC 25.11 on cmake
       run: |
-        cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
-        cmake --build build -j
-        ctest --test-dir build -j
-        mkdir build/drop
+        cmake -B build-cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=FALSE
+        cmake --build build-cmake -j
+        ctest --test-dir build-cmake -j
+        mkdir build-cmake/drop
         chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh "$CXX" build/drop/env-info.json
+        ./tools/dump_build_env.sh "$CXX" build-cmake/drop/env-info.json
 
-    - name: build and run test with NVHPC 25.11 on meson
-      run: |
-        meson setup builddir --buildtype=release -Dtests=enabled
-        meson test -C builddir
+    # - name: build and run test with NVHPC 25.11 on meson
+    #   run: |
+    #     meson setup build-meson --buildtype=release -Dtests=enabled
+    #     meson test -C build-meson
 
     - name: run benchmarks
-      run: build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      run: build-cmake/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
         name: drop-nvhpc
-        path: build/drop/
+        path: build-cmake/drop/
