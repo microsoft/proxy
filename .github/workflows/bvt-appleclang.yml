@@ -27,6 +27,7 @@ jobs:
       run: |
         meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled
         meson test -C build-meson
+        meson test -C build-meson --benchmark --test-args=--benchmark_list_tests=true
 
     - name: run benchmarks
       run: build-cmake/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake/drop/benchmarking-results.json
