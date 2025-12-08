@@ -28,11 +28,12 @@ test(
     test_srcs,
     implicit_include_directories: false,
     dependencies: test_deps,
+    build_by_default: false,
   ),
   protocol: 'gtest',
 )
 
-freestanding_cflags = ['-ffreestanding', '-fno-exceptions', '-fno-rtti']
+freestanding_cflags = ['-ffreestanding']
 freestanding_ldflags = ['-nodefaultlibs']
 
 if cxx.has_multi_arguments(
@@ -55,6 +56,11 @@ if cxx.has_multi_arguments(
         dependencies: [msft_proxy4_dep, libc_dep],
         cpp_args: freestanding_cflags + freestanding_ldflags,
         link_args: get_option('b_sanitize') == 'none' ? freestanding_ldflags : [],
+        override_options: {
+          'cpp_eh': 'none',
+          'cpp_rtti': false,
+        },
+        build_by_default: false,
       ),
     )
   endif
