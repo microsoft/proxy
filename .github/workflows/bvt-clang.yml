@@ -37,7 +37,7 @@ jobs:
 
     - name: build and run test with clang 21 on meson
       run: |
-        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled
+        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled --force-fallback-for=fmt
         meson test -C build-meson
         meson test -C build-meson --benchmark --test-args=--benchmark_list_tests=true
 
