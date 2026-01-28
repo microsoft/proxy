@@ -829,6 +829,7 @@ TEST(ProxyDispatchTests, TestFreeAsMemDispatch) {
 }
 
 TEST(ProxyDispatchTests, TestSubstitutionDispatch) {
+#ifdef PRO4D_HAS_FORMAT
   struct Base : pro::facade_builder              //
                 ::add_skill<pro::skills::format> //
                 ::build {};
@@ -844,4 +845,7 @@ TEST(ProxyDispatchTests, TestSubstitutionDispatch) {
   pro::proxy<Base> p3 = std::move(p1);
   ASSERT_FALSE(p1.has_value());
   ASSERT_EQ(std::format("{}", *p3), "123");
+#else
+  GTEST_SKIP() << "std::format not available";
+#endif // PRO4D_HAS_FORMAT
 }

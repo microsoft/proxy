@@ -7,35 +7,45 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: install meson
+      run: pipx install meson
+
     - name: install clang
       run: |
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 21
-        sudo apt install -y libc++-21-dev clang-format-21
+        curl https://apt.llvm.org/llvm.sh | sudo bash -s -- 21
+        sudo apt install -y clang-21 libc++-21-dev clang-format-21
+        cat <<'EOF' >> "$GITHUB_ENV"
+        CC=clang-21
+        CXX=clang++-21
+        CXXFLAGS=-stdlib=libc++
+        EOF
 
     - name: check compiler version
       run: |
-        clang++-21 --version
+        "$CXX" --version
 
-    - name: build and run test with clang 21
+    - name: build and run test with clang 21 on cmake
       run: |
-        cmake -B build -GNinja -DCMAKE_C_COMPILER=clang-21 -DCMAKE_CXX_COMPILER=clang++-21 -DCMAKE_CXX_FLAGS="-stdlib=libc++" -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
-        mapfile -t FILES < <(find include tests benchmarks build/examples_from_docs tools -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
+        cmake -B build-cmake -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DPROXY_BUILD_MODULES=TRUE
+        mapfile -t FILES < <(find include tests benchmarks build-cmake/examples_from_docs tools -type f \( -name '*.h' -o -name '*.ixx' -o -name '*.cpp' \))
         echo "Running clang-format on ${#FILES[@]} files: ${FILES[*]}"
         clang-format-21 --dry-run --Werror "${FILES[@]}"
-        cmake --build build -j
-        ctest --test-dir build -j
-        mkdir build/drop
-        chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh clang++-21 build/drop/env-info.json
+        cmake --build build-cmake -j
+        ctest --test-dir build-cmake -j
+        mkdir build-cmake/drop
+        bash ./tools/dump_build_env.sh "$CXX" build-cmake/drop/env-info.json
+
+    - name: build and run test with clang 21 on meson
+      run: |
+        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled --force-fallback-for=fmt
+        meson test -C build-meson
+        meson test -C build-meson --benchmark --test-args=--benchmark_list_tests=true
 
     - name: run benchmarks
-      run: |
-        build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      run: build-cmake/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
         name: drop-clang
-        path: build/drop/
+        path: build-cmake/drop/

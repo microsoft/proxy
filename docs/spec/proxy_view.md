@@ -37,6 +37,7 @@ using proxy_view = proxy<observer_facade<F>>;
 ## Example
 
 ```cpp
+#include <cstdio>
 #include <map>
 
 #include <proxy/proxy.h>

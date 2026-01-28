@@ -7,9 +7,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: install meson
+      run: pipx install meson
+
     - name: install libc++
       run: |
         sudo apt-get install -y libc++-19-dev libc++abi-19-dev
+        cat <<'EOF' >> "$GITHUB_ENV"
+        CXXFLAGS=-stdlib=libc++
+        EOF
 
     - name: install intel oneAPI
       run: |
@@ -18,28 +24,36 @@ jobs:
         sudo apt update
         sudo apt install -y intel-oneapi-compiler-dpcpp-cpp
         source /opt/intel/oneapi/setvars.sh
-        echo "PATH=$PATH" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        cat<<-EOF >> "$GITHUB_ENV"
+        PATH=$PATH
+        LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+        CC=$(which icx)
+        CXX=$(which icpx)
+        EOF
 
     - name: check compiler version
       run: |
-        icpx --version
+        "$CXX" --version
 
-    - name: build and run test with oneapi
+    - name: build and run test with oneapi on cmake
       run: |
-        cmake -B build -GNinja -DCMAKE_CXX_COMPILER=icpx -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-stdlib=libc++"
-        cmake --build build -j
-        ctest --test-dir build -j
-        mkdir build/drop
-        chmod +x tools/dump_build_env.sh
-        ./tools/dump_build_env.sh icpx build/drop/env-info.json
+        cmake -B build-cmake -GNinja -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
+        cmake --build build-cmake -j
+        ctest --test-dir build-cmake -j
+        mkdir build-cmake/drop
+        bash ./tools/dump_build_env.sh "$CXX" build-cmake/drop/env-info.json
+
+    - name: build and run test with oneapi on meson
+      run: |
+        meson setup build-meson --buildtype=release -Dtests=enabled -Dbenchmarks=enabled --force-fallback-for=fmt
+        meson test -C build-meson
+        meson test -C build-meson --benchmark --test-args=--benchmark_list_tests=true
 
     - name: run benchmarks
-      run: |
-        build/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build/drop/benchmarking-results.json
+      run: build-cmake/benchmarks/msft_proxy_benchmarks --benchmark_min_warmup_time=0.1 --benchmark_min_time=0.1s --benchmark_repetitions=30 --benchmark_enable_random_interleaving=true --benchmark_report_aggregates_only=true --benchmark_format=json > build-cmake/drop/benchmarking-results.json
 
     - name: archive benchmarking results
       uses: actions/upload-artifact@v4
       with:
         name: drop-oneapi
-        path: build/drop/
+        path: build-cmake/drop/

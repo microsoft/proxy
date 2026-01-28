@@ -1,0 +1,18 @@
+option(
+  'tests',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build tests',
+)
+option(
+  'benchmarks',
+  type: 'feature',
+  value: 'auto',
+  description: 'Build benchmarks',
+)
+option(
+  'examples',
+  type: 'feature',
+  value: 'auto',
+  description: 'Extract and build examples from docs',
+)
