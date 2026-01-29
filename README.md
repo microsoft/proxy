@@ -1,3 +1,18 @@
+<div style="background:#b00020;color:#ffffff;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+  <strong>This repository is no longer actively maintained under the Microsoft organization.</strong>
+  Active development continues at <a href="https://github.com/ngcpp/proxy">ngcpp/proxy</a>.
+  <br><br>
+  <strong>Why the change?</strong> Stewardship of the project has transitioned to a new independent organization, <strong>ngcpp</strong>, to ensure ongoing development and community-driven governance.
+  <br><br>
+  <strong>What does this mean?</strong>
+  <ul>
+    <li><strong>Read-only</strong>: This repository is archived and will not accept new issues or pull requests.</li>
+    <li><strong>History preserved</strong>: All past commits, issues, and discussions remain available for reference.</li>
+    <li><strong>Future contributions</strong>: Please direct all contributions, bug reports, and feature requests to <a href="https://github.com/ngcpp/proxy">ngcpp/proxy</a>.</li>
+  </ul>
+  Thank you to everyone who has supported Proxy here. We look forward to continuing the journey together at <strong>ngcpp</strong>.
+</div>
+
 # Proxy: Next Generation Polymorphism in C++
 
 [![Proxy-CI](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml/badge.svg)](https://github.com/microsoft/proxy/actions/workflows/pipeline-ci.yml)
