@@ -1,4 +1,4 @@
-<div style="background:#b00020;color:#ffffff;padding:12px 16px;border-radius:6px;margin-bottom:16px;">
+<div style="background:#fdecea;color:#2b2b2b;padding:12px 16px;border-radius:6px;margin-bottom:16px;border:1px solid #f5c2c7;">
   <strong>This repository is no longer actively maintained under the Microsoft organization.</strong>
   Active development continues at <a href="https://github.com/ngcpp/proxy">ngcpp/proxy</a>.
   <br><br>
